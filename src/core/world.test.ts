@@ -1,26 +1,40 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_CONFIG } from './config';
 import {
   MARGIN_X,
-  PLACEHOLDER_WORDS,
   SPAWN_X,
   WORLD_HEIGHT,
   createWorld,
   laneCount,
   laneY,
   renderX,
+  spawnTarget,
   stepWorld,
+  type World,
 } from './world';
 
 /** Deterministic stand-in for Math.random. */
 const fixedRandom = (value: number) => () => value;
 
+function playingWorld(random = fixedRandom(0.5)): World {
+  const world = createWorld({ random, keys: ['a', 'b', 'c'] });
+  world.phase = 'playing';
+  return world;
+}
+
 describe('world', () => {
-  it('starts with one target off the right edge', () => {
-    const world = createWorld(fixedRandom(0));
-    expect(world.targets).toHaveLength(1);
-    const [target] = world.targets;
-    expect(target?.x).toBe(SPAWN_X);
-    expect(PLACEHOLDER_WORDS).toContain(target?.text);
+  it('starts on the ready screen with a full ink well and no targets', () => {
+    const world = createWorld();
+    expect(world.phase).toBe('ready');
+    expect(world.ink).toBe(GAME_CONFIG.maxInk);
+    expect(world.targets).toHaveLength(0);
+  });
+
+  it('does not simulate unless playing', () => {
+    const world = createWorld();
+    stepWorld(world, 1000);
+    expect(world.targets).toHaveLength(0);
+    expect(world.stats.playMs).toBe(0);
   });
 
   it('places every lane inside the page', () => {
@@ -30,43 +44,79 @@ describe('world', () => {
     }
   });
 
-  it('moves targets left at their speed', () => {
-    const world = createWorld(fixedRandom(0));
-    const target = world.targets[0]!;
-    target.speed = 100;
+  it('spawns a drip from the key set on the first step', () => {
+    const world = playingWorld();
+    stepWorld(world, 16);
+    expect(world.targets).toHaveLength(1);
+    const [drip] = world.targets;
+    expect(drip?.kind).toBe('drip');
+    expect(['a', 'b', 'c']).toContain(drip?.text);
+    expect(world.page.spawned).toBe(1);
+  });
+
+  it('waits the spawn interval between targets', () => {
+    const world = playingWorld();
+    stepWorld(world, 16);
+    const interval = world.page.params.spawnIntervalMs;
+    stepWorld(world, interval - 32);
+    expect(world.targets).toHaveLength(1);
+    stepWorld(world, 32);
+    expect(world.targets).toHaveLength(2);
+  });
+
+  it('never spawns two targets on top of each other in one lane', () => {
+    const world = playingWorld();
+    for (let i = 0; i < laneCount(); i++) expect(spawnTarget(world)).not.toBeNull();
+    expect(new Set(world.targets.map((t) => t.lane)).size).toBe(laneCount());
+    // Every lane is busy now.
+    expect(spawnTarget(world)).toBeNull();
+  });
+
+  it('moves targets left at their speed and interpolates between steps', () => {
+    const world = playingWorld();
+    const target = spawnTarget(world, { speed: 100 })!;
+    world.page.spawned = world.page.params.size; // stop the spawner
     stepWorld(world, 500);
     expect(target.x).toBeCloseTo(SPAWN_X - 50);
-    expect(target.prevX).toBe(SPAWN_X);
+    expect(target.prevX).toBeCloseTo(SPAWN_X);
+    expect(renderX(target, 0.5)).toBeCloseTo(SPAWN_X - 25);
   });
 
-  it('interpolates render position between steps', () => {
-    const world = createWorld(fixedRandom(0));
-    const target = world.targets[0]!;
-    target.speed = 100;
-    stepWorld(world, 1000);
-    expect(renderX(target, 0)).toBe(SPAWN_X);
-    expect(renderX(target, 0.5)).toBeCloseTo(SPAWN_X - 50);
-    expect(renderX(target, 1)).toBeCloseTo(SPAWN_X - 100);
-  });
-
-  it('counts a margin hit and respawns when a target crosses the margin', () => {
-    const world = createWorld(fixedRandom(0.5));
-    const first = world.targets[0]!;
-    first.x = MARGIN_X + 1;
-    first.speed = 1000;
+  it('drains ink, breaks the combo and drops the lock when a target reaches the margin', () => {
+    const world = playingWorld();
+    const target = spawnTarget(world, { x: MARGIN_X + 1, speed: 1000 })!;
+    world.lockedId = target.id;
+    world.stats.combo = 7;
 
     stepWorld(world, 16);
 
-    expect(world.marginHits).toBe(1);
-    expect(world.targets).toHaveLength(1);
-    const next = world.targets[0]!;
-    expect(next.id).not.toBe(first.id);
-    expect(next.x).toBe(SPAWN_X);
-    expect(next.prevX).toBe(SPAWN_X);
+    expect(world.ink).toBe(GAME_CONFIG.maxInk - GAME_CONFIG.inkLoss.drip);
+    expect(world.stats.combo).toBe(0);
+    expect(world.lockedId).toBeNull();
+    expect(world.targets).not.toContain(target);
+    expect(world.events).toContainEqual(expect.objectContaining({ type: 'marginHit' }));
   });
 
-  it('never picks outside the word list, even at random() edges', () => {
-    const world = createWorld(fixedRandom(0.9999999));
-    expect(PLACEHOLDER_WORDS).toContain(world.targets[0]?.text);
+  it('ends the game when the ink runs out', () => {
+    const world = playingWorld();
+    world.ink = 5;
+    spawnTarget(world, { x: MARGIN_X + 1, speed: 1000 });
+    stepWorld(world, 16);
+    expect(world.ink).toBe(0);
+    expect(world.phase).toBe('gameOver');
+  });
+
+  it('clears the page once every target has been spawned and dealt with', () => {
+    const world = playingWorld();
+    world.page.spawned = world.page.params.size;
+    stepWorld(world, 16);
+    expect(world.phase).toBe('pageCleared');
+  });
+
+  it('counts play time on both the notebook and the page', () => {
+    const world = playingWorld();
+    stepWorld(world, 100);
+    expect(world.stats.playMs).toBe(100);
+    expect(world.pageStats.playMs).toBe(100);
   });
 });

@@ -1,9 +1,9 @@
 /**
  * PixiJS renderer for the play field (REQUIREMENTS §7). Reads game state and
- * draws it; it never changes the state.
+ * events and draws them; it never changes game state.
  *
- * Milestone 1 art is simple placeholder vector shapes in the Inkwell style
- * (DESIGN §7). It gets swapped for hand-drawn art later.
+ * The art is simple placeholder vector shapes in the Inkwell style
+ * (DESIGN §7), to be swapped for hand-drawn art later.
  */
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import {
@@ -13,32 +13,37 @@ import {
   WORLD_HEIGHT,
   WORLD_WIDTH,
   renderX,
+  type GameEvent,
+  type GamePhase,
   type Target,
   type World,
 } from '../core/world';
+import { Effects } from './effects';
+import { Hud } from './hud';
+import { Overlay } from './overlay';
+import { COLORS, TEXT_FONT, prefersReducedMotion } from './theme';
 
-const COLORS = {
-  desk: 0x2b2622,
-  paper: 0xf7f1e3,
-  rule: 0xb9cfe0,
-  margin: 0xd9534f,
-  ink: 0x1f2a44,
-  inkLight: 0x3a4a6b,
-  label: 0xf7f1e3,
-} as const;
-
-/** Legible target text (DESIGN §7). Atkinson Hyperlegible gets bundled later. */
-const TARGET_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+const NIB_LENGTH = 56;
+const NIB_HOME = { x: MARGIN_X - 90, y: WORLD_HEIGHT / 2 };
+const DRIP_RADIUS = 22;
+const BLOT_HEIGHT = 46;
+const BLOT_PAD_X = 18;
 
 interface TargetView {
   root: Container;
-  label: Text;
-  text: string;
+  highlight: Graphics;
+  typedLabel: Text;
+  restLabel: Text;
+  typed: number;
+  /** Body size, for centering effects. */
+  width: number;
+  height: number;
 }
 
 export interface Renderer {
   app: Application;
-  sync(world: World, alpha: number): void;
+  /** Draw the current state. `frameMs` is real time since the last frame. */
+  sync(world: World, alpha: number, frameMs: number): void;
   destroy(): void;
 }
 
@@ -46,7 +51,7 @@ function drawPage(): Graphics {
   const page = new Graphics();
   page.rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(COLORS.paper);
 
-  for (let y = FIRST_LINE_Y - LINE_SPACING; y < WORLD_HEIGHT; y += LINE_SPACING) {
+  for (let y = FIRST_LINE_Y - LINE_SPACING; y < WORLD_HEIGHT - LINE_SPACING / 2; y += LINE_SPACING) {
     page.moveTo(0, y).lineTo(WORLD_WIDTH, y);
   }
   page.stroke({ width: 1.5, color: COLORS.rule });
@@ -55,51 +60,89 @@ function drawPage(): Graphics {
   return page;
 }
 
-/** Placeholder Nib: a fountain-pen tip pointing right, resting in the margin. */
+/** Placeholder Nib: a fountain-pen tip that points at what you're typing. */
 function drawNib(): Graphics {
-  const nib = new Graphics();
-  nib
-    .poly([0, -22, 56, 0, 0, 22, 10, 0])
+  return new Graphics()
+    .poly([0, -22, NIB_LENGTH, 0, 0, 22, 10, 0])
     .fill(COLORS.ink)
     .moveTo(14, 0)
-    .lineTo(50, 0)
+    .lineTo(NIB_LENGTH - 6, 0)
     .stroke({ width: 2, color: COLORS.paper })
     .circle(20, 0, 4)
     .fill(COLORS.paper);
-  nib.position.set(MARGIN_X - 90, WORLD_HEIGHT / 2);
-  return nib;
+}
+
+function labelStyle(fill: number, fontSize: number) {
+  return { fontFamily: TEXT_FONT, fontSize, fontWeight: '600' as const, fill };
 }
 
 function createTargetView(target: Target): TargetView {
   const root = new Container();
-  const label = new Text({
-    text: target.text,
-    style: { fontFamily: TARGET_FONT, fontSize: 26, fontWeight: '600', fill: COLORS.label },
-  });
-  label.anchor.set(0, 0.5);
-
+  const highlight = new Graphics();
   const body = new Graphics();
-  root.addChild(body, label);
-  redrawBody(body, label);
-  return { root, label, text: target.text };
+  const isDrip = target.kind === 'drip';
+  const fontSize = isDrip ? 24 : 26;
+  const typedLabel = new Text({ text: '', style: labelStyle(COLORS.inkFaded, fontSize) });
+  const restLabel = new Text({ text: target.text, style: labelStyle(COLORS.label, fontSize) });
+  typedLabel.anchor.set(0, 0.5);
+  restLabel.anchor.set(0, 0.5);
+
+  let width: number;
+  let height: number;
+
+  if (isDrip) {
+    // A teardrop with its tail trailing to the right as it moves left.
+    const r = DRIP_RADIUS;
+    width = r * 2 + 14;
+    height = r * 2;
+    body
+      .circle(r, 0, r)
+      .poly([r + r * 0.6, -r * 0.8, width, 0, r + r * 0.6, r * 0.8])
+      .fill(COLORS.ink);
+    restLabel.anchor.set(0.5, 0.5);
+    restLabel.position.set(r, 1);
+    highlight.circle(r, 0, r + 8).fill({ color: COLORS.highlighter, alpha: 0.8 });
+  } else {
+    // A lumpy ink blot sized to fit its word: a Blotling (DESIGN §5).
+    width = restLabel.width + BLOT_PAD_X * 2;
+    height = BLOT_HEIGHT;
+    body
+      .roundRect(0, -height / 2, width, height, height / 2)
+      .fill(COLORS.ink)
+      .circle(width * 0.25, height / 2 + 2, 5)
+      .fill(COLORS.inkLight)
+      .circle(width * 0.7, height / 2 + 4, 4)
+      .fill(COLORS.inkLight)
+      .circle(width - 6, -height / 2 + 4, 6)
+      .fill(COLORS.ink);
+    typedLabel.position.set(BLOT_PAD_X, 0);
+    restLabel.position.set(BLOT_PAD_X, 0);
+    highlight
+      .roundRect(-8, -height / 2 - 8, width + 16, height + 16, (height + 16) / 2)
+      .fill({ color: COLORS.highlighter, alpha: 0.8 });
+  }
+
+  highlight.visible = false;
+  root.addChild(highlight, body, typedLabel, restLabel);
+  return { root, highlight, typedLabel, restLabel, typed: 0, width, height };
 }
 
-/** A lumpy ink blot sized to fit its word: a Blotling (DESIGN §5). */
-function redrawBody(body: Graphics, label: Text): void {
-  const padX = 18;
-  const w = label.width + padX * 2;
-  const h = 46;
-  label.position.set(padX, 0);
+/** Grey out the typed part of a word and keep the rest in place. */
+function updateLabels(view: TargetView, target: Target): void {
+  if (view.typed === target.typed || target.kind === 'drip') return;
+  view.typed = target.typed;
+  view.typedLabel.text = target.text.slice(0, target.typed);
+  view.restLabel.text = target.text.slice(target.typed);
+  view.restLabel.x = BLOT_PAD_X + (target.typed > 0 ? view.typedLabel.width : 0);
+}
 
-  body.clear();
-  body.roundRect(0, -h / 2, w, h, h / 2).fill(COLORS.ink);
-  // Little drips and legs give it some character.
-  body.circle(w * 0.25, h / 2 + 2, 5).fill(COLORS.inkLight);
-  body.circle(w * 0.7, h / 2 + 4, 4).fill(COLORS.inkLight);
-  body.circle(w - 6, -h / 2 + 4, 6).fill(COLORS.ink);
+/** Exponential smoothing that behaves the same at any frame rate. */
+function approach(current: number, goal: number, rate: number, dtMs: number): number {
+  return goal + (current - goal) * Math.exp(-rate * (dtMs / 1000));
 }
 
 export async function createRenderer(host: HTMLElement): Promise<Renderer> {
+  const reducedMotion = prefersReducedMotion();
   const app = new Application();
   await app.init({
     // The desk shows around the page when the window's aspect ratio differs.
@@ -113,32 +156,83 @@ export async function createRenderer(host: HTMLElement): Promise<Renderer> {
   host.appendChild(app.canvas);
 
   // Everything is drawn in logical world units, then scaled to fit the window.
-  const world = new Container();
+  const stage = new Container();
+  const effects = new Effects(reducedMotion);
+  const guide = new Graphics();
   const targetLayer = new Container();
-  world.addChild(drawPage(), targetLayer, drawNib());
-  app.stage.addChild(world);
+  const nib = drawNib();
+  nib.position.set(NIB_HOME.x, NIB_HOME.y);
+  const hud = new Hud();
+  const overlay = new Overlay();
+  stage.addChild(drawPage(), effects.stainLayer, guide, targetLayer, nib, effects.particleLayer, hud.root, overlay.root);
+  app.stage.addChild(stage);
+
+  // Clip anything outside the page (targets spawn off the right edge).
+  const mask = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(0xffffff);
+  stage.addChild(mask);
+  stage.mask = mask;
 
   const fit = () => {
     const { width, height } = app.screen;
     const scale = Math.min(width / WORLD_WIDTH, height / WORLD_HEIGHT);
-    world.scale.set(scale);
-    world.position.set((width - WORLD_WIDTH * scale) / 2, (height - WORLD_HEIGHT * scale) / 2);
+    stage.scale.set(scale);
+    stage.position.set((width - WORLD_WIDTH * scale) / 2, (height - WORLD_HEIGHT * scale) / 2);
   };
   fit();
   app.renderer.on('resize', fit);
 
-  // Clip anything outside the page (targets spawn off the right edge).
-  const mask = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(0xffffff);
-  world.addChild(mask);
-  world.mask = mask;
-
   const views = new Map<number, TargetView>();
+  let shakeMs = 0;
+  let wobbleMs = 0;
+  let lastPhase: GamePhase | null = null;
+
+  const center = (target: Target, view: TargetView | undefined) => ({
+    x: target.x + (view ? view.width / 2 : 0),
+    y: target.y - LINE_SPACING / 2,
+  });
+
+  const handleEvent = (world: World, event: GameEvent) => {
+    switch (event.type) {
+      case 'destroyed': {
+        const at = center(event.target, views.get(event.target.id));
+        effects.splatter(at.x, at.y);
+        effects.popup(at.x, at.y - 30, `+${event.points}`);
+        break;
+      }
+      case 'marginHit':
+        effects.marginStain(MARGIN_X, event.target.y - LINE_SPACING / 2);
+        if (!reducedMotion) shakeMs = 300;
+        break;
+      case 'error': {
+        const target = world.targets.find((t) => t.id === event.targetId);
+        const at = target ? center(target, views.get(target.id)) : { x: nib.x + 30, y: nib.y };
+        effects.smudge(at.x, at.y);
+        if (!reducedMotion) wobbleMs = 180;
+        break;
+      }
+      case 'phase':
+        // A fresh page (or notebook) starts clean.
+        if (event.phase === 'playing' && (lastPhase === 'pageCleared' || lastPhase === 'gameOver')) {
+          effects.clearStains();
+        }
+        lastPhase = event.phase;
+        break;
+      case 'locked':
+      case 'progress':
+        break;
+    }
+  };
 
   return {
     app,
-    sync(state, alpha) {
+    sync(world, alpha, frameMs) {
+      for (const event of world.events) handleEvent(world, event);
+      world.events.length = 0;
+
+      // Targets.
       const live = new Set<number>();
-      for (const target of state.targets) {
+      let locked: { x: number; y: number } | null = null;
+      for (const target of world.targets) {
         live.add(target.id);
         let view = views.get(target.id);
         if (!view) {
@@ -146,7 +240,13 @@ export async function createRenderer(host: HTMLElement): Promise<Renderer> {
           views.set(target.id, view);
           targetLayer.addChild(view.root);
         }
-        view.root.position.set(renderX(target, alpha), target.y - LINE_SPACING / 2);
+        updateLabels(view, target);
+        const x = renderX(target, alpha);
+        const y = target.y - LINE_SPACING / 2;
+        view.root.position.set(x, y);
+        const isLocked = target.id === world.lockedId;
+        view.highlight.visible = isLocked;
+        if (isLocked) locked = { x, y };
       }
       for (const [id, view] of views) {
         if (!live.has(id)) {
@@ -154,6 +254,29 @@ export async function createRenderer(host: HTMLElement): Promise<Renderer> {
           views.delete(id);
         }
       }
+
+      // The Nib glides toward the locked target's line and points at it.
+      const goalY = locked ? Math.min(Math.max(locked.y, FIRST_LINE_Y), WORLD_HEIGHT - LINE_SPACING) : NIB_HOME.y;
+      nib.y = approach(nib.y, goalY, 10, frameMs);
+      const goalAngle = locked ? Math.atan2(locked.y - nib.y, locked.x - nib.x) : 0;
+      nib.rotation = approach(nib.rotation, Math.max(-0.7, Math.min(0.7, goalAngle)), 14, frameMs);
+
+      shakeMs = Math.max(0, shakeMs - frameMs);
+      wobbleMs = Math.max(0, wobbleMs - frameMs);
+      nib.x = NIB_HOME.x + (shakeMs > 0 ? Math.sin(shakeMs / 18) * 6 * (shakeMs / 300) : 0);
+      if (wobbleMs > 0) nib.rotation += Math.sin(wobbleMs / 15) * 0.12 * (wobbleMs / 180);
+
+      // Thin pencil guide line from the nib tip to the locked target.
+      guide.clear();
+      if (locked) {
+        const tipX = nib.x + Math.cos(nib.rotation) * NIB_LENGTH;
+        const tipY = nib.y + Math.sin(nib.rotation) * NIB_LENGTH;
+        guide.moveTo(tipX, tipY).lineTo(locked.x, locked.y).stroke({ width: 1.5, color: COLORS.pencil, alpha: 0.35 });
+      }
+
+      effects.update(frameMs);
+      hud.update(world);
+      overlay.update(world);
     },
     destroy() {
       app.destroy(true, { children: true });

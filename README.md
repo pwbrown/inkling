@@ -7,6 +7,18 @@ No servers and no analytics. Everything stays on your device.
 - Requirements: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
 
+## How to play
+
+Type the character on each ink drip before it reaches the red margin. Each drip that gets through drains your ink well, and the game ends when it runs dry. Correct keys in a row build a score multiplier, up to ×4.
+
+| Key | Action |
+|---|---|
+| Characters | Hit the matching target closest to the margin |
+| Enter | Start, turn the page, or start a new notebook |
+| Esc | Pause or resume (the game also pauses when the window loses focus) |
+
+Until key selection arrives, you practice the home row: `a s d f g h j k l ;`.
+
 ## Development
 
 Requires Node 20+ (CI uses Node 24).
@@ -25,8 +37,10 @@ Build for a GitHub Pages project site with `INKLING_BASE=/inkling/ npm run build
 
 | Path | What lives there |
 |---|---|
-| `src/core/` | Pure game logic (loop, world state). No DOM or Pixi, so it's unit tested with Vitest. |
-| `src/render/` | PixiJS rendering. Reads game state, never changes it. |
+| `src/core/` | Pure game logic (loop, world, typing/targeting, stats, tuning config). No DOM or Pixi, so it's unit tested with Vitest. |
+| `src/input/` | DOM keyboard listener that turns key presses into game actions. |
+| `src/i18n/` | UI strings and the `t()` lookup (English only for now). |
+| `src/render/` | PixiJS rendering: page, targets, Nib, effects, HUD and overlays. Reads game state, never changes it. |
 | `src/main.ts` | Wires the fixed-timestep loop to the renderer. |
 
 ## License
