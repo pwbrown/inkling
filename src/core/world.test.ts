@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createContentSource } from '../content/contentSource';
 import { GAME_CONFIG } from './config';
 import {
   MARGIN_X,
@@ -9,6 +10,7 @@ import {
   laneCount,
   laneY,
   renderX,
+  setContent,
   spawnTarget,
   stepWorld,
   type World,
@@ -157,6 +159,16 @@ describe('world', () => {
     spawnTarget(world, { text: 'a', lane: 0, x: 600 });
     const next = spawnTarget(world)!;
     expect(next.text).toBe('b');
+  });
+
+  it('only changes keys on the new-notebook screen', () => {
+    const world = createWorld({ keys: ['a'] });
+    setContent(world, createContentSource({ keys: ['1', '2'] }));
+    expect(world.keys).toEqual(['1', '2']);
+
+    world.phase = 'playing';
+    setContent(world, createContentSource({ keys: ['x'] }));
+    expect(world.keys).toEqual(['1', '2']);
   });
 
   it('counts play time on both the notebook and the page', () => {

@@ -24,12 +24,18 @@ export interface OverlayContent {
   title: string;
   lines: string[];
   options?: OverlayOption[];
+  /** An extra clickable link under the options (e.g. "Change keys"). */
+  link?: string;
   prompt: string;
 }
 
+/** Click handlers and lookups the overlay needs from the app. */
 export interface OverlayActions {
   onPick(difficulty: Difficulty): void;
   onConfirm(): void;
+  onOpenKeys(): void;
+  /** Short name for a key set, e.g. "Home row" or "Custom". */
+  describeKeys(keys: readonly string[]): string;
 }
 
 function statLines(stats: Stats): string[] {
@@ -50,7 +56,10 @@ export function difficultyLabel(difficulty: Difficulty): string {
 }
 
 /** What the card shows for the current phase, or null while playing. */
-export function overlayContent(world: World): OverlayContent | null {
+export function overlayContent(
+  world: World,
+  describeKeys: (keys: readonly string[]) => string = () => t('preset.custom'),
+): OverlayContent | null {
   const chapter = world.page.chapter + 1;
   const page = world.page.index + 1;
 
@@ -58,13 +67,18 @@ export function overlayContent(world: World): OverlayContent | null {
     case 'ready':
       return {
         title: t('overlay.ready.title'),
-        lines: [t('overlay.ready.body'), t('overlay.ready.choose')],
+        lines: [
+          t('overlay.ready.body'),
+          t('overlay.ready.keys', { preset: describeKeys(world.keys), count: world.keys.length }),
+          t('overlay.ready.choose'),
+        ],
         options: DIFFICULTIES.map((id) => ({
           id,
           label: difficultyLabel(id),
           description: t(`difficulty.${id}.description` as MessageKey),
           selected: id === world.selectedDifficulty,
         })),
+        link: t('overlay.ready.changeKeys'),
         prompt: t('overlay.ready.prompt'),
       };
     case 'paused':
@@ -105,6 +119,7 @@ export class Overlay {
   private readonly body: Text;
   private readonly prompt: Text;
   private readonly optionsLayer = new Container();
+  private readonly link: Text;
   /** Rebuild only when what's shown changes. */
   private shownKey: string | null = null;
 
@@ -129,17 +144,25 @@ export class Overlay {
     this.prompt.eventMode = 'static';
     this.prompt.cursor = 'pointer';
     this.prompt.on('pointertap', () => this.actions.onConfirm());
+    this.link = new Text({
+      text: '',
+      style: { fontFamily: TEXT_FONT, fontSize: 17, fontWeight: '600', fill: COLORS.inkLight, fontStyle: 'italic' },
+    });
+    this.link.anchor.set(0.5, 0);
+    this.link.eventMode = 'static';
+    this.link.cursor = 'pointer';
+    this.link.on('pointertap', () => this.actions.onOpenKeys());
     for (const node of [this.title, this.body, this.prompt]) node.anchor.set(0.5, 0);
-    this.root.addChild(backdrop, this.card, this.title, this.body, this.optionsLayer, this.prompt);
+    this.root.addChild(backdrop, this.card, this.title, this.body, this.optionsLayer, this.link, this.prompt);
     this.root.visible = false;
   }
 
   update(world: World): void {
-    const key = `${world.phase}|${world.selectedDifficulty}`;
+    const key = `${world.phase}|${world.selectedDifficulty}|${world.keys.join('')}`;
     if (key === this.shownKey) return;
     this.shownKey = key;
 
-    const content = overlayContent(world);
+    const content = overlayContent(world, this.actions.describeKeys);
     this.root.visible = content !== null;
     if (!content) return;
 
@@ -150,7 +173,11 @@ export class Overlay {
 
     const options = content.options ?? [];
     const optionsHeight = options.length > 0 ? options.length * OPTION_HEIGHT + 12 : 0;
-    const height = PAD + this.title.height + 14 + this.body.height + 16 + optionsHeight + 16 + this.prompt.height + PAD;
+    this.link.text = content.link ?? '';
+    this.link.visible = Boolean(content.link);
+    const linkHeight = content.link ? this.link.height + 14 : 0;
+    const height =
+      PAD + this.title.height + 14 + this.body.height + 16 + optionsHeight + linkHeight + 16 + this.prompt.height + PAD;
     const left = (WORLD_WIDTH - CARD_WIDTH) / 2;
     const top = (WORLD_HEIGHT - height) / 2;
     const cx = WORLD_WIDTH / 2;
@@ -171,7 +198,8 @@ export class Overlay {
       this.optionsLayer.addChild(this.createOption(option, i, left + PAD, optionsTop + i * OPTION_HEIGHT));
     });
 
-    this.prompt.position.set(cx, optionsTop + optionsHeight + (options.length > 0 ? 4 : 0));
+    this.link.position.set(cx, optionsTop + optionsHeight);
+    this.prompt.position.set(cx, optionsTop + optionsHeight + linkHeight + (options.length > 0 ? 4 : 0));
   }
 
   private createOption(option: OverlayOption, index: number, x: number, y: number): Container {

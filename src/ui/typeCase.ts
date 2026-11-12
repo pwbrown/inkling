@@ -1,0 +1,301 @@
+/**
+ * The Type Case: the key-selection screen (REQUIREMENTS §5, DESIGN §4).
+ *
+ * Plain DOM rather than PixiJS (REQUIREMENTS §7), so it works with screen
+ * readers and keyboard navigation. Each key cap has two buttons: its Shift
+ * character on top and its plain character below.
+ */
+import './typeCase.css';
+import type { KeyboardLayout, LayoutKey } from '../content/layouts/types';
+import {
+  REGIONS,
+  matchingPreset,
+  orderedSelection,
+  regionChars,
+  regionState,
+  toggleRegion,
+  type Preset,
+} from '../core/keySelection';
+import { formatNumber, t, type MessageKey } from '../i18n';
+import { h } from './dom';
+
+export interface TypeCaseOptions {
+  layout: KeyboardLayout;
+  builtInPresets: readonly Preset[];
+  customPresets: readonly Preset[];
+  /** Currently selected characters. */
+  initial: readonly string[];
+  /** Number of dictionary words the keys can make. */
+  countWords(keys: readonly string[]): number;
+  /** Below this many words, warn that made-up strings will be mixed in. */
+  minWords: number;
+  onDone(keys: string[]): void;
+  onCancel(): void;
+  /** Save the current selection as a named preset. Returns the new preset. */
+  onSavePreset(name: string, keys: string[]): Preset;
+  onDeletePreset(id: string): void;
+}
+
+export interface TypeCaseHandle {
+  close(): void;
+}
+
+/** What the player sees on a key cap. */
+export function capLabel(ch: string): string {
+  return ch === ' ' ? t('typeCase.space') : ch;
+}
+
+export function presetName(preset: Preset): string {
+  return preset.builtIn ? t(`preset.${preset.id}` as MessageKey) : (preset.name ?? '');
+}
+
+export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeCaseHandle {
+  const { layout } = options;
+  let selection = new Set(options.initial);
+  let custom = [...options.customPresets];
+  const previousFocus = document.activeElement as HTMLElement | null;
+
+  /** Every character button, for refreshing their pressed state. */
+  const charButtons = new Map<string, HTMLButtonElement[]>();
+  const regionButtons = new Map<string, HTMLButtonElement>();
+
+  const summary = h('p', { className: 'tc-summary', 'aria-live': 'polite' });
+  const warning = h('p', { className: 'tc-warning', 'aria-live': 'polite' });
+  const presetList = h('div', { className: 'tc-chips', role: 'group', 'aria-label': t('typeCase.presets') });
+  const customList = h('div', { className: 'tc-chips', role: 'group', 'aria-label': t('typeCase.yourPresets') });
+  const customSection = h('div', { className: 'tc-custom' });
+  const doneButton = h('button', { type: 'button', className: 'tc-primary', onClick: () => done() }, [t('typeCase.done')]);
+  const nameInput = h('input', {
+    type: 'text',
+    className: 'tc-name',
+    maxlength: 40,
+    placeholder: t('typeCase.savePlaceholder'),
+    'aria-label': t('typeCase.savePlaceholder'),
+  });
+
+  const set = (next: Set<string>) => {
+    selection = next;
+    refresh();
+  };
+
+  const toggleChar = (ch: string) => {
+    const next = new Set(selection);
+    if (next.has(ch)) next.delete(ch);
+    else next.add(ch);
+    set(next);
+  };
+
+  // --- Key caps ---------------------------------------------------------------
+
+  const charButton = (ch: string, part: 'base' | 'shift' | 'solo') => {
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        className: `tc-char tc-${part}`,
+        'aria-label': t('typeCase.key', { char: capLabel(ch) }),
+        onClick: () => toggleChar(ch),
+      },
+      [capLabel(ch)],
+    );
+    const list = charButtons.get(ch) ?? [];
+    list.push(button);
+    charButtons.set(ch, list);
+    return button;
+  };
+
+  const keyCap = (key: LayoutKey) => {
+    const cap = h('div', { className: 'tc-key' });
+    if (key.width) cap.style.flexGrow = String(key.width);
+    if (key.shift) cap.append(charButton(key.shift, 'shift'));
+    cap.append(charButton(key.base, key.shift ? 'base' : 'solo'));
+    return cap;
+  };
+
+  const keyboard = h(
+    'div',
+    { className: 'tc-keyboard', role: 'group', 'aria-label': t('typeCase.keyboard') },
+    layout.rows.map((row, i) => h('div', { className: `tc-row tc-row-${i}` }, row.map(keyCap))),
+  );
+
+  // --- Regions and presets -------------------------------------------------
+
+  const regions = h(
+    'div',
+    { className: 'tc-chips', role: 'group', 'aria-label': t('typeCase.groups') },
+    REGIONS.map((region) => {
+      const chars = regionChars(layout, region);
+      const button = h(
+        'button',
+        { type: 'button', className: 'tc-chip', onClick: () => set(toggleRegion(selection, chars)) },
+        [t(`region.${region}` as MessageKey)],
+      );
+      regionButtons.set(region, button);
+      return button;
+    }),
+  );
+
+  const presetChip = (preset: Preset) =>
+    h('button', { type: 'button', className: 'tc-chip', 'data-preset': preset.id, onClick: () => set(new Set(preset.chars)) }, [
+      presetName(preset),
+    ]);
+
+  for (const preset of options.builtInPresets) presetList.append(presetChip(preset));
+
+  const renderCustom = () => {
+    customList.replaceChildren(
+      ...custom.map((preset) =>
+        h('span', { className: 'tc-custom-chip' }, [
+          presetChip(preset),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'tc-delete',
+              'aria-label': t('typeCase.delete', { name: presetName(preset) }),
+              onClick: () => {
+                options.onDeletePreset(preset.id);
+                custom = custom.filter((p) => p.id !== preset.id);
+                renderCustom();
+                refresh();
+              },
+            },
+            ['×'],
+          ),
+        ]),
+      ),
+    );
+    customSection.hidden = custom.length === 0;
+  };
+
+  const saveForm = h(
+    'form',
+    {
+      className: 'tc-save',
+      onSubmit: (event) => {
+        event.preventDefault();
+        const name = nameInput.value.trim();
+        if (!name || selection.size === 0) return;
+        custom = [...custom, options.onSavePreset(name, orderedSelection(layout, selection))];
+        nameInput.value = '';
+        renderCustom();
+        refresh();
+      },
+    },
+    [nameInput, h('button', { type: 'submit', className: 'tc-secondary' }, [t('typeCase.save')])],
+  );
+
+  customSection.append(h('h3', {}, [t('typeCase.yourPresets')]), customList);
+
+  // --- Layout ---------------------------------------------------------------
+
+  const panel = h('div', { className: 'tc-panel' }, [
+    h('header', {}, [h('h2', { id: 'tc-title' }, [t('typeCase.title')]), h('p', { className: 'tc-intro' }, [t('typeCase.intro')])]),
+    h('section', {}, [h('h3', {}, [t('typeCase.presets')]), presetList, customSection]),
+    keyboard,
+    h('section', {}, [h('h3', {}, [t('typeCase.groups')]), regions]),
+    h('footer', {}, [
+      h('div', { className: 'tc-status' }, [summary, warning]),
+      saveForm,
+      h('div', { className: 'tc-actions' }, [
+        h('button', { type: 'button', className: 'tc-secondary', onClick: () => set(new Set()) }, [t('typeCase.clear')]),
+        h('button', { type: 'button', className: 'tc-secondary', onClick: () => cancel() }, [t('typeCase.cancel')]),
+        doneButton,
+      ]),
+    ]),
+  ]);
+
+  const root = h('div', { className: 'type-case', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tc-title' }, [panel]);
+
+  // --- State → DOM ----------------------------------------------------------
+
+  function refresh() {
+    for (const [ch, buttons] of charButtons) {
+      for (const button of buttons) button.setAttribute('aria-pressed', String(selection.has(ch)));
+    }
+    for (const region of REGIONS) {
+      const state = regionState(selection, regionChars(layout, region));
+      regionButtons.get(region)?.setAttribute('aria-pressed', state === 'all' ? 'true' : state === 'some' ? 'mixed' : 'false');
+    }
+    const active = matchingPreset([...options.builtInPresets, ...custom], selection);
+    for (const chip of root.querySelectorAll<HTMLButtonElement>('[data-preset]')) {
+      chip.setAttribute('aria-pressed', String(chip.dataset.preset === active?.id));
+    }
+
+    const keys = [...selection];
+    const words = options.countWords(keys);
+    summary.textContent = t('typeCase.summary', { keys: formatNumber(keys.length), words: formatNumber(words) });
+    warning.textContent =
+      keys.length === 0
+        ? t('typeCase.warnEmpty')
+        : words === 0
+          ? t('typeCase.warnNoWords')
+          : words < options.minWords
+            ? t('typeCase.warnFewWords')
+            : '';
+    doneButton.disabled = keys.length === 0;
+  }
+
+  // --- Keyboard -------------------------------------------------------------
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancel();
+      return;
+    }
+    if (event.key === 'Tab') {
+      trapFocus(event);
+      return;
+    }
+    // Pressing a key on the real keyboard toggles it, unless typing a preset name
+    // or pressing Space/Enter to activate a focused button.
+    const target = event.target as HTMLElement;
+    if (target instanceof HTMLInputElement) return;
+    if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+    if ((event.key === ' ' || event.key === 'Enter') && target instanceof HTMLButtonElement) return;
+    if ([...event.key].length === 1 && (selection.has(event.key) || charButtons.has(event.key))) {
+      event.preventDefault();
+      toggleChar(event.key);
+    }
+  };
+
+  function trapFocus(event: KeyboardEvent) {
+    const focusable = [...root.querySelectorAll<HTMLElement>('button:not([disabled]), input')];
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function close() {
+    root.removeEventListener('keydown', onKeyDown);
+    root.remove();
+    previousFocus?.focus?.();
+  }
+
+  function done() {
+    if (selection.size === 0) return;
+    close();
+    options.onDone(orderedSelection(layout, selection));
+  }
+
+  function cancel() {
+    close();
+    options.onCancel();
+  }
+
+  root.addEventListener('keydown', onKeyDown);
+  renderCustom();
+  refresh();
+  host.append(root);
+  (presetList.querySelector<HTMLButtonElement>('[aria-pressed="true"]') ?? presetList.querySelector('button'))?.focus();
+
+  return { close };
+}

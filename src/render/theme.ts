@@ -23,6 +23,11 @@ export function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+/** How to show a character on a target: space gets a visible symbol. */
+export function glyph(text: string): string {
+  return text === ' ' ? '␣' : text;
+}
+
 /** How to show a key in UI text. */
 export function keyLabel(key: string): string {
   return key === ' ' ? 'Space' : key;

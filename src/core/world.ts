@@ -167,6 +167,16 @@ export function createWorld(options: WorldOptions = {}): World {
   };
 }
 
+/**
+ * Switch to a new key set (from the Type Case). Only allowed on the
+ * new-notebook screen; the next notebook uses it.
+ */
+export function setContent(world: World, content: ContentSource): void {
+  if (world.phase !== 'ready') return;
+  world.content = content;
+  world.keys = content.keys;
+}
+
 export function setPhase(world: World, phase: GamePhase): void {
   if (world.phase === phase) return;
   world.phase = phase;

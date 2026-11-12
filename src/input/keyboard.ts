@@ -22,9 +22,18 @@ export function isPrintable(key: string): boolean {
   return [...key].length === 1;
 }
 
-/** Starts listening on `target`. Returns a function that stops listening. */
-export function bindKeyboard(target: Window, handlers: KeyboardHandlers): () => void {
+/**
+ * Starts listening on `target`. Returns a function that stops listening.
+ * While `isSuspended()` is true (e.g. a menu screen is open) keys are left
+ * for that screen to handle.
+ */
+export function bindKeyboard(
+  target: Window,
+  handlers: KeyboardHandlers,
+  isSuspended: () => boolean = () => false,
+): () => void {
   const onKeyDown = (event: KeyboardEvent) => {
+    if (isSuspended() || event.defaultPrevented) return;
     // Leave browser and OS shortcuts alone. AltGr layouts are a later concern (REQUIREMENTS §11).
     if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
 

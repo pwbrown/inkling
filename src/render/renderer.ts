@@ -21,7 +21,7 @@ import {
 import { Effects } from './effects';
 import { Hud } from './hud';
 import { Overlay, type OverlayActions } from './overlay';
-import { COLORS, TEXT_FONT, prefersReducedMotion } from './theme';
+import { COLORS, TEXT_FONT, glyph, prefersReducedMotion } from './theme';
 
 const NIB_LENGTH = 56;
 const NIB_HOME = { x: MARGIN_X - 90, y: WORLD_HEIGHT / 2 };
@@ -83,7 +83,7 @@ function createTargetView(target: Target): TargetView {
   const isDrip = target.kind === 'drip';
   const fontSize = isDrip ? 24 : 26;
   const typedLabel = new Text({ text: '', style: labelStyle(COLORS.inkFaded, fontSize) });
-  const restLabel = new Text({ text: target.text, style: labelStyle(COLORS.label, fontSize) });
+  const restLabel = new Text({ text: glyph(target.text), style: labelStyle(COLORS.label, fontSize) });
   typedLabel.anchor.set(0, 0.5);
   restLabel.anchor.set(0, 0.5);
 

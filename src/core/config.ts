@@ -13,10 +13,10 @@
  */
 
 /**
- * Default practice keys until the Type Case (key selection) arrives in
- * milestone 5: the home row, the usual first lesson (DESIGN §4).
+ * Keys a brand-new player starts with: the home row, the usual first lesson
+ * (DESIGN §4). Matches the "Home row" preset in keySelection.ts.
  */
-export const DEFAULT_KEYS: readonly string[] = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'];
+export const DEFAULT_KEYS: readonly string[] = [...'asdfghjkl;'];
 
 export type TargetKind = 'drip' | 'blotling';
 

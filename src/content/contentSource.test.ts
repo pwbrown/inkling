@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Blocklist } from './blocklist';
-import { MIN_WORD_POOL, createContentSource } from './contentSource';
+import { MIN_WORD_POOL, countTypeableWords, createContentSource, styleWord, wordLetters } from './contentSource';
 import { entriesFromTiers } from './wordPool';
 
 const counter = () => {
@@ -38,5 +38,40 @@ describe('content source', () => {
       blocklist: new Blocklist(['darn', 'heck']),
     });
     expect(content.wordCount).toBe(1);
+  });
+});
+
+describe('capitals and punctuation', () => {
+  it('treats a letter as usable when either case is selected', () => {
+    expect([...wordLetters(['a', 'B', '1', ';'])].sort()).toEqual(['a', 'b']);
+  });
+
+  it('counts words for any mix of cases', () => {
+    const words = entriesFromTiers(['cab bad dab ace']);
+    expect(countTypeableWords(words, ['a', 'b', 'c', 'd'])).toBe(3);
+    expect(countTypeableWords(words, ['A', 'B', 'C', 'D'])).toBe(3);
+    expect(countTypeableWords(words, ['1'])).toBe(0);
+  });
+
+  it('types letters only selected as capitals in capitals', () => {
+    expect(styleWord('cab', new Set(['C', 'A', 'B']), () => 0.99)).toBe('CAB');
+    expect(styleWord('cab', new Set(['c', 'A', 'b']), () => 0.99)).toBe('cAb');
+  });
+
+  it('sometimes capitalizes the first letter when both cases are selected', () => {
+    const keys = new Set(['c', 'C', 'a', 'b']);
+    expect(styleWord('cab', keys, () => 0)).toBe('Cab');
+    expect(styleWord('cab', keys, () => 0.99)).toBe('cab');
+  });
+
+  it('adds trailing punctuation only from selected keys', () => {
+    const words = Array.from({ length: MIN_WORD_POOL }, (_, i) => 'ab'.repeat(1 + (i % 4)) + 'a'.repeat(i));
+    const content = createContentSource({ keys: ['a', 'b', ',', '!'], words: entriesFromTiers([words.join(' ')]) });
+    let i = 0;
+    const random = () => [0.5, 0.1, 0.0, 0.5, 0.6][i++ % 5]!;
+    const results = Array.from({ length: 40 }, () => content.nextWord(0.5, random));
+    const endings = new Set(results.map((w) => w.at(-1)));
+    for (const end of endings) expect(['a', 'b', ',', '!']).toContain(end);
+    expect(results.some((w) => /[,!]$/.test(w))).toBe(true);
   });
 });

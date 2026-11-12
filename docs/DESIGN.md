@@ -126,7 +126,7 @@ Other names considered:
 ## 10. Open Design Questions
 
 - [x] Final name: **Inkling**.
-- [ ] Should the Apprentice path be the default for new players, with Free Case unlocked from the start?
+- [ ] Should the Apprentice path be the default for new players, with Free Case unlocked from the start? (Milestone 5 shipped Free Case only. Mastery inking and Apprentice suggestions need saved per-key stats, so they come after milestone 6.)
 - [ ] Does the page get messier from errors permanently within a chapter, or reset every page?
 - [ ] Is the Spill boss part of the MVP or post-MVP?
 - [ ] Ship night mode in the MVP?

@@ -15,10 +15,17 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 |---|---|
 | Characters | Hit the matching target closest to the margin |
 | ↑ ↓ or 1–4 | Choose a difficulty on the new-notebook screen (or click one) |
+| K | Open the **Type Case** from the new-notebook screen to choose which keys to practice |
 | Enter | Start a notebook, turn the page, or return to the new-notebook screen after running out of ink |
 | Esc | Pause or resume (the game also pauses when the window loses focus) |
 
-A notebook is a series of **chapters**, each made of a few **pages**. Each page is either all **drips** (single characters) or all **Blotlings** (words). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. All of these numbers live in `src/core/config.ts`. Until key selection arrives, you practice the home row: `a s d f g h j k l ;`, so Blotlings carry home-row words like *flask* and *glass*.
+A notebook is a series of **chapters**, each made of a few **pages**. Each page is either all **drips** (single characters) or all **Blotlings** (words). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. All of these numbers live in `src/core/config.ts`. 
+
+### Choosing keys
+
+The **Type Case** shows a keyboard where every key has two halves: its plain character below and its Shift character on top. Click a half, or press that key on your real keyboard, to add or remove it. You can also start from a preset (Home row, All letters, Numbers, Code symbols…), toggle whole groups (digits, top row, left hand…), or save your own presets. New players start on the home row (`a s d f g h j k l ;`).
+
+The game builds everything from your keys: drips use them directly, and word pages use real words that only need those letters. Selected capitals and punctuation show up in words too. If too few words fit, made-up strings are mixed in, and the Type Case warns you when that will happen.
 
 ## Development
 
