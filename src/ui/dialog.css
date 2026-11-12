@@ -1,6 +1,6 @@
-/* The Type Case: a letterpress drawer of keys (DESIGN §4). */
+/* Shared dialog styles (Type Case, Save data) and the Type Case drawer (DESIGN §4). */
 
-.type-case {
+.dialog {
   --tc-paper: #f7f1e3;
   --tc-ink: #1f2a44;
   --tc-ink-light: #3a4a6b;
@@ -57,13 +57,13 @@
   line-height: 1.45;
 }
 
-.type-case button {
+.dialog button {
   font: inherit;
   color: inherit;
   cursor: pointer;
 }
 
-.type-case :focus-visible {
+.dialog :focus-visible {
   outline: 3px solid var(--tc-margin);
   outline-offset: 2px;
 }
@@ -298,4 +298,46 @@
   .tc-chip {
     transition: background-color 120ms ease, color 120ms ease;
   }
+}
+
+/* Save data dialog. */
+.sd-panel {
+  width: min(620px, 100%);
+}
+
+.sd-row {
+  display: grid;
+  gap: 6px;
+  padding: 14px 0;
+  border-top: 1px solid var(--tc-rule);
+}
+
+.sd-row p,
+.sd-message {
+  margin: 0;
+  color: var(--tc-ink-light);
+  line-height: 1.45;
+}
+
+.sd-row button {
+  justify-self: start;
+}
+
+.sd-danger {
+  border-color: var(--tc-margin) !important;
+  color: var(--tc-margin) !important;
+}
+
+.sd-status {
+  margin: 0;
+  font-weight: 700;
+  min-height: 1.3em;
+}
+
+.sd-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }

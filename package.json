@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "words:build": "node scripts/build-words.ts"
+    "words:build": "node scripts/build-words.ts",
+    "icons": "python3 scripts/make-icons.py"
   },
   "dependencies": {
     "pixi.js": "^8.23.0"
@@ -26,12 +27,16 @@
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.19.2",
     "eslint": "^10.14.0",
+    "fake-indexeddb": "^6.2.8",
     "globals": "^17.14.0",
     "naughty-words": "^1.2.0",
     "typescript": "~6.0.0",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.1.0",
-    "wordlist-english": "^1.2.1"
+    "wordlist-english": "^1.2.1",
+    "workbox-build": "^7.4.1",
+    "workbox-window": "^7.4.1"
   }
 }

@@ -2,7 +2,7 @@
 
 A browser-based, offline-first typing game inspired by *Typer Shark*. Ink-blot creatures crawl across a notebook page carrying words, characters, digits or symbols, and you type them before they reach the margin. What makes it different is that **you choose exactly which keys to practice**, and the game builds all of its content from only those keys, so it grows with you as you learn.
 
-No servers and no analytics. Everything stays on your device.
+No servers and no analytics. Everything stays on your device (see [PRIVACY.md](PRIVACY.md)), and the game works offline after the first visit.
 
 - Requirements: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
@@ -16,6 +16,8 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | Characters | Hit the matching target closest to the margin |
 | ↑ ↓ or 1–4 | Choose a difficulty on the new-notebook screen (or click one) |
 | K | Open the **Type Case** from the new-notebook screen to choose which keys to practice |
+| C | Continue your saved notebook from the start of the page you reached |
+| B | Open **Save data**: export or import a backup, or erase everything |
 | Enter | Start a notebook, turn the page, or return to the new-notebook screen after running out of ink |
 | Esc | Pause or resume (the game also pauses when the window loses focus) |
 
@@ -26,6 +28,10 @@ A notebook is a series of **chapters**, each made of a few **pages**. Each page 
 The **Type Case** shows a keyboard where every key has two halves: its plain character below and its Shift character on top. Click a half, or press that key on your real keyboard, to add or remove it. You can also start from a preset (Home row, All letters, Numbers, Code symbols…), toggle whole groups (digits, top row, left hand…), or save your own presets. New players start on the home row (`a s d f g h j k l ;`).
 
 The game builds everything from your keys: drips use them directly, and word pages use real words that only need those letters. Selected capitals and punctuation show up in words too. If too few words fit, made-up strings are mixed in, and the Type Case warns you when that will happen.
+
+### Saving
+
+Your keys, presets, difficulty, best scores, per-key typing stats and notebook progress are saved in your browser (IndexedDB). Progress is saved at the start of each page, so **C** resumes from the page you reached. Drips show the keys you miss most a little more often.
 
 ## Development
 
@@ -42,13 +48,23 @@ npm run preview    # serve the production build locally
 
 Build for a GitHub Pages project site with `INKLING_BASE=/inkling/ npm run build`.
 
+### Deploying
+
+`.github/workflows/deploy.yml` builds and publishes to GitHub Pages on every push to `main`. One-time setup: in the GitHub repo, go to **Settings → Pages** and set **Source** to **GitHub Actions**. The build is a static site, so any static host works too.
+
+The service worker is only registered in production builds. Use `npm run build && npm run preview` to try offline mode locally.
+
+`npm run icons` (or `python3 scripts/make-icons.py`) redraws the app icons.
+
 ### Project layout
 
 | Path | What lives there |
 |---|---|
 | `src/core/` | Pure game logic (loop, world, typing/targeting, stats, tuning config). No DOM or Pixi, so it's unit tested with Vitest. |
 | `src/content/` | Word pool, fallback string generator, profanity guard, and per-locale content packs (`en/`). |
-| `scripts/` | Build-time tools, such as generating the word pack. |
+| `scripts/` | Build-time tools: the word pack and the app icons. |
+| `src/storage/` | Save format and migrations, IndexedDB storage, and progress tracking. |
+| `src/ui/` | DOM screens: the Type Case and Save data dialogs. |
 | `src/input/` | DOM keyboard listener that turns key presses into game actions. |
 | `src/i18n/` | UI strings and the `t()` lookup (English only for now). |
 | `src/render/` | PixiJS rendering: page, targets, Nib, effects, HUD and overlays. Reads game state, never changes it. |

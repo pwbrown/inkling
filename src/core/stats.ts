@@ -17,10 +17,12 @@ export interface Stats {
    * (REQUIREMENTS §9). It feeds weak-key focus and the graded page later.
    */
   missedKeys: Record<string, number>;
+  /** How often each character was typed correctly. Local only, like missedKeys. */
+  hitKeys: Record<string, number>;
 }
 
 export function createStats(): Stats {
-  return { correct: 0, errors: 0, score: 0, combo: 0, bestCombo: 0, destroyed: 0, playMs: 0, missedKeys: {} };
+  return { correct: 0, errors: 0, score: 0, combo: 0, bestCombo: 0, destroyed: 0, playMs: 0, missedKeys: {}, hitKeys: {} };
 }
 
 /** Accuracy from 0 to 1. Returns 1 before any keys are pressed. */

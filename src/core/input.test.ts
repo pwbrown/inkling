@@ -90,6 +90,7 @@ describe('typeChar', () => {
     expect(world.stats.errors).toBe(1);
     expect(world.stats.combo).toBe(0);
     expect(world.stats.missedKeys).toEqual({ n: 1 });
+    expect(world.stats.hitKeys).toEqual({ i: 1 });
   });
 
   it('blames a stray key on the most urgent target', () => {

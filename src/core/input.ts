@@ -76,6 +76,7 @@ export function typeChar(world: World, key: string): void {
   target.typed++;
   bothStats(world, (s) => {
     s.correct++;
+    s.hitKeys[key] = (s.hitKeys[key] ?? 0) + 1;
     s.combo++;
     s.bestCombo = Math.max(s.bestCombo, s.combo);
     s.score += GAME_CONFIG.points.perChar * multiplier(s.combo);

@@ -5,7 +5,7 @@
  * readers and keyboard navigation. Each key cap has two buttons: its Shift
  * character on top and its plain character below.
  */
-import './typeCase.css';
+import './dialog.css';
 import type { KeyboardLayout, LayoutKey } from '../content/layouts/types';
 import {
   REGIONS,
@@ -205,7 +205,7 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
     ]),
   ]);
 
-  const root = h('div', { className: 'type-case', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tc-title' }, [panel]);
+  const root = h('div', { className: 'dialog type-case', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tc-title' }, [panel]);
 
   // --- State → DOM ----------------------------------------------------------
 

@@ -263,5 +263,5 @@ Inkling is **open source** and will be **publicly hosted** as a static web app.
 - [x] Word-list source: SCOWL levels 10–50 (via `wordlist-english`) plus the LDNOOBW blocklist. See CREDITS.md.
 - [ ] Which API to use for the optional vocabulary fetch.
 - [ ] Confirm the code license (MIT vs GPL-3.0) and the art/audio license.
-- [ ] Pick the host and public repo/site name (§12).
+- [ ] Pick the public repo/site name (§12). Host: GitHub Pages via `.github/workflows/deploy.yml` (any static host works).
 - [ ] An endless or practice mode alongside the campaign?

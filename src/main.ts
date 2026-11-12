@@ -4,14 +4,25 @@ import './style.css';
 import { countTypeableWords, createContentSource, MIN_WORD_POOL } from './content/contentSource';
 import { loadEnglishPack } from './content/en';
 import { US_QWERTY } from './content/layouts/us-qwerty';
-import { DEFAULT_KEYS } from './core/config';
 import { autoPause, confirm, moveSelection, selectDifficulty, togglePause, typeChar } from './core/input';
 import { builtInPresets, matchingPreset, type Preset } from './core/keySelection';
 import { FixedStepLoop } from './core/loop';
-import { createWorld, setContent, stepWorld, type World } from './core/world';
-import { setLocale, t } from './i18n';
+import { createWorld, setContent, stepWorld, type GamePhase, type World } from './core/world';
+import { formatNumber, setLocale, t } from './i18n';
 import { bindKeyboard } from './input/keyboard';
+import { registerOffline } from './pwa';
+import { difficultyLabel, type OverlayLinkId } from './render/overlay';
 import { createRenderer } from './render/renderer';
+import {
+  continueNotebook,
+  keyWeights,
+  mergeKeyStats,
+  nextPagePosition,
+  recordResult,
+  snapshotNotebook,
+} from './storage/progress';
+import { openBackend, SaveStore } from './storage/store';
+import { openSaveData } from './ui/saveData';
 import { openTypeCase, presetName } from './ui/typeCase';
 
 async function main(): Promise<void> {
@@ -19,105 +30,227 @@ async function main(): Promise<void> {
   if (!host) throw new Error('#app element missing');
 
   setLocale(navigator.language);
+  registerOffline();
 
   const layout = US_QWERTY;
   const presets = builtInPresets(layout);
-  // Custom presets live in memory for now; milestone 6 saves them on the device.
-  let customPresets: Preset[] = [];
-  let typeCaseOpen = false;
+  const store = await SaveStore.open(await openBackend());
+
+  const customPresets = (): Preset[] => store.data.customPresets.map((p) => ({ ...p, builtIn: false }));
+  /** A menu screen (Type Case, Save data) is open and owns the keyboard. */
+  let dialogOpen = false;
+  /** Set when the last notebook ended with a new best score, for the game-over card. */
+  let newBest = false;
 
   const describeKeys = (keys: readonly string[]) => {
-    const preset = matchingPreset([...presets, ...customPresets], keys);
+    const preset = matchingPreset([...presets, ...customPresets()], keys);
     return preset ? presetName(preset) : t('preset.custom');
   };
 
-  // Assigned once the word pack loads; the overlay's click handlers only run after that.
+  // `world` is assigned once the word pack loads; the overlay's handlers only run after that.
   let world: World | null = null;
-  let openKeys = () => {};
-  const start = () => {
-    if (!world || typeCaseOpen) return;
-    confirm(world);
-    loop.reset();
-  };
+  const actions: { onLink: (id: OverlayLinkId) => void; start: () => void } = { onLink: () => {}, start: () => {} };
 
   const [pack, renderer] = await Promise.all([
     loadEnglishPack(),
     createRenderer(host, {
-      onPick: (difficulty) => world && !typeCaseOpen && selectDifficulty(world, difficulty),
-      onConfirm: start,
-      onOpenKeys: () => openKeys(),
+      onPick: (difficulty) => world && !dialogOpen && selectDifficulty(world, difficulty),
+      onConfirm: () => actions.start(),
+      onLink: (id) => actions.onLink(id),
       describeKeys,
+      continueLabel: () => {
+        const saved = store.data.notebook;
+        return saved
+          ? t('overlay.ready.continue', {
+              difficulty: difficultyLabel(saved.difficulty),
+              chapter: saved.chapter + 1,
+              page: saved.page + 1,
+            })
+          : null;
+      },
+      extraLines: (w) => {
+        if (w.phase === 'gameOver') {
+          return newBest ? [t('overlay.gameOver.newBest', { difficulty: difficultyLabel(w.difficulty) })] : [];
+        }
+        if (w.phase !== 'ready') return [];
+        const d = w.selectedDifficulty;
+        const best = store.data.records.bestScore[d];
+        return best
+          ? [
+              t('overlay.ready.best', {
+                difficulty: difficultyLabel(d),
+                score: formatNumber(best),
+                chapter: store.data.records.furthestChapter[d] ?? 1,
+              }),
+            ]
+          : [];
+      },
     }),
   ]);
 
+  /** Content for a key set, weighted toward the player's weak keys. */
   const contentFor = (keys: readonly string[]) =>
-    createContentSource({ keys, words: pack.words, blocklist: pack.blocklist, trustedWords: true });
+    createContentSource({
+      keys,
+      words: pack.words,
+      blocklist: pack.blocklist,
+      trustedWords: true,
+      keyWeights: keyWeights(store.data.keyStats, keys),
+    });
 
-  const game = createWorld({ content: contentFor(DEFAULT_KEYS) });
+  const game = createWorld({ content: contentFor(store.data.keys), difficulty: store.data.difficulty });
   world = game;
   const loop = new FixedStepLoop((stepMs) => stepWorld(game, stepMs));
 
-  openKeys = () => {
-    if (typeCaseOpen || game.phase !== 'ready') return;
-    typeCaseOpen = true;
+  /** Re-read keys and difficulty from the save (after an import or erase). */
+  const applySave = () => {
+    setContent(game, contentFor(store.data.keys));
+    game.selectedDifficulty = store.data.difficulty;
+  };
+
+  actions.start = () => {
+    if (dialogOpen) return;
+    // Refresh weak-key weights from the latest stats before a new notebook.
+    if (game.phase === 'ready') setContent(game, contentFor(game.keys));
+    confirm(game);
+    loop.reset();
+  };
+
+  const continueSaved = () => {
+    const saved = store.data.notebook;
+    if (dialogOpen || game.phase !== 'ready' || !saved) return;
+    setContent(game, contentFor(game.keys));
+    continueNotebook(game, saved);
+    loop.reset();
+  };
+
+  const openKeys = () => {
+    if (dialogOpen || game.phase !== 'ready') return;
+    dialogOpen = true;
     openTypeCase(document.body, {
       layout,
       builtInPresets: presets,
-      customPresets,
+      customPresets: customPresets(),
       initial: game.keys,
       countWords: (keys) => countTypeableWords(pack.words, keys),
       minWords: MIN_WORD_POOL,
       onDone: (keys) => {
-        typeCaseOpen = false;
+        dialogOpen = false;
         setContent(game, contentFor(keys));
+        store.update((save) => {
+          save.keys = [...keys];
+        });
       },
       onCancel: () => {
-        typeCaseOpen = false;
+        dialogOpen = false;
       },
       onSavePreset: (name, keys) => {
-        const preset: Preset = { id: `custom-${Date.now()}`, name, chars: keys, builtIn: false };
-        customPresets = [...customPresets, preset];
-        return preset;
+        const preset = { id: `custom-${Date.now()}`, name, chars: [...keys] };
+        store.update((save) => {
+          save.customPresets.push(preset);
+        });
+        return { ...preset, builtIn: false };
       },
       onDeletePreset: (id) => {
-        customPresets = customPresets.filter((p) => p.id !== id);
+        store.update((save) => {
+          save.customPresets = save.customPresets.filter((p) => p.id !== id);
+        });
       },
     });
   };
+
+  const openSaves = () => {
+    if (dialogOpen || game.phase !== 'ready') return;
+    dialogOpen = true;
+    openSaveData(document.body, {
+      store,
+      onImported: applySave,
+      onErased: applySave,
+      onClose: () => {
+        dialogOpen = false;
+      },
+    });
+  };
+
+  actions.onLink = (id) => {
+    if (id === 'continue') continueSaved();
+    else if (id === 'keys') openKeys();
+    else openSaves();
+  };
+
+  /** Save progress when the game moves between screens (REQUIREMENTS §8). */
+  const onPhase = (phase: GamePhase) => {
+    switch (phase) {
+      case 'playing':
+        // A fresh notebook: remember it and its difficulty right away.
+        if (game.page.chapter === 0 && game.page.index === 0 && game.stats.playMs === 0) {
+          newBest = false;
+          store.update((save) => {
+            save.difficulty = game.difficulty;
+            save.notebook = snapshotNotebook(game);
+          });
+        }
+        break;
+      case 'pageCleared':
+        store.update((save) => {
+          mergeKeyStats(save, game.pageStats);
+          recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);
+          save.notebook = snapshotNotebook(game, nextPagePosition(game.page));
+        });
+        break;
+      case 'gameOver':
+        store.update((save) => {
+          mergeKeyStats(save, game.pageStats);
+          newBest = recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);
+          save.notebook = null;
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const shortcuts: Record<string, () => void> = { k: openKeys, b: openSaves, c: continueSaved };
 
   bindKeyboard(
     window,
     {
       onChar: (char) => {
-        // K opens the Type Case from the new-notebook screen.
-        if (game.phase === 'ready' && char.toLowerCase() === 'k') openKeys();
+        const shortcut = game.phase === 'ready' ? shortcuts[char.toLowerCase()] : undefined;
+        if (shortcut) shortcut();
         else typeChar(game, char);
       },
-      onConfirm: start,
+      onConfirm: () => actions.start(),
       onNavigate: (delta) => moveSelection(game, delta),
       onPause: () => {
         togglePause(game);
         loop.reset();
       },
     },
-    () => typeCaseOpen,
+    () => dialogOpen,
   );
 
-  // Pause when the player looks away (REQUIREMENTS §10).
+  // Pause when the player looks away (REQUIREMENTS §10), and make sure the save is written.
   window.addEventListener('blur', () => autoPause(game));
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) autoPause(game);
+    if (document.hidden) {
+      autoPause(game);
+      void store.flush();
+    }
     loop.reset();
   });
+  window.addEventListener('pagehide', () => void store.flush());
 
   renderer.app.ticker.add((ticker) => {
     const alpha = loop.advance(ticker.deltaMS);
+    // Look at phase changes before the renderer consumes the events.
+    for (const event of game.events) if (event.type === 'phase') onPhase(event.phase);
     renderer.sync(game, alpha, ticker.deltaMS);
   });
 
   if (import.meta.env.DEV) {
     // Handy for poking at state from the console during development.
-    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, openKeys: () => openKeys() };
+    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, openKeys, openSaves };
   }
 }
 

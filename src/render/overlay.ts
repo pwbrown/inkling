@@ -20,23 +20,44 @@ export interface OverlayOption {
   selected: boolean;
 }
 
+export type OverlayLinkId = 'continue' | 'keys' | 'saveData';
+
+export interface OverlayLink {
+  id: OverlayLinkId;
+  label: string;
+}
+
 export interface OverlayContent {
   title: string;
   lines: string[];
   options?: OverlayOption[];
-  /** An extra clickable link under the options (e.g. "Change keys"). */
-  link?: string;
+  /** Clickable links under the options (e.g. "Change keys"). */
+  links?: OverlayLink[];
   prompt: string;
 }
 
-/** Click handlers and lookups the overlay needs from the app. */
-export interface OverlayActions {
-  onPick(difficulty: Difficulty): void;
-  onConfirm(): void;
-  onOpenKeys(): void;
+/** App state the overlay shows that isn't part of the game world (it comes from the save). */
+export interface OverlayContext {
   /** Short name for a key set, e.g. "Home row" or "Custom". */
   describeKeys(keys: readonly string[]): string;
+  /** "Continue …" label when a saved notebook can be resumed, else null. */
+  continueLabel(): string | null;
+  /** Extra lines for a screen, e.g. best score or "New best score!". */
+  extraLines(world: World): string[];
 }
+
+/** Click handlers and lookups the overlay needs from the app. */
+export interface OverlayActions extends OverlayContext {
+  onPick(difficulty: Difficulty): void;
+  onConfirm(): void;
+  onLink(id: OverlayLinkId): void;
+}
+
+const NO_CONTEXT: OverlayContext = {
+  describeKeys: () => t('preset.custom'),
+  continueLabel: () => null,
+  extraLines: () => [],
+};
 
 function statLines(stats: Stats): string[] {
   const lines = [
@@ -56,12 +77,10 @@ export function difficultyLabel(difficulty: Difficulty): string {
 }
 
 /** What the card shows for the current phase, or null while playing. */
-export function overlayContent(
-  world: World,
-  describeKeys: (keys: readonly string[]) => string = () => t('preset.custom'),
-): OverlayContent | null {
+export function overlayContent(world: World, context: OverlayContext = NO_CONTEXT): OverlayContent | null {
   const chapter = world.page.chapter + 1;
   const page = world.page.index + 1;
+  const extra = context.extraLines(world);
 
   switch (world.phase) {
     case 'ready':
@@ -69,7 +88,8 @@ export function overlayContent(
         title: t('overlay.ready.title'),
         lines: [
           t('overlay.ready.body'),
-          t('overlay.ready.keys', { preset: describeKeys(world.keys), count: world.keys.length }),
+          t('overlay.ready.keys', { preset: context.describeKeys(world.keys), count: world.keys.length }),
+          ...extra,
           t('overlay.ready.choose'),
         ],
         options: DIFFICULTIES.map((id) => ({
@@ -78,7 +98,11 @@ export function overlayContent(
           description: t(`difficulty.${id}.description` as MessageKey),
           selected: id === world.selectedDifficulty,
         })),
-        link: t('overlay.ready.changeKeys'),
+        links: [
+          ...(context.continueLabel() ? [{ id: 'continue' as const, label: context.continueLabel()! }] : []),
+          { id: 'keys', label: t('overlay.ready.changeKeys') },
+          { id: 'saveData', label: t('overlay.ready.saveData') },
+        ],
         prompt: t('overlay.ready.prompt'),
       };
     case 'paused':
@@ -104,6 +128,7 @@ export function overlayContent(
         lines: [
           t('overlay.gameOver.reached', { difficulty: difficultyLabel(world.difficulty), chapter, page }),
           ...statLines(world.stats),
+          ...extra,
         ],
         prompt: t('overlay.gameOver.prompt'),
       };
@@ -119,7 +144,7 @@ export class Overlay {
   private readonly body: Text;
   private readonly prompt: Text;
   private readonly optionsLayer = new Container();
-  private readonly link: Text;
+  private readonly linksLayer = new Container();
   /** Rebuild only when what's shown changes. */
   private shownKey: string | null = null;
 
@@ -144,25 +169,22 @@ export class Overlay {
     this.prompt.eventMode = 'static';
     this.prompt.cursor = 'pointer';
     this.prompt.on('pointertap', () => this.actions.onConfirm());
-    this.link = new Text({
-      text: '',
-      style: { fontFamily: TEXT_FONT, fontSize: 17, fontWeight: '600', fill: COLORS.inkLight, fontStyle: 'italic' },
-    });
-    this.link.anchor.set(0.5, 0);
-    this.link.eventMode = 'static';
-    this.link.cursor = 'pointer';
-    this.link.on('pointertap', () => this.actions.onOpenKeys());
     for (const node of [this.title, this.body, this.prompt]) node.anchor.set(0.5, 0);
-    this.root.addChild(backdrop, this.card, this.title, this.body, this.optionsLayer, this.link, this.prompt);
+    this.root.addChild(backdrop, this.card, this.title, this.body, this.optionsLayer, this.linksLayer, this.prompt);
     this.root.visible = false;
   }
 
   update(world: World): void {
-    const key = `${world.phase}|${world.selectedDifficulty}|${world.keys.join('')}`;
+    if (world.phase === 'playing') {
+      this.root.visible = false;
+      this.shownKey = null;
+      return;
+    }
+    // Menus are cheap to describe, so compare the content itself.
+    const content = overlayContent(world, this.actions);
+    const key = JSON.stringify(content);
     if (key === this.shownKey) return;
     this.shownKey = key;
-
-    const content = overlayContent(world, this.actions.describeKeys);
     this.root.visible = content !== null;
     if (!content) return;
 
@@ -173,11 +195,9 @@ export class Overlay {
 
     const options = content.options ?? [];
     const optionsHeight = options.length > 0 ? options.length * OPTION_HEIGHT + 12 : 0;
-    this.link.text = content.link ?? '';
-    this.link.visible = Boolean(content.link);
-    const linkHeight = content.link ? this.link.height + 14 : 0;
+    const linksHeight = this.layoutLinks(content.links ?? []);
     const height =
-      PAD + this.title.height + 14 + this.body.height + 16 + optionsHeight + linkHeight + 16 + this.prompt.height + PAD;
+      PAD + this.title.height + 14 + this.body.height + 16 + optionsHeight + linksHeight + 16 + this.prompt.height + PAD;
     const left = (WORLD_WIDTH - CARD_WIDTH) / 2;
     const top = (WORLD_HEIGHT - height) / 2;
     const cx = WORLD_WIDTH / 2;
@@ -198,8 +218,45 @@ export class Overlay {
       this.optionsLayer.addChild(this.createOption(option, i, left + PAD, optionsTop + i * OPTION_HEIGHT));
     });
 
-    this.link.position.set(cx, optionsTop + optionsHeight);
-    this.prompt.position.set(cx, optionsTop + optionsHeight + linkHeight + (options.length > 0 ? 4 : 0));
+    this.linksLayer.position.set(cx, optionsTop + optionsHeight);
+    this.prompt.position.set(cx, optionsTop + optionsHeight + linksHeight + (options.length > 0 ? 4 : 0));
+  }
+
+  /**
+   * Lay links out centered on x = 0: in a row if they fit the card, else
+   * stacked. Returns the height they need.
+   */
+  private layoutLinks(links: OverlayLink[]): number {
+    for (const child of this.linksLayer.removeChildren()) child.destroy();
+    const texts = links.map((link) => {
+      const text = new Text({
+        text: link.label,
+        style: { fontFamily: TEXT_FONT, fontSize: 17, fontWeight: '600', fill: COLORS.inkLight, fontStyle: 'italic' },
+      });
+      text.eventMode = 'static';
+      text.cursor = 'pointer';
+      text.on('pointertap', () => this.actions.onLink(link.id));
+      this.linksLayer.addChild(text);
+      return text;
+    });
+    if (texts.length === 0) return 0;
+
+    const gap = 30;
+    const rowWidth = texts.reduce((sum, text) => sum + text.width, 0) + gap * (texts.length - 1);
+    if (rowWidth <= CARD_WIDTH - PAD * 2) {
+      let x = -rowWidth / 2;
+      for (const text of texts) {
+        text.position.set(x, 0);
+        x += text.width + gap;
+      }
+      return (texts[0]?.height ?? 0) + 14;
+    }
+    let y = 0;
+    for (const text of texts) {
+      text.position.set(-text.width / 2, y);
+      y += text.height + 6;
+    }
+    return y + 8;
   }
 
   private createOption(option: OverlayOption, index: number, x: number, y: number): Container {

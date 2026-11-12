@@ -16,6 +16,16 @@ describe('content source', () => {
     for (let i = 0; i < 50; i++) expect(['a', 's']).toContain(content.nextChar(random));
   });
 
+  it('shows heavier-weighted keys more often as drips', () => {
+    const content = createContentSource({ keys: ['a', 's'], keyWeights: { s: 3 } });
+    let i = 0;
+    const random = () => (i++ % 100) / 100;
+    const counts = { a: 0, s: 0 };
+    for (let n = 0; n < 100; n++) counts[content.nextChar(random) as 'a' | 's']++;
+    expect(counts.a).toBe(25);
+    expect(counts.s).toBe(75);
+  });
+
   it('uses real words when enough are typeable', () => {
     const words = Array.from({ length: MIN_WORD_POOL }, (_, i) => 'ab'.repeat(1 + (i % 4)) + 'a'.repeat(i));
     const content = createContentSource({ keys: ['a', 'b'], words: entriesFromTiers([words.join(' ')]) });

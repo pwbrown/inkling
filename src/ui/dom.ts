@@ -19,3 +19,18 @@ export function h<K extends keyof HTMLElementTagNameMap>(
   }
   return el;
 }
+
+/** Keep Tab focus inside a dialog. Call from the dialog's keydown handler. */
+export function trapFocus(root: HTMLElement, event: KeyboardEvent): void {
+  const focusable = [...root.querySelectorAll<HTMLElement>('button:not([disabled]), input:not(.sd-file)')];
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  if (!first || !last) return;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}

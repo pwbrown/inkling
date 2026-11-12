@@ -39,6 +39,11 @@ export interface ContentOptions {
    * Leave unset for imported or fetched words so they get checked.
    */
   trustedWords?: boolean;
+  /**
+   * Relative chance of each key appearing as a drip (default 1). Used to
+   * show weak keys more often.
+   */
+  keyWeights?: Readonly<Record<string, number>>;
 }
 
 /**
@@ -85,11 +90,14 @@ export function createContentSource({
   words = [],
   blocklist = new Blocklist([]),
   trustedWords = false,
+  keyWeights = {},
 }: ContentOptions): ContentSource {
   if (keys.length === 0) throw new Error('A content source needs at least one key');
   const unique = [...new Set(keys)];
   const keySet = new Set(unique);
   const punctuation = TRAILING_PUNCTUATION.filter((p) => keySet.has(p));
+  const weights = unique.map((k) => Math.max(0, keyWeights[k] ?? 1));
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
   let pool: RankedWord[] = buildWordPool(words, wordLetters(unique));
   if (!trustedWords) pool = pool.filter((w) => !blocklist.blocksWord(w.word));
@@ -98,7 +106,13 @@ export function createContentSource({
     keys: unique,
     wordCount: pool.length,
     nextChar(random) {
-      return unique[Math.floor(random() * unique.length)] as string;
+      if (totalWeight <= 0) return unique[Math.floor(random() * unique.length)] as string;
+      let roll = random() * totalWeight;
+      for (let i = 0; i < unique.length; i++) {
+        roll -= weights[i]!;
+        if (roll < 0) return unique[i]!;
+      }
+      return unique[unique.length - 1]!;
     },
     nextWord(difficulty, random) {
       const useWords = pool.length >= MIN_WORD_POOL || (pool.length > 0 && random() < 0.5);
