@@ -86,7 +86,7 @@ Build for a GitHub Pages project site with `INKLING_BASE=/inkling/ npm run build
 
 ### Deploying
 
-`.github/workflows/deploy.yml` builds and publishes to GitHub Pages on every push to `main`. One-time setup: in the GitHub repo, go to **Settings → Pages** and set **Source** to **GitHub Actions**. The build is a static site, so any static host works too.
+The game isn't deployed yet while the hosting platform is decided. `.github/workflows/deploy.yml` can publish to GitHub Pages, but it only runs when started by hand (**Actions → Deploy → Run workflow**), after setting **Settings → Pages → Source** to **GitHub Actions**. The build is a static site, so any static host works: serve the `dist/` folder from `npm run build` over HTTPS, with `INKLING_BASE` set to the path it's served from.
 
 The service worker is only registered in production builds. Use `npm run build && npm run preview` to try offline mode locally.
 
