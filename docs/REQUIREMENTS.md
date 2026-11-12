@@ -1,9 +1,9 @@
-# Typing Game: Requirements
+# Inkling: Requirements
 
-> Working title: **typing-game**. The final name, theme and art direction are TBD (see §13).
+> Name: **Inkling**. Theme and art direction are in [DESIGN.md](DESIGN.md).
 > Status: Draft v0.1 (2026-11-12)
 
-This doc is the source of truth for what the game must do. It is organized so the game can be built one milestone at a time (§12).
+This doc is the source of truth for what the game must do. It is organized so the game can be built one milestone at a time (§13).
 
 ---
 
@@ -160,6 +160,7 @@ param = clamp(
 - **No** network requests except the optional vocabulary fetch the player starts (§6).
 - Per-key accuracy stats exist only for in-game adaptation and display, and **never leave the device**.
 - A strict **Content Security Policy** is enforced.
+- When hosted, the host's own access logs are disclosed in a privacy note (§12).
 
 ---
 
@@ -198,25 +199,68 @@ English is the only language at launch, but the game is built so new languages c
 
 ---
 
-## 12. Milestones
+## 12. Licensing & Distribution
+
+Inkling is **open source** and will be **publicly hosted** as a static web app.
+
+### Licenses
+| What | License | Notes |
+|---|---|---|
+| Source code | **MIT** (default; GPL-3.0 is the alternative if forks must stay open) | `LICENSE` at the repo root |
+| Original art & audio | **CC-BY-4.0** (proposed) | Licensed separately from the code |
+| Word & phrase lists | Must allow redistribution | e.g. ENABLE (public domain) or SCOWL-derived lists (permissive) |
+| Profanity blocklist | Must allow redistribution | Or write and maintain our own |
+| Fonts | SIL OFL or similar | e.g. Atkinson Hyperlegible |
+| Third-party sounds/art | CC0 or CC-BY only | |
+
+- Every third-party asset is listed with its source and license in **`CREDITS.md`**.
+- No asset is added to the repo without a confirmed redistributable license.
+
+### Hosting
+- A static host with free HTTPS: **GitHub Pages** (default), Cloudflare Pages or Netlify.
+- HTTPS is required for the service worker and PWA install.
+- Vite's `base` setting must match the deploy path (e.g. `/inkling/` on GitHub Pages).
+- The host must not inject analytics or third-party scripts.
+- The same build must also work fully offline after first load, and locally through `vite preview`.
+
+### Privacy on a hosted site
+- The game collects nothing (§9). However, the **host keeps standard server access logs** (e.g. IP addresses), which are outside the game's control.
+- Publish a short **privacy note** in the README and on the site that explains this, along with what the optional word fetch sends (§6).
+- The CSP `connect-src` allows only the game's own origin, plus the one vocabulary API if that feature is enabled.
+
+### Project & community
+- `README.md` (pitch, how to play, how to run locally, privacy note), `LICENSE`, `CREDITS.md`, `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`.
+- **CI (GitHub Actions):** typecheck, lint and test on every PR. Deploy to the host on every push to `main`.
+- **Good first contributions:** translations, keyboard layout files and word/phrase content packs (§11). These need contribution guidelines covering format, licensing and the blocklist check.
+
+### Naming
+- Local folder: `~/projects/inkling`.
+- Use a distinctive public identifier (repo or site name), e.g. `inkling-type` or *Inkling: Type Case*, to avoid confusion with similarly named games (see DESIGN.md §9).
+- Do a trademark search before any commercial use.
+
+---
+
+## 13. Milestones
 
 | # | Milestone | Scope |
 |---|---|---|
-| 1 | **Scaffold** | Vite + TS + PixiJS, fixed-timestep loop, one target moving across the screen |
+| 1 | **Scaffold** | Vite + TS + PixiJS, fixed-timestep loop, one target moving across the screen, `LICENSE`, CI (typecheck/lint/test) |
 | 2 | **Core loop (T2)** | Character targets, targeting, collision/damage, scoring |
 | 3 | **T1 + word pool** | Bundled list, key filtering, fallback generator, explicit-content guard |
 | 4 | **Progression** | Config-driven waves/levels/difficulty, campaign difficulty select |
 | 5 | **Key-selection UI** | Interactive keyboard, regions, presets |
-| 6 | **Persistence + PWA** | IndexedDB saves, export/import, offline service worker |
+| 6 | **Persistence + PWA + deploy** | IndexedDB saves, export/import, offline service worker, auto-deploy to the static host, privacy note |
 | 7 | **Polish** | Summary screens, per-key stats, accessibility settings, i18n string audit |
 | 8 | **Post-MVP** | T3 phrases (Backspace), T4 corrections (arrows), optional vocabulary fetch, additional locales and keyboard layouts |
 
 ---
 
-## 13. Open Questions / TODO
+## 14. Open Questions / TODO
 
-- [ ] **Name, theme, art direction and audio.** Brainstorm separately.
-- [ ] Health or lives? Does game-over restart the level or the campaign?
+- [x] **Theme, art direction and audio.** See [DESIGN.md](DESIGN.md) (Inkwell direction). Name: **Inkling**.
+- [ ] Health or lives? (DESIGN.md proposes an ink-reservoir health meter.) Does game-over restart the level or the campaign?
 - [ ] Which additional locales and keyboard layouts to add first (§11)?
-- [ ] Which word-list source and license to bundle. Which API to use for the optional fetch.
+- [ ] Which word-list source to bundle (license must allow redistribution, §12). Which API to use for the optional fetch.
+- [ ] Confirm the code license (MIT vs GPL-3.0) and the art/audio license.
+- [ ] Pick the host and public repo/site name (§12).
 - [ ] An endless or practice mode alongside the campaign?
