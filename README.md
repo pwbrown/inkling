@@ -17,7 +17,7 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | Enter | Start, turn the page, or start a new notebook |
 | Esc | Pause or resume (the game also pauses when the window loses focus) |
 
-Until key selection arrives, you practice the home row: `a s d f g h j k l ;`.
+Pages alternate between **drips** (single characters) and **Blotlings** (words). Until key selection arrives, you practice the home row: `a s d f g h j k l ;`, so Blotlings carry home-row words like *flask* and *glass*.
 
 ## Development
 
@@ -28,6 +28,7 @@ npm install
 npm run dev        # start the dev server
 npm run check      # typecheck + lint + tests
 npm run build      # production build into dist/
+npm run words:build  # regenerate the bundled word pack and blocklist
 npm run preview    # serve the production build locally
 ```
 
@@ -38,6 +39,8 @@ Build for a GitHub Pages project site with `INKLING_BASE=/inkling/ npm run build
 | Path | What lives there |
 |---|---|
 | `src/core/` | Pure game logic (loop, world, typing/targeting, stats, tuning config). No DOM or Pixi, so it's unit tested with Vitest. |
+| `src/content/` | Word pool, fallback string generator, profanity guard, and per-locale content packs (`en/`). |
+| `scripts/` | Build-time tools, such as generating the word pack. |
 | `src/input/` | DOM keyboard listener that turns key presses into game actions. |
 | `src/i18n/` | UI strings and the `t()` lookup (English only for now). |
 | `src/render/` | PixiJS rendering: page, targets, Nib, effects, HUD and overlays. Reads game state, never changes it. |
@@ -45,4 +48,4 @@ Build for a GitHub Pages project site with `INKLING_BASE=/inkling/ npm run build
 
 ## License
 
-Code is [MIT](LICENSE). Asset licenses will be listed in `CREDITS.md` as assets are added.
+Code is [MIT](LICENSE). Bundled third-party content (word list, blocklist) and its licenses are listed in [CREDITS.md](CREDITS.md).

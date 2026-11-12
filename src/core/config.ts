@@ -10,9 +10,6 @@
  */
 export const DEFAULT_KEYS: readonly string[] = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'];
 
-/** Placeholder words for Blotlings until the word pool lands in milestone 3. */
-export const PLACEHOLDER_WORDS: readonly string[] = ['ink', 'quill', 'page', 'nib', 'blot', 'margin'];
-
 export type TargetKind = 'drip' | 'blotling';
 
 export const GAME_CONFIG = {
@@ -31,23 +28,37 @@ export const GAME_CONFIG = {
     step: 10,
     maxMultiplier: 4,
   },
-  page: {
-    /** Targets per page (wave). */
-    size: 20,
-    /** Time between spawns on page 1. */
-    spawnIntervalMs: 1300,
-    /** Most targets on screen at once. */
-    maxOnScreen: 6,
-    /** Base target speed on page 1, in logical px per second. */
-    speed: 85,
-    /** Each target's speed varies randomly by up to ±this fraction. */
-    speedJitter: 0.15,
-    /** Per-page increases (a preview of the milestone 4 difficulty curve). */
-    speedStep: 0.08,
-    intervalStep: 0.07,
-  },
-  /** A lane can't take a new target until the last one has moved this far in. */
-  laneClearancePx: 160,
+  /** Base page settings per target type, for page 1 of that type. */
+  pages: {
+    drip: {
+      /** Targets per page (wave). */
+      size: 20,
+      /** Time between spawns. */
+      spawnIntervalMs: 1300,
+      /** Most targets on screen at once. */
+      maxOnScreen: 6,
+      /** Speed in logical px per second. */
+      speed: 85,
+    },
+    blotling: {
+      size: 12,
+      spawnIntervalMs: 2600,
+      maxOnScreen: 4,
+      speed: 55,
+    },
+  } satisfies Record<TargetKind, { size: number; spawnIntervalMs: number; maxOnScreen: number; speed: number }>,
+  /** Page types cycle in this order (milestone 4 replaces this with level plans). */
+  pageCycle: ['drip', 'blotling'] as TargetKind[],
+  /** Each target's speed varies randomly by up to ±this fraction. */
+  speedJitter: 0.15,
+  /** Per-page increases (a preview of the milestone 4 difficulty curve). */
+  speedStep: 0.08,
+  intervalStep: 0.07,
+  /** Word difficulty (0..1) on the first page, and how much it rises per page. */
+  complexityStart: 0.15,
+  complexityStep: 0.1,
+  /** Empty space to keep behind the last target in a lane before spawning another. */
+  laneGapPx: 100,
 } as const;
 
 export interface PageParams {
@@ -56,16 +67,21 @@ export interface PageParams {
   spawnIntervalMs: number;
   maxOnScreen: number;
   speed: number;
+  /** Word difficulty, 0 (easiest) to 1 (hardest). */
+  complexity: number;
 }
 
 /** Parameters for page `index` (0-based). */
 export function pageParams(index: number): PageParams {
-  const p = GAME_CONFIG.page;
+  const cycle = GAME_CONFIG.pageCycle;
+  const kind = cycle[index % cycle.length] ?? 'drip';
+  const base = GAME_CONFIG.pages[kind];
   return {
-    kind: 'drip',
-    size: p.size,
-    spawnIntervalMs: p.spawnIntervalMs / (1 + p.intervalStep * index),
-    maxOnScreen: p.maxOnScreen,
-    speed: p.speed * (1 + p.speedStep * index),
+    kind,
+    size: base.size,
+    spawnIntervalMs: base.spawnIntervalMs / (1 + GAME_CONFIG.intervalStep * index),
+    maxOnScreen: base.maxOnScreen,
+    speed: base.speed * (1 + GAME_CONFIG.speedStep * index),
+    complexity: Math.min(1, GAME_CONFIG.complexityStart + GAME_CONFIG.complexityStep * index),
   };
 }

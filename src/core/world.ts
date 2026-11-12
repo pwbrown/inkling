@@ -2,7 +2,8 @@
  * Pure game state and simulation. No rendering or DOM code lives here, so it
  * can be unit tested directly (REQUIREMENTS §7).
  */
-import { DEFAULT_KEYS, GAME_CONFIG, PLACEHOLDER_WORDS, pageParams, type PageParams, type TargetKind } from './config';
+import { createContentSource, type ContentSource } from '../content/contentSource';
+import { DEFAULT_KEYS, GAME_CONFIG, pageParams, type PageParams, type TargetKind } from './config';
 import { createStats, type Stats } from './stats';
 
 /** Logical play-field size. The renderer scales this to fit the window. */
@@ -73,6 +74,8 @@ export interface World {
   events: GameEvent[];
   /** Characters to build targets from (the player's Type Case). */
   keys: readonly string[];
+  /** Supplies drip characters and Blotling words for those keys. */
+  content: ContentSource;
   nextId: number;
   /** Injected so tests are deterministic. Returns [0, 1). */
   random: () => number;
@@ -98,9 +101,15 @@ export function createPage(index: number): PageState {
   return { index, params: pageParams(index), spawned: 0, spawnTimerMs: 0 };
 }
 
-export function createWorld(
-  options: { random?: () => number; keys?: readonly string[] } = {},
-): World {
+export interface WorldOptions {
+  random?: () => number;
+  /** Ignored when `content` is given (its keys are used). */
+  keys?: readonly string[];
+  content?: ContentSource;
+}
+
+export function createWorld(options: WorldOptions = {}): World {
+  const content = options.content ?? createContentSource({ keys: options.keys ?? DEFAULT_KEYS });
   return {
     phase: 'ready',
     resumePhase: 'ready',
@@ -112,7 +121,8 @@ export function createWorld(
     stats: createStats(),
     pageStats: createStats(),
     events: [],
-    keys: options.keys ?? DEFAULT_KEYS,
+    keys: content.keys,
+    content,
     nextId: 1,
     random: options.random ?? Math.random,
   };
@@ -126,23 +136,49 @@ export function setPhase(world: World, phase: GamePhase): void {
 
 /** Start a fresh notebook, keeping the same object (and its key set). */
 export function resetWorld(world: World): void {
-  const fresh = createWorld({ random: world.random, keys: world.keys });
+  const fresh = createWorld({ random: world.random, content: world.content });
   fresh.nextId = world.nextId;
   Object.assign(world, fresh);
+}
+
+/**
+ * Rough on-page width of a target, for spacing. Matches the renderer's
+ * shapes closely enough without depending on font measurement.
+ */
+export function estimateWidth(target: Pick<Target, 'kind' | 'text'>): number {
+  return target.kind === 'drip' ? 58 : 36 + 15 * [...target.text].length;
 }
 
 /** Lanes whose most recent target has moved far enough in to make room. */
 function freeLanes(world: World): number[] {
   const busy = new Set(
-    world.targets.filter((t) => t.x > SPAWN_X - GAME_CONFIG.laneClearancePx).map((t) => t.lane),
+    world.targets
+      .filter((t) => t.x + estimateWidth(t) > SPAWN_X - GAME_CONFIG.laneGapPx)
+      .map((t) => t.lane),
   );
   const lanes: number[] = [];
   for (let lane = 0; lane < laneCount(); lane++) if (!busy.has(lane)) lanes.push(lane);
   return lanes;
 }
 
+/** Up to this many re-rolls to avoid two targets starting with the same character. */
+const DISTINCT_FIRST_CHAR_TRIES = 6;
+
+/**
+ * Pick a payload, preferring one whose first character doesn't match any
+ * target already on the page. That keeps targeting unambiguous: the first
+ * keystroke picks exactly the target you meant.
+ */
 function payloadFor(world: World, kind: TargetKind): string {
-  return kind === 'drip' ? pick(world.keys, world.random) : pick(PLACEHOLDER_WORDS, world.random);
+  const taken = new Set(world.targets.map((t) => t.text[t.typed]));
+  const next = () =>
+    kind === 'drip'
+      ? world.content.nextChar(world.random)
+      : world.content.nextWord(world.page.params.complexity, world.random);
+
+  let text = next();
+  for (let i = 1; i < DISTINCT_FIRST_CHAR_TRIES && taken.has(text[0]); i++) text = next();
+  return text;
 }
 
 /**
@@ -154,8 +190,10 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
   if (lanes.length === 0 && overrides.lane === undefined) return null;
 
   const { kind, speed } = world.page.params;
-  const jitter = GAME_CONFIG.page.speedJitter;
+  const jitter = GAME_CONFIG.speedJitter;
   const lane = overrides.lane ?? pick(lanes, world.random);
+  // Never faster than the target ahead in the same lane, so they can't overlap.
+  const leaderSpeed = Math.min(...world.targets.filter((t) => t.lane === lane).map((t) => t.speed));
   const target: Target = {
     id: world.nextId++,
     kind,
@@ -165,7 +203,7 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
     prevX: SPAWN_X,
     y: laneY(lane),
     lane,
-    speed: speed * (1 + (world.random() * 2 - 1) * jitter),
+    speed: Math.min(leaderSpeed, speed * (1 + (world.random() * 2 - 1) * jitter)),
     ...overrides,
   };
   world.targets.push(target);

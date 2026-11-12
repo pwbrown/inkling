@@ -138,14 +138,15 @@ describe('phases', () => {
     const world = playingWorld();
     world.stats.score = 500;
     world.pageStats.score = 500;
-    const speed = world.page.params.speed;
+    const complexity = world.page.params.complexity;
     world.phase = 'pageCleared';
 
     confirm(world);
 
     expect(world.phase).toBe('playing');
     expect(world.page.index).toBe(1);
-    expect(world.page.params.speed).toBeGreaterThan(speed);
+    expect(world.page.params.kind).toBe('blotling');
+    expect(world.page.params.complexity).toBeGreaterThan(complexity);
     expect(world.pageStats.score).toBe(0);
     expect(world.stats.score).toBe(500);
   });

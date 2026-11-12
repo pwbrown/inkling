@@ -7,6 +7,8 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
+    // The bundled word pack is one ~500 kB chunk (~165 kB gzipped), loaded lazily.
+    chunkSizeWarningLimit: 600,
   },
   test: {
     include: ['src/**/*.test.ts'],

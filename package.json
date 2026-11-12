@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "words:build": "node scripts/build-words.ts"
   },
   "dependencies": {
     "pixi.js": "^8.23.0"
@@ -26,9 +27,11 @@
     "@types/node": "^24.19.2",
     "eslint": "^10.14.0",
     "globals": "^17.14.0",
+    "naughty-words": "^1.2.0",
     "typescript": "~6.0.0",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wordlist-english": "^1.2.1"
   }
 }

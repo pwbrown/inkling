@@ -1,6 +1,9 @@
 // Lets PixiJS run under our strict CSP (no 'unsafe-eval'). REQUIREMENTS §9.
 import 'pixi.js/unsafe-eval';
 import './style.css';
+import { createContentSource } from './content/contentSource';
+import { loadEnglishPack } from './content/en';
+import { DEFAULT_KEYS } from './core/config';
 import { autoPause, confirm, togglePause, typeChar } from './core/input';
 import { FixedStepLoop } from './core/loop';
 import { createWorld, stepWorld } from './core/world';
@@ -14,8 +17,10 @@ async function main(): Promise<void> {
 
   setLocale(navigator.language);
 
-  const world = createWorld();
-  const renderer = await createRenderer(host);
+  const [pack, renderer] = await Promise.all([loadEnglishPack(), createRenderer(host)]);
+  // The Type Case (milestone 5) will supply the player's keys here.
+  const content = createContentSource({ keys: DEFAULT_KEYS, words: pack.words, blocklist: pack.blocklist });
+  const world = createWorld({ content });
   const loop = new FixedStepLoop((stepMs) => stepWorld(world, stepMs));
 
   bindKeyboard(window, {
@@ -44,7 +49,7 @@ async function main(): Promise<void> {
 
   if (import.meta.env.DEV) {
     // Handy for poking at state from the console during development.
-    (window as unknown as { inkling: unknown }).inkling = { world, loop, renderer };
+    (window as unknown as { inkling: unknown }).inkling = { world, loop, renderer, pack, createContentSource };
   }
 }
 

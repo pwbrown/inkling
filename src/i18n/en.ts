@@ -9,7 +9,7 @@ export const en = {
   'hud.page': 'Page {page} · {done}/{total}',
 
   'overlay.ready.title': 'Inkling',
-  'overlay.ready.body': 'Type the letter on each ink drip before it reaches the red margin.',
+  'overlay.ready.body': 'Type the letters and words on the ink creatures before they reach the red margin.',
   'overlay.ready.prompt': 'Press Enter to start',
 
   'overlay.paused.title': 'Paused',

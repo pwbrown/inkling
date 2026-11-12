@@ -260,7 +260,8 @@ Inkling is **open source** and will be **publicly hosted** as a static web app.
 - [x] **Theme, art direction and audio.** See [DESIGN.md](DESIGN.md) (Inkwell direction). Name: **Inkling**.
 - [ ] Health or lives? (DESIGN.md proposes an ink-reservoir health meter.) Does game-over restart the level or the campaign?
 - [ ] Which additional locales and keyboard layouts to add first (§11)?
-- [ ] Which word-list source to bundle (license must allow redistribution, §12). Which API to use for the optional fetch.
+- [x] Word-list source: SCOWL levels 10–50 (via `wordlist-english`) plus the LDNOOBW blocklist. See CREDITS.md.
+- [ ] Which API to use for the optional vocabulary fetch.
 - [ ] Confirm the code license (MIT vs GPL-3.0) and the art/audio license.
 - [ ] Pick the host and public repo/site name (§12).
 - [ ] An endless or practice mode alongside the campaign?

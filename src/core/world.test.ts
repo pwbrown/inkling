@@ -113,6 +113,23 @@ describe('world', () => {
     expect(world.phase).toBe('pageCleared');
   });
 
+  it('never lets a target overtake the one ahead of it in its lane', () => {
+    const world = playingWorld();
+    const leader = spawnTarget(world, { lane: 3, speed: 50 })!;
+    leader.x = 600;
+    const follower = spawnTarget(world, { lane: 3 })!;
+    expect(follower.speed).toBeLessThanOrEqual(leader.speed);
+  });
+
+  it('prefers a first character no other target on the page starts with', () => {
+    let i = 0;
+    const world = createWorld({ random: () => [0, 0, 0.5, 0.9][i++ % 4]!, keys: ['a', 'b'] });
+    world.phase = 'playing';
+    spawnTarget(world, { text: 'a', lane: 0, x: 600 });
+    const next = spawnTarget(world)!;
+    expect(next.text).toBe('b');
+  });
+
   it('counts play time on both the notebook and the page', () => {
     const world = playingWorld();
     stepWorld(world, 100);
