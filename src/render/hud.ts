@@ -55,10 +55,16 @@ export class Hud {
     const mult = multiplier(world.stats.combo);
     setText(this.combo, mult > 1 ? t('hud.multiplier', { multiplier: mult }) : '');
 
-    const { spawned, params } = world.page;
+    const { spawned, params, chapter, index, pageCount } = world.page;
     setText(
       this.page,
-      t('hud.page', { page: world.page.index + 1, done: spawned - world.targets.length, total: params.size }),
+      t('hud.page', {
+        chapter: chapter + 1,
+        page: index + 1,
+        pages: pageCount,
+        done: spawned - world.targets.length,
+        total: params.size,
+      }),
     );
   }
 }

@@ -5,9 +5,9 @@
  * This is the "match mode" input model from REQUIREMENTS §3, used by Drips
  * (T2) and Blotlings (T1). Buffer mode for T3/T4 will sit beside it.
  */
-import { GAME_CONFIG } from './config';
+import { DIFFICULTIES, GAME_CONFIG, type Difficulty } from './config';
 import { createStats, type Stats } from './stats';
-import { WORLD_WIDTH, createPage, resetWorld, setPhase, type Target, type World } from './world';
+import { WORLD_WIDTH, createPage, isLastPageOfChapter, resetWorld, setPhase, type Target, type World } from './world';
 
 /** Current score multiplier for a combo length. */
 export function multiplier(combo: number): number {
@@ -46,8 +46,14 @@ function registerError(world: World, key: string, target: Target | undefined): v
   world.events.push({ type: 'error', key, targetId: target?.id ?? null });
 }
 
-/** Handle one typed character. Ignored unless the game is being played. */
+/** Handle one typed character. */
 export function typeChar(world: World, key: string): void {
+  if (world.phase === 'ready') {
+    // Number keys pick a difficulty on the new-notebook screen.
+    const choice = DIFFICULTIES[Number(key) - 1];
+    if (choice) selectDifficulty(world, choice);
+    return;
+  }
   if (world.phase !== 'playing') return;
   const scoreBefore = world.stats.score;
 
@@ -92,20 +98,44 @@ export function typeChar(world: World, key: string): void {
   world.events.push({ type: 'destroyed', target: done, points: world.stats.score - scoreBefore });
 }
 
-/** Enter: start, turn the page, or start over, depending on the phase. */
+/** Highlight a difficulty on the new-notebook screen. */
+export function selectDifficulty(world: World, difficulty: Difficulty): void {
+  if (world.phase === 'ready') world.selectedDifficulty = difficulty;
+}
+
+/** Arrow keys on the new-notebook screen: move the highlight, wrapping around. */
+export function moveSelection(world: World, delta: number): void {
+  if (world.phase !== 'ready') return;
+  const i = DIFFICULTIES.indexOf(world.selectedDifficulty);
+  const n = DIFFICULTIES.length;
+  world.selectedDifficulty = DIFFICULTIES[(((i + delta) % n) + n) % n] ?? world.selectedDifficulty;
+}
+
+/** Move on from a cleared page: the next page, or the next chapter's first page. */
+function turnPage(world: World): void {
+  const { chapter, index } = world.page;
+  world.page = isLastPageOfChapter(world.page)
+    ? createPage(world.difficulty, chapter + 1, 0)
+    : createPage(world.difficulty, chapter, index + 1);
+  world.pageStats = createStats();
+  world.inkRefilled = 0;
+}
+
+/** Enter: start a notebook, turn the page, or go back to the new-notebook screen. */
 export function confirm(world: World): void {
   switch (world.phase) {
     case 'ready':
+      resetWorld(world, world.selectedDifficulty);
       setPhase(world, 'playing');
       break;
     case 'pageCleared':
-      world.page = createPage(world.page.index + 1);
-      world.pageStats = createStats();
+      turnPage(world);
       setPhase(world, 'playing');
       break;
     case 'gameOver':
-      resetWorld(world);
-      setPhase(world, 'playing');
+      // Back to the new-notebook screen so difficulty can be changed.
+      world.selectedDifficulty = world.difficulty;
+      setPhase(world, 'ready');
       break;
     default:
       break;

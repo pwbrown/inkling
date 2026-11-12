@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_CONFIG } from './config';
-import { autoPause, confirm, multiplier, togglePause, typeChar } from './input';
-import { MARGIN_X, WORLD_WIDTH, createWorld, spawnTarget, type World } from './world';
+import { autoPause, confirm, moveSelection, multiplier, selectDifficulty, togglePause, typeChar } from './input';
+import { MARGIN_X, WORLD_WIDTH, createPage, createWorld, spawnTarget, type World } from './world';
 
 function playingWorld(): World {
   const world = createWorld({ random: () => 0.5, keys: ['a', 'b'] });
@@ -113,8 +113,50 @@ describe('typeChar', () => {
   });
 });
 
+describe('new-notebook screen', () => {
+  it('starts on Normal', () => {
+    expect(createWorld().selectedDifficulty).toBe('normal');
+  });
+
+  it('arrow keys move the selection and wrap around', () => {
+    const world = createWorld();
+    moveSelection(world, 1);
+    expect(world.selectedDifficulty).toBe('hard');
+    moveSelection(world, 2);
+    expect(world.selectedDifficulty).toBe('relaxed');
+    moveSelection(world, -1);
+    expect(world.selectedDifficulty).toBe('expert');
+  });
+
+  it('number keys pick a difficulty', () => {
+    const world = createWorld();
+    typeChar(world, '1');
+    expect(world.selectedDifficulty).toBe('relaxed');
+    typeChar(world, '4');
+    expect(world.selectedDifficulty).toBe('expert');
+    typeChar(world, '9');
+    expect(world.selectedDifficulty).toBe('expert');
+  });
+
+  it('Enter starts a notebook at the selected difficulty', () => {
+    const world = createWorld();
+    selectDifficulty(world, 'hard');
+    confirm(world);
+    expect(world.phase).toBe('playing');
+    expect(world.difficulty).toBe('hard');
+    expect(world.page.params.speed).toBe(createWorld({ difficulty: 'hard' }).page.params.speed);
+  });
+
+  it('ignores selection outside the new-notebook screen', () => {
+    const world = playingWorld();
+    selectDifficulty(world, 'expert');
+    moveSelection(world, 1);
+    expect(world.selectedDifficulty).toBe('normal');
+  });
+});
+
 describe('phases', () => {
-  it('Enter starts the game from the ready screen', () => {
+  it('Enter starts the game from the new-notebook screen', () => {
     const world = createWorld();
     confirm(world);
     expect(world.phase).toBe('playing');
@@ -134,7 +176,7 @@ describe('phases', () => {
     expect(world.phase).toBe('ready');
   });
 
-  it('Enter turns the page: harder page, fresh page stats, notebook stats kept', () => {
+  it('Enter turns to the next page in the chapter with fresh page stats', () => {
     const world = playingWorld();
     world.stats.score = 500;
     world.pageStats.score = 500;
@@ -144,24 +186,42 @@ describe('phases', () => {
     confirm(world);
 
     expect(world.phase).toBe('playing');
+    expect(world.page.chapter).toBe(0);
     expect(world.page.index).toBe(1);
-    expect(world.page.params.kind).toBe('blotling');
     expect(world.page.params.complexity).toBeGreaterThan(complexity);
     expect(world.pageStats.score).toBe(0);
     expect(world.stats.score).toBe(500);
   });
 
-  it('Enter after game over starts a fresh notebook', () => {
+  it('Enter after the last page starts the next chapter', () => {
     const world = playingWorld();
+    world.page = createPage(world.difficulty, 0, world.page.pageCount - 1);
+    world.inkRefilled = 30;
+    world.phase = 'pageCleared';
+
+    confirm(world);
+
+    expect(world.page.chapter).toBe(1);
+    expect(world.page.index).toBe(0);
+    expect(world.inkRefilled).toBe(0);
+  });
+
+  it('Enter after game over returns to the new-notebook screen, keeping the difficulty', () => {
+    const world = createWorld();
+    selectDifficulty(world, 'hard');
+    confirm(world);
     world.phase = 'gameOver';
     world.ink = 0;
     world.stats.score = 900;
 
     confirm(world);
+    expect(world.phase).toBe('ready');
+    expect(world.selectedDifficulty).toBe('hard');
 
+    confirm(world);
     expect(world.phase).toBe('playing');
+    expect(world.difficulty).toBe('hard');
     expect(world.ink).toBe(GAME_CONFIG.maxInk);
     expect(world.stats.score).toBe(0);
-    expect(world.keys).toEqual(['a', 'b']);
   });
 });

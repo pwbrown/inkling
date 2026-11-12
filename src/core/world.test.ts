@@ -4,6 +4,7 @@ import {
   MARGIN_X,
   SPAWN_X,
   WORLD_HEIGHT,
+  createPage,
   createWorld,
   laneCount,
   laneY,
@@ -90,7 +91,7 @@ describe('world', () => {
 
     stepWorld(world, 16);
 
-    expect(world.ink).toBe(GAME_CONFIG.maxInk - GAME_CONFIG.inkLoss.drip);
+    expect(world.ink).toBe(GAME_CONFIG.maxInk - world.page.params.inkLoss);
     expect(world.stats.combo).toBe(0);
     expect(world.lockedId).toBeNull();
     expect(world.targets).not.toContain(target);
@@ -108,9 +109,37 @@ describe('world', () => {
 
   it('clears the page once every target has been spawned and dealt with', () => {
     const world = playingWorld();
+    world.ink = 50;
     world.page.spawned = world.page.params.size;
     stepWorld(world, 16);
     expect(world.phase).toBe('pageCleared');
+    // Not the end of a chapter, so no refill.
+    expect(world.ink).toBe(50);
+  });
+
+  it('refills some ink at the end of a chapter, up to the maximum', () => {
+    const world = playingWorld();
+    world.page = createPage(world.difficulty, 0, world.page.pageCount - 1);
+    world.page.spawned = world.page.params.size;
+    world.ink = 50;
+    stepWorld(world, 16);
+    const refill = Math.round(GAME_CONFIG.maxInk * GAME_CONFIG.chapterInkRefill);
+    expect(world.ink).toBe(50 + refill);
+    expect(world.inkRefilled).toBe(refill);
+
+    const full = playingWorld();
+    full.page = createPage(full.difficulty, 0, full.page.pageCount - 1);
+    full.page.spawned = full.page.params.size;
+    full.ink = full.maxInk - 5;
+    stepWorld(full, 16);
+    expect(full.ink).toBe(full.maxInk);
+    expect(full.inkRefilled).toBe(5);
+  });
+
+  it('uses the difficulty for page settings', () => {
+    const relaxed = createWorld({ difficulty: 'relaxed' });
+    const expert = createWorld({ difficulty: 'expert' });
+    expect(expert.page.params.speed).toBeGreaterThan(relaxed.page.params.speed);
   });
 
   it('never lets a target overtake the one ahead of it in its lane', () => {

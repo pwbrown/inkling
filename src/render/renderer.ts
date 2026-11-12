@@ -20,7 +20,7 @@ import {
 } from '../core/world';
 import { Effects } from './effects';
 import { Hud } from './hud';
-import { Overlay } from './overlay';
+import { Overlay, type OverlayActions } from './overlay';
 import { COLORS, TEXT_FONT, prefersReducedMotion } from './theme';
 
 const NIB_LENGTH = 56;
@@ -141,7 +141,11 @@ function approach(current: number, goal: number, rate: number, dtMs: number): nu
   return goal + (current - goal) * Math.exp(-rate * (dtMs / 1000));
 }
 
-export async function createRenderer(host: HTMLElement): Promise<Renderer> {
+/**
+ * `actions` handles clicks on the overlay (difficulty picker, prompts). They
+ * are intents for main.ts to apply; the renderer itself never changes state.
+ */
+export async function createRenderer(host: HTMLElement, actions: OverlayActions): Promise<Renderer> {
   const reducedMotion = prefersReducedMotion();
   const app = new Application();
   await app.init({
@@ -163,7 +167,7 @@ export async function createRenderer(host: HTMLElement): Promise<Renderer> {
   const nib = drawNib();
   nib.position.set(NIB_HOME.x, NIB_HOME.y);
   const hud = new Hud();
-  const overlay = new Overlay();
+  const overlay = new Overlay(actions);
   stage.addChild(drawPage(), effects.stainLayer, guide, targetLayer, nib, effects.particleLayer, hud.root, overlay.root);
   app.stage.addChild(stage);
 
@@ -212,7 +216,7 @@ export async function createRenderer(host: HTMLElement): Promise<Renderer> {
       }
       case 'phase':
         // A fresh page (or notebook) starts clean.
-        if (event.phase === 'playing' && (lastPhase === 'pageCleared' || lastPhase === 'gameOver')) {
+        if (event.phase === 'playing' && lastPhase !== 'paused') {
           effects.clearStains();
         }
         lastPhase = event.phase;

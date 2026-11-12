@@ -3,7 +3,16 @@
  * can be unit tested directly (REQUIREMENTS §7).
  */
 import { createContentSource, type ContentSource } from '../content/contentSource';
-import { DEFAULT_KEYS, GAME_CONFIG, pageParams, type PageParams, type TargetKind } from './config';
+import {
+  DEFAULT_DIFFICULTY,
+  DEFAULT_KEYS,
+  GAME_CONFIG,
+  chapterPlan,
+  pageParams,
+  type Difficulty,
+  type PageParams,
+  type TargetKind,
+} from './config';
 import { createStats, type Stats } from './stats';
 
 /** Logical play-field size. The renderer scales this to fit the window. */
@@ -48,8 +57,12 @@ export type GameEvent =
   | { type: 'phase'; phase: GamePhase };
 
 export interface PageState {
-  /** 0-based page (wave) index. */
+  /** 0-based chapter (level) index. */
+  chapter: number;
+  /** 0-based page (wave) index within the chapter. */
   index: number;
+  /** Pages in this chapter. */
+  pageCount: number;
   params: PageParams;
   spawned: number;
   /** Counts down to the next spawn. */
@@ -57,7 +70,14 @@ export interface PageState {
 }
 
 export interface World {
+  /**
+   * 'ready' is the new-notebook screen, where difficulty is chosen.
+   */
   phase: GamePhase;
+  /** Campaign difficulty of the notebook being played. */
+  difficulty: Difficulty;
+  /** Highlighted option on the new-notebook screen. */
+  selectedDifficulty: Difficulty;
   /** Phase to return to when unpausing. */
   resumePhase: GamePhase;
   page: PageState;
@@ -66,6 +86,8 @@ export interface World {
   lockedId: number | null;
   ink: number;
   maxInk: number;
+  /** Ink refilled for the chapter just completed (shown on the overlay). */
+  inkRefilled: number;
   /** Stats for the whole notebook (campaign). */
   stats: Stats;
   /** Stats for the current page only. */
@@ -96,9 +118,21 @@ function pick<T>(items: readonly T[], random: () => number): T {
   return item;
 }
 
-export function createPage(index: number): PageState {
-  // Spawn the first target right away.
-  return { index, params: pageParams(index), spawned: 0, spawnTimerMs: 0 };
+export function createPage(difficulty: Difficulty, chapter: number, index: number): PageState {
+  return {
+    chapter,
+    index,
+    pageCount: chapterPlan(chapter).length,
+    params: pageParams(difficulty, chapter, index),
+    spawned: 0,
+    // Spawn the first target right away.
+    spawnTimerMs: 0,
+  };
+}
+
+/** True on the last page of a chapter. */
+export function isLastPageOfChapter(page: PageState): boolean {
+  return page.index >= page.pageCount - 1;
 }
 
 export interface WorldOptions {
@@ -106,18 +140,23 @@ export interface WorldOptions {
   /** Ignored when `content` is given (its keys are used). */
   keys?: readonly string[];
   content?: ContentSource;
+  difficulty?: Difficulty;
 }
 
 export function createWorld(options: WorldOptions = {}): World {
   const content = options.content ?? createContentSource({ keys: options.keys ?? DEFAULT_KEYS });
+  const difficulty = options.difficulty ?? DEFAULT_DIFFICULTY;
   return {
     phase: 'ready',
+    difficulty,
+    selectedDifficulty: difficulty,
     resumePhase: 'ready',
-    page: createPage(0),
+    page: createPage(difficulty, 0, 0),
     targets: [],
     lockedId: null,
     ink: GAME_CONFIG.maxInk,
     maxInk: GAME_CONFIG.maxInk,
+    inkRefilled: 0,
     stats: createStats(),
     pageStats: createStats(),
     events: [],
@@ -135,8 +174,8 @@ export function setPhase(world: World, phase: GamePhase): void {
 }
 
 /** Start a fresh notebook, keeping the same object (and its key set). */
-export function resetWorld(world: World): void {
-  const fresh = createWorld({ random: world.random, content: world.content });
+export function resetWorld(world: World, difficulty: Difficulty = world.difficulty): void {
+  const fresh = createWorld({ random: world.random, content: world.content, difficulty });
   fresh.nextId = world.nextId;
   Object.assign(world, fresh);
 }
@@ -244,7 +283,7 @@ export function stepWorld(world: World, stepMs: number): void {
       continue;
     }
 
-    const inkLost = GAME_CONFIG.inkLoss[target.kind];
+    const inkLost = world.page.params.inkLoss;
     world.ink = Math.max(0, world.ink - inkLost);
     world.stats.combo = 0;
     world.pageStats.combo = 0;
@@ -258,6 +297,12 @@ export function stepWorld(world: World, stepMs: number): void {
     world.lockedId = null;
     setPhase(world, 'gameOver');
   } else if (world.page.spawned >= world.page.params.size && world.targets.length === 0) {
+    if (isLastPageOfChapter(world.page)) {
+      // A reward for finishing a chapter.
+      const before = world.ink;
+      world.ink = Math.min(world.maxInk, world.ink + Math.round(world.maxInk * GAME_CONFIG.chapterInkRefill));
+      world.inkRefilled = world.ink - before;
+    }
     setPhase(world, 'pageCleared');
   }
 }

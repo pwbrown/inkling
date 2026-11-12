@@ -28,7 +28,7 @@
 | Requirements term | In-world name | Notes |
 |---|---|---|
 | Campaign | **Notebook** | A save slot, with its own difficulty and Type Case |
-| Level | **Chapter** | Shown as a notebook tab |
+| Level | **Chapter** | Shown as a notebook tab. Finishing one refills 30% of the ink well. |
 | Wave | **Page** | Single target type per page |
 | Summary screen | **Graded page** | See §6 |
 | Optional boss | **The Spill** | End-of-chapter large blot that splits into smaller ones (post-MVP idea) |

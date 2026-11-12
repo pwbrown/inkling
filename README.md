@@ -14,10 +14,11 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | Key | Action |
 |---|---|
 | Characters | Hit the matching target closest to the margin |
-| Enter | Start, turn the page, or start a new notebook |
+| ↑ ↓ or 1–4 | Choose a difficulty on the new-notebook screen (or click one) |
+| Enter | Start a notebook, turn the page, or return to the new-notebook screen after running out of ink |
 | Esc | Pause or resume (the game also pauses when the window loses focus) |
 
-Pages alternate between **drips** (single characters) and **Blotlings** (words). Until key selection arrives, you practice the home row: `a s d f g h j k l ;`, so Blotlings carry home-row words like *flask* and *glass*.
+A notebook is a series of **chapters**, each made of a few **pages**. Each page is either all **drips** (single characters) or all **Blotlings** (words). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. All of these numbers live in `src/core/config.ts`. Until key selection arrives, you practice the home row: `a s d f g h j k l ;`, so Blotlings carry home-row words like *flask* and *glass*.
 
 ## Development
 
