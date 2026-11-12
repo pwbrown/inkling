@@ -15,3 +15,9 @@ Third-party content bundled with Inkling, with its source and license (REQUIREME
 - **Source:** [List of Dirty, Naughty, Obscene, and Otherwise Bad Words](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (LDNOOBW), via the [`naughty-words`](https://github.com/LDNOOBW/naughty-words-js) npm package.
 - **License:** [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
 - **Changes:** multi-word phrases removed, a few extra terms added, and an allowlist of harmless words the matching rules caught by mistake (both lists are in `scripts/build-words.ts`).
+
+## Topic word lists (optional download)
+
+- **What:** words downloaded on request in the Word lists screen. Nothing is bundled.
+- **Source:** the [Datamuse API](https://www.datamuse.com/api/), a free word-finding service that needs no key.
+- **Use:** requests only the `ml` (related words) query with the player's topic. Results are filtered to single lowercase words and run through the blocklist before use.

@@ -18,7 +18,14 @@
  */
 export const DEFAULT_KEYS: readonly string[] = [...'asdfghjkl;'];
 
-export type TargetKind = 'drip' | 'blotling';
+/**
+ * Target types (REQUIREMENTS §3): drips (one character), Blotlings (a word),
+ * Run-ons (a phrase, fixed with Backspace) and Misprints (a misspelled word,
+ * fixed with the arrow keys, Backspace and Delete).
+ */
+export type TargetKind = 'drip' | 'blotling' | 'runon' | 'misprint';
+
+export const TARGET_KINDS: readonly TargetKind[] = ['drip', 'blotling', 'runon', 'misprint'];
 
 export type Difficulty = 'relaxed' | 'normal' | 'hard' | 'expert';
 
@@ -89,12 +96,16 @@ export const GAME_CONFIG = {
   base: {
     drip: { size: 20, spawnIntervalMs: 1300, maxOnScreen: 6, speed: 85, inkLoss: 10 },
     blotling: { size: 12, spawnIntervalMs: 2600, maxOnScreen: 4, speed: 55, inkLoss: 20 },
+    runon: { size: 5, spawnIntervalMs: 6500, maxOnScreen: 2, speed: 32, inkLoss: 30 },
+    misprint: { size: 8, spawnIntervalMs: 4200, maxOnScreen: 3, speed: 36, inkLoss: 20 },
   } satisfies Record<TargetKind, KindSettings>,
 
   /** Hard limits so late chapters stay humanly possible. */
   limits: {
     drip: { maxSize: 36, minSpawnIntervalMs: 420, maxOnScreen: 10, maxSpeed: 240 },
     blotling: { maxSize: 22, minSpawnIntervalMs: 1000, maxOnScreen: 7, maxSpeed: 150 },
+    runon: { maxSize: 10, minSpawnIntervalMs: 3500, maxOnScreen: 4, maxSpeed: 70 },
+    misprint: { maxSize: 14, minSpawnIntervalMs: 2200, maxOnScreen: 5, maxSpeed: 80 },
   } satisfies Record<TargetKind, KindLimits>,
 
   progression: {
@@ -119,8 +130,14 @@ export const GAME_CONFIG = {
   chapters: [
     ['drip', 'drip', 'blotling'],
     ['drip', 'blotling', 'drip', 'blotling'],
-    ['blotling', 'drip', 'blotling', 'drip', 'blotling'],
+    ['blotling', 'drip', 'runon', 'blotling'],
+    ['drip', 'blotling', 'misprint', 'runon', 'blotling'],
   ] as TargetKind[][],
+
+  /** Run-on phrases: how many words, growing with complexity. */
+  phraseWords: { min: 2, max: 5 },
+  /** Shortest word worth misprinting. */
+  misprintMinLength: 4,
 
   /** When a key counts as practiced or mastered (DESIGN §4). */
   mastery: {
@@ -170,10 +187,20 @@ export interface PageParams {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-/** Settings for page `page` of chapter `chapter` (both 0-based). */
-export function pageParams(difficulty: Difficulty, chapter: number, page: number): PageParams {
+/**
+ * Settings for page `page` of chapter `chapter` (both 0-based). `canUse`
+ * says whether the player's keys can produce a target type (e.g. Run-ons
+ * need the space key); unusable pages become Blotling pages.
+ */
+export function pageParams(
+  difficulty: Difficulty,
+  chapter: number,
+  page: number,
+  canUse: (kind: TargetKind) => boolean = () => true,
+): PageParams {
   const plan = chapterPlan(chapter);
-  const kind = plan[page % plan.length] ?? 'drip';
+  const planned = plan[page % plan.length] ?? 'drip';
+  const kind = canUse(planned) ? planned : 'blotling';
   const base = GAME_CONFIG.base[kind];
   const limits = GAME_CONFIG.limits[kind];
   const profile = DIFFICULTY_PROFILES[difficulty];

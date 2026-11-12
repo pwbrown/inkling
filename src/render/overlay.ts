@@ -21,7 +21,7 @@ export interface OverlayOption {
   selected: boolean;
 }
 
-export type OverlayLinkId = 'continue' | 'keys' | 'saveData' | 'settings';
+export type OverlayLinkId = 'continue' | 'keys' | 'wordLists' | 'saveData' | 'settings';
 
 export interface OverlayLink {
   id: OverlayLinkId;
@@ -110,6 +110,7 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
         links: [
           ...(context.continueLabel() ? [{ id: 'continue' as const, label: context.continueLabel()! }] : []),
           { id: 'keys', label: t('overlay.ready.changeKeys') },
+          { id: 'wordLists', label: t('overlay.ready.wordLists') },
           { id: 'saveData', label: t('overlay.ready.saveData') },
           { id: 'settings', label: t('overlay.settings') },
         ],

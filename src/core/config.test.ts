@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTIES, GAME_CONFIG, chapterPlan, pageParams } from './config';
+import { DIFFICULTIES, GAME_CONFIG, TARGET_KINDS, chapterPlan, pageParams } from './config';
 
 describe('chapterPlan', () => {
   it('uses the configured chapters, then repeats the last one', () => {
@@ -61,7 +61,7 @@ describe('pageParams', () => {
   });
 
   it('respects the limits deep into a hard campaign', () => {
-    for (const kind of ['drip', 'blotling'] as const) {
+    for (const kind of TARGET_KINDS) {
       const limits = GAME_CONFIG.limits[kind];
       for (let chapter = 0; chapter < 60; chapter++) {
         for (let page = 0; page < chapterPlan(chapter).length; page++) {
@@ -75,6 +75,18 @@ describe('pageParams', () => {
         }
       }
     }
+  });
+
+  it('swaps in a Blotling page when the keys cannot make the planned type', () => {
+    const runonPage = chapterPlan(2).indexOf('runon');
+    expect(pageParams('normal', 2, runonPage).kind).toBe('runon');
+    expect(pageParams('normal', 2, runonPage, (k) => k !== 'runon').kind).toBe('blotling');
+  });
+
+  it('introduces Run-ons and Misprints in later chapters only', () => {
+    expect(chapterPlan(0)).not.toContain('runon');
+    expect(chapterPlan(1)).not.toContain('misprint');
+    expect(chapterPlan(3)).toEqual(expect.arrayContaining(['runon', 'misprint']));
   });
 
   it('keeps Relaxed playable: at least one target on screen and complexity ≥ 0', () => {

@@ -33,8 +33,18 @@ export interface Target {
   id: number;
   kind: TargetKind;
   text: string;
-  /** How many characters of `text` have been typed. */
+  /**
+   * How many characters of `text` have been typed correctly. For Run-ons,
+   * the length of the correct start of the buffer.
+   */
   typed: number;
+  /**
+   * Buffer-mode targets (Run-on, Misprint) only: the text as currently
+   * typed or edited. The target is done when it equals `text`.
+   */
+  buffer?: string;
+  /** Buffer-mode targets only: cursor position in the buffer. */
+  cursor?: number;
   /** Current position (left edge of the target body). */
   x: number;
   y: number;
@@ -125,12 +135,17 @@ function pick<T>(items: readonly T[], random: () => number): T {
   return item;
 }
 
-export function createPage(difficulty: Difficulty, chapter: number, index: number): PageState {
+export function createPage(
+  difficulty: Difficulty,
+  chapter: number,
+  index: number,
+  content?: Pick<ContentSource, 'supports'>,
+): PageState {
   return {
     chapter,
     index,
     pageCount: chapterPlan(chapter).length,
-    params: pageParams(difficulty, chapter, index),
+    params: pageParams(difficulty, chapter, index, content ? (kind) => content.supports(kind) : undefined),
     spawned: 0,
     // Spawn the first target right away.
     spawnTimerMs: 0,
@@ -158,7 +173,7 @@ export function createWorld(options: WorldOptions = {}): World {
     difficulty,
     selectedDifficulty: difficulty,
     resumePhase: 'ready',
-    page: createPage(difficulty, 0, 0),
+    page: createPage(difficulty, 0, 0, content),
     targets: [],
     lockedId: null,
     ink: GAME_CONFIG.maxInk,
@@ -205,8 +220,10 @@ export function resetWorld(world: World, difficulty: Difficulty = world.difficul
  * Rough on-page width of a target, for spacing. Matches the renderer's
  * shapes closely enough without depending on font measurement.
  */
-export function estimateWidth(target: Pick<Target, 'kind' | 'text'>, scale = 1): number {
-  return (target.kind === 'drip' ? 58 : 36 + 15 * [...target.text].length) * scale;
+export function estimateWidth(target: Pick<Target, 'kind' | 'text' | 'buffer'>, scale = 1): number {
+  if (target.kind === 'drip') return 58 * scale;
+  const length = Math.max([...target.text].length, [...(target.buffer ?? '')].length);
+  return (36 + 15 * length) * scale;
 }
 
 /** Lanes whose most recent target has moved far enough in to make room. */
@@ -224,21 +241,36 @@ function freeLanes(world: World): number[] {
 /** Up to this many re-rolls to avoid two targets starting with the same character. */
 const DISTINCT_FIRST_CHAR_TRIES = 6;
 
+/** Whether a target type is edited as a buffer (rather than typed letter by letter). */
+export function isBufferKind(kind: TargetKind): boolean {
+  return kind === 'runon' || kind === 'misprint';
+}
+
 /**
  * Pick a payload, preferring one whose first character doesn't match any
  * target already on the page. That keeps targeting unambiguous: the first
  * keystroke picks exactly the target you meant.
  */
-function payloadFor(world: World, kind: TargetKind): string {
+function payloadFor(world: World, kind: TargetKind): Pick<Target, 'text' | 'buffer' | 'cursor'> {
+  const { complexity } = world.page.params;
+  const { content, random } = world;
+  if (kind === 'misprint') {
+    // Misprints are picked by urgency, not first letter, so no re-rolls needed.
+    const { right, wrong } = content.nextMisprint(complexity, random);
+    return { text: right, buffer: wrong, cursor: [...wrong].length };
+  }
+
   const taken = new Set(world.targets.map((t) => t.text[t.typed]));
   const next = () =>
     kind === 'drip'
-      ? world.content.nextChar(world.random)
-      : world.content.nextWord(world.page.params.complexity, world.random);
+      ? content.nextChar(random)
+      : kind === 'runon'
+        ? content.nextPhrase(complexity, random)
+        : content.nextWord(complexity, random);
 
   let text = next();
   for (let i = 1; i < DISTINCT_FIRST_CHAR_TRIES && taken.has(text[0]); i++) text = next();
-  return text;
+  return kind === 'runon' ? { text, buffer: '', cursor: 0 } : { text };
 }
 
 /**
@@ -257,7 +289,7 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
   const target: Target = {
     id: world.nextId++,
     kind,
-    text: payloadFor(world, kind),
+    ...payloadFor(world, kind),
     typed: 0,
     x: SPAWN_X,
     prevX: SPAWN_X,

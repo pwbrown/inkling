@@ -4,13 +4,23 @@ import './style.css';
 import { countTypeableWords, createContentSource, MIN_WORD_POOL } from './content/contentSource';
 import { loadEnglishPack } from './content/en';
 import { US_QWERTY } from './content/layouts/us-qwerty';
-import { autoPause, confirm, moveSelection, selectDifficulty, togglePause, typeChar } from './core/input';
+import {
+  autoPause,
+  confirm,
+  cycleLock,
+  editKey,
+  moveSelection,
+  selectDifficulty,
+  togglePause,
+  typeChar,
+  type EditKey,
+} from './core/input';
 import { builtInPresets, matchingPreset, type Preset } from './core/keySelection';
 import { FixedStepLoop } from './core/loop';
 import { improvedKeys } from './core/mastery';
 import { createWorld, setContent, stepWorld, type GamePhase, type World } from './core/world';
 import { formatNumber, setLocale, t } from './i18n';
-import { bindKeyboard } from './input/keyboard';
+import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { registerOffline } from './pwa';
 import { difficultyLabel, type OverlayLinkId } from './render/overlay';
 import { Sfx, type Sound } from './audio/sfx';
@@ -29,6 +39,7 @@ import { openBackend, SaveStore } from './storage/store';
 import { openSaveData } from './ui/saveData';
 import { openSettings } from './ui/settingsDialog';
 import { openTypeCase, presetName } from './ui/typeCase';
+import { openWordLists } from './ui/wordLists';
 
 async function main(): Promise<void> {
   const host = document.getElementById('app');
@@ -121,6 +132,7 @@ async function main(): Promise<void> {
       blocklist: pack.blocklist,
       trustedWords: true,
       keyWeights: keyWeights(store.data.keyStats, keys),
+      topicWords: store.data.vocab.filter((list) => list.enabled).flatMap((list) => list.words),
     });
 
   const game = createWorld({ content: contentFor(store.data.keys), difficulty: store.data.difficulty });
@@ -227,10 +239,49 @@ async function main(): Promise<void> {
     });
   };
 
+  const openVocab = () => {
+    if (dialogOpen || game.phase !== 'ready') return;
+    dialogOpen = true;
+    /** Rebuild content so word pages pick up list changes. */
+    const refresh = () => setContent(game, contentFor(game.keys));
+    openWordLists(document.body, {
+      lists: store.data.vocab,
+      blocklist: pack.blocklist,
+      countFitting: (words) =>
+        countTypeableWords(
+          words.map((word) => ({ word, tier: 0 })),
+          game.keys,
+        ),
+      onAdd: (list) => {
+        store.update((save) => {
+          save.vocab.push(list);
+        });
+        refresh();
+      },
+      onToggle: (id, enabled) => {
+        store.update((save) => {
+          const list = save.vocab.find((l) => l.id === id);
+          if (list) list.enabled = enabled;
+        });
+        refresh();
+      },
+      onDelete: (id) => {
+        store.update((save) => {
+          save.vocab = save.vocab.filter((l) => l.id !== id);
+        });
+        refresh();
+      },
+      onClose: () => {
+        dialogOpen = false;
+      },
+    });
+  };
+
   actions.onLink = (id) => {
     if (id === 'continue') continueSaved();
     else if (id === 'keys') openKeys();
     else if (id === 'settings') openSettingsDialog();
+    else if (id === 'wordLists') openVocab();
     else openSaves();
   };
 
@@ -268,7 +319,34 @@ async function main(): Promise<void> {
     }
   };
 
-  const shortcuts: Record<string, () => void> = { k: openKeys, b: openSaves, c: continueSaved, s: openSettingsDialog };
+  const EDIT_KEYS: Partial<Record<SpecialKey, EditKey>> = {
+    Backspace: 'backspace',
+    Delete: 'delete',
+    ArrowLeft: 'left',
+    ArrowRight: 'right',
+    Home: 'home',
+    End: 'end',
+  };
+
+  /** Arrows pick a difficulty on the menu; while playing, these keys edit Run-ons and Misprints. */
+  const handleSpecial = (key: SpecialKey): boolean => {
+    if (game.phase === 'ready') {
+      const delta = key === 'ArrowUp' || key === 'ArrowLeft' ? -1 : key === 'ArrowDown' || key === 'ArrowRight' ? 1 : 0;
+      if (delta !== 0) moveSelection(game, delta);
+      return delta !== 0;
+    }
+    if (game.phase !== 'playing') return false;
+    if (key === 'Tab') {
+      cycleLock(game);
+      return true;
+    }
+    const edit = EDIT_KEYS[key];
+    if (edit) editKey(game, edit);
+    // Swallow the rest too, so arrows never scroll the page mid-game.
+    return true;
+  };
+
+  const shortcuts: Record<string, () => void> = { k: openKeys, b: openSaves, c: continueSaved, s: openSettingsDialog, w: openVocab };
 
   bindKeyboard(
     window,
@@ -281,7 +359,7 @@ async function main(): Promise<void> {
         else typeChar(game, char);
       },
       onConfirm: () => actions.start(),
-      onNavigate: (delta) => moveSelection(game, delta),
+      onSpecial: (key) => handleSpecial(key),
       onPause: () => {
         togglePause(game);
         loop.reset();
@@ -329,7 +407,7 @@ async function main(): Promise<void> {
 
   if (import.meta.env.DEV) {
     // Handy for poking at state from the console during development.
-    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, openKeys, openSaves, openSettings: openSettingsDialog };
+    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
   }
 }
 

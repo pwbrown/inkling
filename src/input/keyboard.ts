@@ -9,11 +9,18 @@ export interface KeyboardHandlers {
   onConfirm(): void;
   /** Escape: pause or resume. */
   onPause(): void;
-  /** Arrow keys: move a menu selection by -1 or +1. */
-  onNavigate(delta: number): void;
+  /**
+   * Arrow keys, Backspace, Delete, Home, End and Tab: menu navigation or
+   * text editing, depending on the screen. Return true if it was used, so
+   * the browser's default (like Tab moving focus) is suppressed.
+   */
+  onSpecial(key: SpecialKey): boolean;
 }
 
-const NAVIGATION: Record<string, number> = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 };
+export const SPECIAL_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backspace', 'Delete', 'Home', 'End', 'Tab'] as const;
+export type SpecialKey = (typeof SPECIAL_KEYS)[number];
+
+const isSpecial = (key: string): key is SpecialKey => (SPECIAL_KEYS as readonly string[]).includes(key);
 
 /** True for a single printable character (letters, digits, symbols, space). */
 export function isPrintable(key: string): boolean {
@@ -43,9 +50,8 @@ export function bindKeyboard(
     } else if (event.key === 'Enter') {
       event.preventDefault();
       if (!event.repeat) handlers.onConfirm();
-    } else if (event.key in NAVIGATION) {
-      event.preventDefault();
-      handlers.onNavigate(NAVIGATION[event.key] ?? 0);
+    } else if (isSpecial(event.key)) {
+      if (handlers.onSpecial(event.key)) event.preventDefault();
     } else if (isPrintable(event.key)) {
       event.preventDefault();
       // Holding a key down shouldn't machine-gun targets or errors.

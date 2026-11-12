@@ -58,7 +58,7 @@ export function snapshotNotebook(
 /** Resume a saved notebook at the start of its page. */
 export function continueNotebook(world: World, saved: SavedNotebook): void {
   resetWorld(world, saved.difficulty);
-  world.page = createPage(saved.difficulty, saved.chapter, saved.page);
+  world.page = createPage(saved.difficulty, saved.chapter, saved.page, world.content);
   world.ink = Math.min(world.maxInk, Math.max(1, saved.ink));
   Object.assign(world.stats, {
     score: saved.score,

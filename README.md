@@ -14,9 +14,13 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | Key | Action |
 |---|---|
 | Characters | Hit the matching target closest to the margin |
+| Backspace / Delete | Erase mistakes in a Run-on; fix a Misprint |
+| ← → / Home / End | Move the cursor in a Misprint |
+| Tab | Switch to the next target (nearest the margin first) |
 | ↑ ↓ or 1–4 | Choose a difficulty on the new-notebook screen (or click one) |
 | K | Open the **Type Case** from the new-notebook screen to choose which keys to practice |
 | C | Continue your saved notebook from the start of the page you reached |
+| W | Open **Word lists**: download words about a topic to practice with |
 | B | Open **Save data**: export or import a backup, or erase everything |
 | S | Open **Settings** (also from the pause screen): text size, colors, motion, sound |
 | Enter | Start a notebook, turn the page, or return to the new-notebook screen after running out of ink |
@@ -29,6 +33,17 @@ A notebook is a series of **chapters**, each made of a few **pages**. Each page 
 The **Type Case** shows a keyboard where every key has two halves: its plain character below and its Shift character on top. Click a half, or press that key on your real keyboard, to add or remove it. You can also start from a preset (Home row, All letters, Numbers, Code symbols…), toggle whole groups (digits, top row, left hand…), or save your own presets. New players start on the home row (`a s d f g h j k l ;`).
 
 The game builds everything from your keys: drips use them directly, and word pages use real words that only need those letters. Selected capitals and punctuation show up in words too. If too few words fit, made-up strings are mixed in, and the Type Case warns you when that will happen.
+
+### Target types
+
+- **Drips:** a single character.
+- **Blotlings:** a word.
+- **Run-ons** (from chapter 3): a phrase. Mistakes stay, struck through in red, until you erase them with Backspace. They need the space key, so without it those pages become word pages.
+- **Misprints** (from chapter 4): a crooked rubber stamp with a misspelled word and the correct spelling pencilled above. Fix it with the arrow keys, Backspace, Delete and typing. Edits that bring it closer to right score, and edits that make it worse count as mistakes.
+
+### Word lists
+
+Press **W** to download words about a topic (e.g. *ocean*). Inkling asks the free [Datamuse](https://www.datamuse.com/api/) service for related words, sending only your topic. It keeps the clean single words, saves them on your device, and favours the ones your keys can type on word pages. Lists can be switched off or deleted. This is the only feature that uses the network, and only when you ask.
 
 ### After each page
 
@@ -82,7 +97,7 @@ The service worker is only registered in production builds. Use `npm run build &
 | `src/content/` | Word pool, fallback string generator, profanity guard, and per-locale content packs (`en/`). |
 | `scripts/` | Build-time tools: the word pack and the app icons. |
 | `src/storage/` | Save format and migrations, IndexedDB storage, and progress tracking. |
-| `src/ui/` | DOM screens: the Type Case, Save data and Settings dialogs. |
+| `src/ui/` | DOM screens: the Type Case, Word lists, Save data and Settings dialogs. |
 | `src/audio/` | Synthesized sound effects (Web Audio API). |
 | `src/input/` | DOM keyboard listener that turns key presses into game actions. |
 | `src/i18n/` | UI strings and the `t()` lookup (English only for now). |

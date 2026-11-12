@@ -5,7 +5,8 @@
  * The art is simple placeholder vector shapes in the Inkwell style
  * (DESIGN §7), to be swapped for hand-drawn art later.
  */
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Application, CanvasTextMetrics, Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { editDistance } from '../core/editing';
 import {
   FIRST_LINE_Y,
   LINE_SPACING,
@@ -40,6 +41,8 @@ interface TargetView {
   /** Body size, for centering effects. */
   width: number;
   height: number;
+  /** Buffer-mode targets redraw themselves when their buffer changes. */
+  update?: (target: Target) => void;
 }
 
 export interface Renderer {
@@ -88,6 +91,8 @@ function labelStyle(fill: number, fontSize: number) {
 }
 
 function createTargetView(target: Target, scale: number): TargetView {
+  if (target.kind === 'runon') return createRunonView(target, scale);
+  if (target.kind === 'misprint') return createMisprintView(target, scale);
   const root = new Container();
   const highlight = new Graphics();
   const body = new Graphics();
@@ -139,8 +144,146 @@ function createTargetView(target: Target, scale: number): TargetView {
   return { root, highlight, typedLabel, restLabel, typed: 0, padX, width, height };
 }
 
+const measure = (text: string, style: TextStyle) => CanvasTextMetrics.measureText(text, style).width;
+
+/**
+ * A Run-on (DESIGN §5): a segmented ink creature carrying a phrase. Typed
+ * text greys out; mistakes appear in red, struck through, until erased with
+ * Backspace; a caret marks where the next character goes.
+ */
+function createRunonView(target: Target, scale: number): TargetView {
+  const root = new Container();
+  const highlight = new Graphics();
+  const body = new Graphics();
+  const marks = new Graphics();
+  const fontSize = 24 * scale;
+  const padX = BLOT_PAD_X * scale;
+  const height = BLOT_HEIGHT * scale;
+  const styles = {
+    ok: new TextStyle(labelStyle(COLORS.inkFaded, fontSize)),
+    bad: new TextStyle(labelStyle(COLORS.margin, fontSize)),
+    rest: new TextStyle(labelStyle(COLORS.label, fontSize)),
+  };
+  const ok = new Text({ text: '', style: styles.ok });
+  const bad = new Text({ text: '', style: styles.bad });
+  const rest = new Text({ text: '', style: styles.rest });
+  for (const t of [ok, bad, rest]) t.anchor.set(0, 0.5);
+  root.addChild(highlight, body, ok, bad, rest, marks);
+
+  const view: TargetView = { root, highlight, typedLabel: ok, restLabel: rest, typed: -1, padX, width: 0, height };
+  let shown = '';
+  view.update = (t) => {
+    const buffer = t.buffer ?? '';
+    if (buffer === shown && view.width > 0) return;
+    shown = buffer;
+    const chars = [...t.text];
+    const okText = chars.slice(0, t.typed).join('');
+    const badText = [...buffer].slice(t.typed).join('');
+    const restText = chars.slice(t.typed).join('');
+    ok.text = okText;
+    bad.text = badText;
+    rest.text = restText;
+    ok.x = padX;
+    bad.x = ok.x + measure(okText, styles.ok);
+    rest.x = bad.x + measure(badText, styles.bad) + (badText ? 6 * scale : 0);
+    const width = rest.x + measure(restText, styles.rest) + padX;
+    view.width = width;
+
+    // Body: one long blot with a bump and a pair of legs per word.
+    body.clear().roundRect(0, -height / 2, width, height, height / 2).fill(COLORS.ink);
+    const words = Math.max(1, t.text.split(' ').length);
+    for (let i = 0; i < words; i++) {
+      const cx = ((i + 0.5) / words) * width;
+      body
+        .circle(cx, -height / 2 + 2, 6 * scale)
+        .fill(COLORS.ink)
+        .circle(cx - 8 * scale, height / 2 + 3, 3.5 * scale)
+        .fill(COLORS.inkLight)
+        .circle(cx + 8 * scale, height / 2 + 3, 3.5 * scale)
+        .fill(COLORS.inkLight);
+    }
+    highlight
+      .clear()
+      .roundRect(-8, -height / 2 - 8, width + 16, height + 16, (height + 16) / 2)
+      .fill({ color: COLORS.highlighter, alpha: 0.8 });
+
+    // Strike through mistakes (shape, not just color) and draw the caret.
+    marks.clear();
+    if (badText) {
+      marks.moveTo(bad.x, 1).lineTo(bad.x + measure(badText, styles.bad), 1).stroke({ width: 2.5 * scale, color: COLORS.margin });
+    }
+    const caretX = rest.x - (badText ? 3 * scale : 0);
+    marks.moveTo(caretX, -fontSize * 0.55).lineTo(caretX, fontSize * 0.55).stroke({ width: 2, color: COLORS.highlighter });
+  };
+  view.update(target);
+  highlight.visible = false;
+  return view;
+}
+
+/**
+ * A Misprint (DESIGN §5): a crooked rubber stamp with an editable word and a
+ * text caret. The correct spelling is pencilled above it. The stamp
+ * straightens as the word gets closer to right.
+ */
+function createMisprintView(target: Target, scale: number): TargetView {
+  const root = new Container();
+  const stamp = new Container();
+  const highlight = new Graphics();
+  const body = new Graphics();
+  const caret = new Graphics();
+  const fontSize = 26 * scale;
+  const padX = BLOT_PAD_X * scale;
+  const height = BLOT_HEIGHT * scale;
+  const style = new TextStyle({ ...labelStyle(COLORS.ink, fontSize), fontFamily: 'ui-monospace, Menlo, Consolas, monospace' });
+  const label = new Text({ text: '', style });
+  label.anchor.set(0, 0.5);
+  const hint = new Text({ text: target.text, style: labelStyle(COLORS.pencil, 15 * scale) });
+  hint.anchor.set(0, 1);
+  stamp.addChild(highlight, body, label, caret);
+  root.addChild(stamp, hint);
+
+  const view: TargetView = { root, highlight, typedLabel: label, restLabel: label, typed: -1, padX, width: 0, height };
+  let shown = '';
+  view.update = (t) => {
+    const buffer = t.buffer ?? '';
+    const key = `${buffer}|${t.cursor}`;
+    if (key === shown && view.width > 0) return;
+    shown = key;
+    label.text = buffer;
+    label.x = padX;
+    const width = Math.max(measure(buffer, style), measure(t.text, style)) + padX * 2;
+    view.width = width;
+    stamp.pivot.set(width / 2, 0);
+    stamp.x = width / 2;
+    stamp.rotation = -0.07 * Math.min(1, editDistance(buffer, t.text) / 2);
+    hint.position.set(padX, -height / 2 - 4);
+
+    body
+      .clear()
+      .roundRect(0, -height / 2, width, height, 6)
+      .fill(COLORS.paper)
+      .stroke({ width: 3, color: COLORS.margin })
+      .roundRect(4, -height / 2 + 4, width - 8, height - 8, 4)
+      .stroke({ width: 1, color: COLORS.margin });
+    highlight
+      .clear()
+      .roundRect(-8, -height / 2 - 8, width + 16, height + 16, 12)
+      .fill({ color: COLORS.highlighter, alpha: 0.8 });
+
+    const caretX = padX + measure([...buffer].slice(0, t.cursor ?? 0).join(''), style);
+    caret.clear().moveTo(caretX, -fontSize * 0.6).lineTo(caretX, fontSize * 0.6).stroke({ width: 2.5, color: COLORS.margin });
+  };
+  view.update(target);
+  highlight.visible = false;
+  return view;
+}
+
 /** Grey out the typed part of a word and keep the rest in place. */
 function updateLabels(view: TargetView, target: Target): void {
+  if (view.update) {
+    view.update(target);
+    return;
+  }
   if (view.typed === target.typed || target.kind === 'drip') return;
   view.typed = target.typed;
   view.typedLabel.text = target.text.slice(0, target.typed);

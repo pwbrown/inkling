@@ -20,9 +20,29 @@ describe('save schema', () => {
     expect(migrate(structuredClone(save))).toEqual(save);
   });
 
+  it('upgrades version 1 saves, adding empty word lists', () => {
+    const save = migrate({ version: 1, keys: ['q'], difficulty: 'hard' });
+    expect(save.version).toBe(SAVE_VERSION);
+    expect(save.vocab).toEqual([]);
+    expect(save.keys).toEqual(['q']);
+    expect(save.difficulty).toBe('hard');
+  });
+
+  it('keeps valid word lists and drops bad ones', () => {
+    const save = migrate({
+      version: 2,
+      vocab: [
+        { id: 'a', topic: 'ocean', words: ['sea', 'Bad', 'reef', 'sea', 7], enabled: false, fetchedAt: '2026-01-01' },
+        { id: 'b', topic: 'empty', words: [] },
+        'junk',
+      ],
+    });
+    expect(save.vocab).toEqual([{ id: 'a', topic: 'ocean', words: ['sea', 'reef'], enabled: false, fetchedAt: '2026-01-01' }]);
+  });
+
   it('cleans up bad fields instead of trusting them', () => {
     const save = migrate({
-      version: 1,
+      version: 2,
       keys: ['a', 'ab', 7, 'a', 'b'],
       difficulty: 'impossible',
       keyStats: { a: { hits: -3, misses: 2.7 }, toolong: { hits: 1, misses: 1 }, b: 'nope' },
@@ -39,7 +59,7 @@ describe('save schema', () => {
   });
 
   it('falls back to default keys if none are usable', () => {
-    expect(migrate({ version: 1, keys: [] }).keys).toEqual([...DEFAULT_KEYS]);
+    expect(migrate({ version: 2, keys: [] }).keys).toEqual([...DEFAULT_KEYS]);
   });
 
   it('rejects things that are not saves', () => {

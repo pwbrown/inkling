@@ -21,5 +21,5 @@ Inkling is an offline-first, open-source browser typing game (TypeScript + Vite 
 - Menus and settings screens are plain DOM in `src/ui/`, for accessibility.
 - All tuning numbers go in `src/core/config.ts`.
 - Every user-facing string goes through `t()` with an entry in `src/i18n/en.ts`.
-- No network requests, analytics or third-party scripts (see `PRIVACY.md`). Every bundled third-party asset needs a redistributable license and an entry in `CREDITS.md`.
+- No network requests, analytics or third-party scripts (see `PRIVACY.md`). The single exception is the player-triggered word download in `src/content/vocabApi.ts`, the only origin allowed by the CSP's `connect-src`. Every bundled third-party asset needs a redistributable license and an entry in `CREDITS.md`.
 - Keep the save format versioned: changing `SaveData` means bumping `SAVE_VERSION` and adding a migration in `src/storage/schema.ts`.

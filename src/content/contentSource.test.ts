@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Blocklist } from './blocklist';
-import { MIN_WORD_POOL, countTypeableWords, createContentSource, styleWord, wordLetters } from './contentSource';
+import { MIN_WORD_POOL, corrupt, countTypeableWords, createContentSource, styleWord, wordLetters } from './contentSource';
 import { entriesFromTiers } from './wordPool';
 
 const counter = () => {
@@ -83,5 +83,75 @@ describe('capitals and punctuation', () => {
     const endings = new Set(results.map((w) => w.at(-1)));
     for (const end of endings) expect(['a', 'b', ',', '!']).toContain(end);
     expect(results.some((w) => /[,!]$/.test(w))).toBe(true);
+  });
+});
+
+describe('phrases and misprints', () => {
+  const words = entriesFromTiers([
+    Array.from({ length: 40 }, (_, i) => ['flask', 'glass', 'salad', 'dash', 'hall'][i % 5] + 'a'.repeat(Math.floor(i / 5))).join(' '),
+  ]);
+  const random = (() => {
+    let i = 0;
+    return () => ((i++ * 0.618) % 1);
+  })();
+
+  it('only offers Run-ons when space is selected', () => {
+    expect(createContentSource({ keys: [...'asdf'] }).supports('runon')).toBe(false);
+    expect(createContentSource({ keys: [...'asdf '] }).supports('runon')).toBe(true);
+    expect(createContentSource({ keys: [...'asdf'] }).supports('misprint')).toBe(true);
+  });
+
+  it('builds phrases of several words, longer when harder', () => {
+    const content = createContentSource({ keys: [...'asdfghjkl '], words });
+    const easy = content.nextPhrase(0, random);
+    const hard = content.nextPhrase(1, random);
+    expect(easy.split(' ').length).toBe(2);
+    expect(hard.split(' ').length).toBe(5);
+    expect(hard).toMatch(/^[asdfghjkl ]+$/);
+  });
+
+  it('misspells a real word using only selected keys', () => {
+    const content = createContentSource({ keys: [...'asdfghjkl'], words });
+    for (let i = 0; i < 50; i++) {
+      const { right, wrong } = content.nextMisprint(0.3, random);
+      expect(wrong).not.toBe(right);
+      expect([...right].length).toBeGreaterThanOrEqual(4);
+      expect(wrong).toMatch(/^[asdfghjkl]+$/);
+    }
+  });
+
+  it('makes each kind of typo', () => {
+    const r = () => 0;
+    expect(corrupt('flask', 'swap', [], r)).toBe('lfask');
+    expect(corrupt('flask', 'drop', [], r)).toBe('lask');
+    expect(corrupt('flask', 'double', [], r)).toBe('fflask');
+    expect(corrupt('flask', 'replace', ['g'], r)).toBe('glask');
+    expect(corrupt('aa', 'swap', [], r)).toBeNull();
+    expect(corrupt('ab', 'replace', ['a'], r)).toBeNull();
+  });
+});
+
+describe('topic words', () => {
+  it('favours downloaded topic words that fit the keys', () => {
+    const words = entriesFromTiers([Array.from({ length: 30 }, (_, i) => 'sad' + 'a'.repeat(i)).join(' ')]);
+    const content = createContentSource({
+      keys: [...'asdfghjkl'],
+      words,
+      topicWords: ['flask', 'glass', 'flags', 'shall', 'halls', 'ocean'],
+    });
+    expect(content.topicWordCount).toBe(5);
+    let i = 0;
+    const random = () => [0.1, 0.5, 0.5][i++ % 3]!;
+    const picked = Array.from({ length: 20 }, () => content.nextWord(0.5, random).replace(/[,.;:!?]$/, ''));
+    expect(picked.some((w) => ['flask', 'glass', 'flags', 'shall', 'halls'].includes(w))).toBe(true);
+  });
+
+  it('checks topic words against the blocklist', () => {
+    const content = createContentSource({
+      keys: [...'darnheck'],
+      topicWords: ['darn', 'heck', 'den', 'dank', 'hen', 'need', 'deck'],
+      blocklist: new Blocklist(['darn']),
+    });
+    expect(content.topicWordCount).toBe(6);
   });
 });

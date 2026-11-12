@@ -477,3 +477,33 @@
 :root[data-theme='night'] .tc-char {
   border-color: #4a5068;
 }
+
+/* Word lists dialog. */
+.wl-privacy {
+  font-size: 14px;
+  border-left: 3px solid var(--tc-margin);
+  padding-left: 10px;
+}
+
+.wl-lists {
+  display: grid;
+  gap: 8px;
+}
+
+.wl-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.wl-count {
+  color: var(--tc-ink-light);
+  font-size: 14px;
+  flex: 1;
+}
+
+.wl-delete {
+  border-radius: 999px !important;
+  border-left: 1.5px solid var(--tc-ink) !important;
+}

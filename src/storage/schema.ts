@@ -7,7 +7,7 @@
  */
 import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from '../core/config';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -39,6 +39,17 @@ export interface SavedNotebook {
   savedAt: string;
 }
 
+/** A downloaded topic word list (REQUIREMENTS §6, optional vocabulary fetch). */
+export interface VocabList {
+  id: string;
+  topic: string;
+  words: string[];
+  /** Whether its words are used in the game. */
+  enabled: boolean;
+  /** ISO timestamp. */
+  fetchedAt: string;
+}
+
 export interface Records {
   bestScore: Partial<Record<Difficulty, number>>;
   /** Highest chapter reached (1-based). */
@@ -53,6 +64,8 @@ export interface SaveData {
   keyStats: Record<string, KeyStat>;
   records: Records;
   notebook: SavedNotebook | null;
+  /** Added in version 2. */
+  vocab: VocabList[];
 }
 
 /** File format for export/import. */
@@ -82,6 +95,7 @@ export function defaultSave(): SaveData {
     keyStats: {},
     records: { bestScore: {}, furthestChapter: {} },
     notebook: null,
+    vocab: [],
   };
 }
 
@@ -124,7 +138,28 @@ function sanitizeNotebook(v: unknown): SavedNotebook | null {
   };
 }
 
-function sanitizeV1(v: Json): SaveData {
+function sanitizeVocab(v: unknown): VocabList[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((list): VocabList[] => {
+    if (!isObject(list) || typeof list.id !== 'string' || typeof list.topic !== 'string') return [];
+    const words = Array.isArray(list.words)
+      ? [...new Set(list.words.filter((w): w is string => typeof w === 'string' && /^[a-z]{2,14}$/.test(w)))]
+      : [];
+    if (words.length === 0) return [];
+    return [
+      {
+        id: list.id,
+        topic: list.topic.slice(0, 40),
+        words,
+        enabled: list.enabled !== false,
+        fetchedAt: typeof list.fetchedAt === 'string' ? list.fetchedAt : new Date(0).toISOString(),
+      },
+    ];
+  });
+}
+
+/** Check every field of a current-version save. */
+function sanitize(v: Json): SaveData {
   const base = defaultSave();
   const keys = chars(v.keys);
 
@@ -153,14 +188,15 @@ function sanitizeV1(v: Json): SaveData {
     keyStats,
     records: { bestScore: difficultyRecord(records.bestScore), furthestChapter: difficultyRecord(records.furthestChapter) },
     notebook: sanitizeNotebook(v.notebook),
+    vocab: sanitizeVocab(v.vocab),
   };
 }
 
-/**
- * Upgrade steps: MIGRATIONS[n] turns a version-n save into version n+1.
- * Empty while there's only one version.
- */
-const MIGRATIONS: Record<number, (save: Json) => Json> = {};
+/** Upgrade steps: MIGRATIONS[n] turns a version-n save into version n+1. */
+const MIGRATIONS: Record<number, (save: Json) => Json> = {
+  // v2 added downloaded topic word lists.
+  1: (save) => ({ ...save, version: 2, vocab: [] }),
+};
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */
 export function migrate(raw: unknown): SaveData {
@@ -176,7 +212,7 @@ export function migrate(raw: unknown): SaveData {
     data = step(data);
     version++;
   }
-  return sanitizeV1(data);
+  return sanitize(data);
 }
 
 export function toExport(save: SaveData, now = new Date()): SaveExport {

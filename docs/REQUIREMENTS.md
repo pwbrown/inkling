@@ -261,7 +261,7 @@ Inkling is **open source** and will be **publicly hosted** as a static web app.
 - [ ] Health or lives? (DESIGN.md proposes an ink-reservoir health meter.) Does game-over restart the level or the campaign?
 - [ ] Which additional locales and keyboard layouts to add first (§11)?
 - [x] Word-list source: SCOWL levels 10–50 (via `wordlist-english`) plus the LDNOOBW blocklist. See CREDITS.md.
-- [ ] Which API to use for the optional vocabulary fetch.
+- [x] Vocabulary API: Datamuse (`api.datamuse.com/words?ml=<topic>`). No key needed, CORS-enabled, sends only the topic. See PRIVACY.md.
 - [ ] Confirm the code license (MIT vs GPL-3.0) and the art/audio license.
 - [ ] Pick the public repo/site name (§12). Host: GitHub Pages via `.github/workflows/deploy.yml` (any static host works).
 - [ ] An endless or practice mode alongside the campaign?
