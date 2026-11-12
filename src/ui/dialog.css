@@ -171,6 +171,7 @@
 }
 
 .tc-char {
+  position: relative;
   border: 1.5px solid #9a8f78;
   background: var(--tc-sort);
   border-radius: 4px;
@@ -196,6 +197,54 @@
 
 .tc-char:hover {
   border-color: var(--tc-highlight);
+}
+
+/* Practice bar along the bottom of each sort: fills with ink as the key is learned. */
+.tc-char::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  bottom: 2px;
+  height: 3px;
+  width: calc((100% - 6px) * var(--fill, 0));
+  border-radius: 2px;
+  background: var(--tc-ink-light);
+}
+
+.tc-char[aria-pressed='true']::after {
+  background: var(--tc-highlight);
+}
+
+/* Mastered: a gold-leaf edge (DESIGN §4). */
+.tc-char[data-mastery='mastered'] {
+  border-color: #c9a227;
+  box-shadow: inset 0 0 0 1.5px #c9a227;
+}
+
+.tc-legend {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--tc-ink-light);
+}
+
+.tc-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1.5px dashed var(--tc-ink);
+  border-radius: 10px;
+  background: rgb(255 224 102 / 0.3);
+}
+
+.tc-suggest p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.tc-suggest[hidden] {
+  display: none;
 }
 
 /* Inked: selected. Dark-on-light flips to light-on-dark, so it doesn't rely on hue alone. */
@@ -340,4 +389,91 @@
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+.tc-char[aria-pressed='true'][data-mastery='mastered'] {
+  border-color: #c9a227;
+  box-shadow: inset 0 0 0 2px #c9a227;
+}
+
+/* Settings dialog. */
+.st-panel {
+  width: min(640px, 100%);
+}
+
+.st-group {
+  border: 1px solid var(--tc-rule);
+  border-radius: 10px;
+  padding: 10px 14px 12px;
+  margin: 0;
+}
+
+.st-group legend {
+  padding: 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tc-ink-light);
+}
+
+.st-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+}
+
+.st-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.st-option input {
+  accent-color: var(--tc-ink);
+  width: 18px;
+  height: 18px;
+}
+
+.st-volume input {
+  width: 160px;
+}
+
+.st-help {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--tc-ink-light);
+}
+
+/* Dialogs follow the game's color theme (REQUIREMENTS §10). */
+:root[data-theme='contrast'] .dialog {
+  --tc-paper: #ffffff;
+  --tc-ink: #000000;
+  --tc-ink-light: #1a1a1a;
+  --tc-rule: #8aa4bf;
+  --tc-margin: #0050c8;
+  --tc-highlight: #ffd400;
+  --tc-sort: #f2f2f2;
+}
+
+:root[data-theme='night'] .dialog {
+  --tc-paper: #1d2130;
+  --tc-ink: #e9e4d4;
+  --tc-ink-light: #c4bfae;
+  --tc-rule: #34405a;
+  --tc-margin: #ff8a7a;
+  --tc-highlight: #8a6d00;
+  --tc-wood: #3a2c20;
+  --tc-wood-dark: #241a12;
+  --tc-sort: #2a2f42;
+}
+
+:root[data-theme='night'] .tc-name {
+  background: #2a2f42;
+  color: var(--tc-ink);
+}
+
+:root[data-theme='night'] .tc-char {
+  border-color: #4a5068;
 }

@@ -35,6 +35,8 @@ interface TargetView {
   typedLabel: Text;
   restLabel: Text;
   typed: number;
+  /** Left padding before the label (scaled). */
+  padX: number;
   /** Body size, for centering effects. */
   width: number;
   height: number;
@@ -44,7 +46,16 @@ export interface Renderer {
   app: Application;
   /** Draw the current state. `frameMs` is real time since the last frame. */
   sync(world: World, alpha: number, frameMs: number): void;
+  /** Redraw everything, e.g. after the theme, text size or motion setting changes. */
+  rebuild(): void;
   destroy(): void;
+}
+
+/** Display options the renderer reads from the player's settings. */
+export interface DisplayOptions {
+  /** Size multiplier for targets and their text (REQUIREMENTS §10). */
+  textScale: number;
+  reducedMotion: boolean;
 }
 
 function drawPage(): Graphics {
@@ -76,12 +87,13 @@ function labelStyle(fill: number, fontSize: number) {
   return { fontFamily: TEXT_FONT, fontSize, fontWeight: '600' as const, fill };
 }
 
-function createTargetView(target: Target): TargetView {
+function createTargetView(target: Target, scale: number): TargetView {
   const root = new Container();
   const highlight = new Graphics();
   const body = new Graphics();
   const isDrip = target.kind === 'drip';
-  const fontSize = isDrip ? 24 : 26;
+  const fontSize = (isDrip ? 24 : 26) * scale;
+  const padX = BLOT_PAD_X * scale;
   const typedLabel = new Text({ text: '', style: labelStyle(COLORS.inkFaded, fontSize) });
   const restLabel = new Text({ text: glyph(target.text), style: labelStyle(COLORS.label, fontSize) });
   typedLabel.anchor.set(0, 0.5);
@@ -92,7 +104,7 @@ function createTargetView(target: Target): TargetView {
 
   if (isDrip) {
     // A teardrop with its tail trailing to the right as it moves left.
-    const r = DRIP_RADIUS;
+    const r = DRIP_RADIUS * scale;
     width = r * 2 + 14;
     height = r * 2;
     body
@@ -104,8 +116,8 @@ function createTargetView(target: Target): TargetView {
     highlight.circle(r, 0, r + 8).fill({ color: COLORS.highlighter, alpha: 0.8 });
   } else {
     // A lumpy ink blot sized to fit its word: a Blotling (DESIGN §5).
-    width = restLabel.width + BLOT_PAD_X * 2;
-    height = BLOT_HEIGHT;
+    width = restLabel.width + padX * 2;
+    height = BLOT_HEIGHT * scale;
     body
       .roundRect(0, -height / 2, width, height, height / 2)
       .fill(COLORS.ink)
@@ -115,8 +127,8 @@ function createTargetView(target: Target): TargetView {
       .fill(COLORS.inkLight)
       .circle(width - 6, -height / 2 + 4, 6)
       .fill(COLORS.ink);
-    typedLabel.position.set(BLOT_PAD_X, 0);
-    restLabel.position.set(BLOT_PAD_X, 0);
+    typedLabel.position.set(padX, 0);
+    restLabel.position.set(padX, 0);
     highlight
       .roundRect(-8, -height / 2 - 8, width + 16, height + 16, (height + 16) / 2)
       .fill({ color: COLORS.highlighter, alpha: 0.8 });
@@ -124,7 +136,7 @@ function createTargetView(target: Target): TargetView {
 
   highlight.visible = false;
   root.addChild(highlight, body, typedLabel, restLabel);
-  return { root, highlight, typedLabel, restLabel, typed: 0, width, height };
+  return { root, highlight, typedLabel, restLabel, typed: 0, padX, width, height };
 }
 
 /** Grey out the typed part of a word and keep the rest in place. */
@@ -133,7 +145,7 @@ function updateLabels(view: TargetView, target: Target): void {
   view.typed = target.typed;
   view.typedLabel.text = target.text.slice(0, target.typed);
   view.restLabel.text = target.text.slice(target.typed);
-  view.restLabel.x = BLOT_PAD_X + (target.typed > 0 ? view.typedLabel.width : 0);
+  view.restLabel.x = view.padX + (target.typed > 0 ? view.typedLabel.width : 0);
 }
 
 /** Exponential smoothing that behaves the same at any frame rate. */
@@ -145,8 +157,11 @@ function approach(current: number, goal: number, rate: number, dtMs: number): nu
  * `actions` handles clicks on the overlay (difficulty picker, prompts). They
  * are intents for main.ts to apply; the renderer itself never changes state.
  */
-export async function createRenderer(host: HTMLElement, actions: OverlayActions): Promise<Renderer> {
-  const reducedMotion = prefersReducedMotion();
+export async function createRenderer(
+  host: HTMLElement,
+  actions: OverlayActions,
+  display: () => DisplayOptions = () => ({ textScale: 1, reducedMotion: prefersReducedMotion() }),
+): Promise<Renderer> {
   const app = new Application();
   await app.init({
     // The desk shows around the page when the window's aspect ratio differs.
@@ -161,20 +176,40 @@ export async function createRenderer(host: HTMLElement, actions: OverlayActions)
 
   // Everything is drawn in logical world units, then scaled to fit the window.
   const stage = new Container();
-  const effects = new Effects(reducedMotion);
-  const guide = new Graphics();
-  const targetLayer = new Container();
-  const nib = drawNib();
-  nib.position.set(NIB_HOME.x, NIB_HOME.y);
-  const hud = new Hud();
-  const overlay = new Overlay(actions);
-  stage.addChild(drawPage(), effects.stainLayer, guide, targetLayer, nib, effects.particleLayer, hud.root, overlay.root);
   app.stage.addChild(stage);
+  const views = new Map<number, TargetView>();
 
-  // Clip anything outside the page (targets spawn off the right edge).
-  const mask = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(0xffffff);
-  stage.addChild(mask);
-  stage.mask = mask;
+  // The scene is rebuilt from scratch when display settings change.
+  let reducedMotion = false;
+  let textScale = 1;
+  let effects!: Effects;
+  let guide!: Graphics;
+  let targetLayer!: Container;
+  let nib!: Graphics;
+  let hud!: Hud;
+  let overlay!: Overlay;
+
+  const build = () => {
+    ({ reducedMotion, textScale } = display());
+    for (const child of stage.removeChildren()) child.destroy({ children: true });
+    views.clear();
+    app.renderer.background.color = COLORS.desk;
+
+    effects = new Effects(reducedMotion);
+    guide = new Graphics();
+    targetLayer = new Container();
+    nib = drawNib();
+    nib.position.set(NIB_HOME.x, NIB_HOME.y);
+    hud = new Hud();
+    overlay = new Overlay(actions);
+    stage.addChild(drawPage(), effects.stainLayer, guide, targetLayer, nib, effects.particleLayer, hud.root, overlay.root);
+
+    // Clip anything outside the page (targets spawn off the right edge).
+    const mask = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(0xffffff);
+    stage.addChild(mask);
+    stage.mask = mask;
+  };
+  build();
 
   const fit = () => {
     const { width, height } = app.screen;
@@ -185,7 +220,6 @@ export async function createRenderer(host: HTMLElement, actions: OverlayActions)
   fit();
   app.renderer.on('resize', fit);
 
-  const views = new Map<number, TargetView>();
   let shakeMs = 0;
   let wobbleMs = 0;
   let lastPhase: GamePhase | null = null;
@@ -240,7 +274,7 @@ export async function createRenderer(host: HTMLElement, actions: OverlayActions)
         live.add(target.id);
         let view = views.get(target.id);
         if (!view) {
-          view = createTargetView(target);
+          view = createTargetView(target, textScale);
           views.set(target.id, view);
           targetLayer.addChild(view.root);
         }
@@ -281,6 +315,9 @@ export async function createRenderer(host: HTMLElement, actions: OverlayActions)
       effects.update(frameMs);
       hud.update(world);
       overlay.update(world);
+    },
+    rebuild() {
+      build();
     },
     destroy() {
       app.destroy(true, { children: true });

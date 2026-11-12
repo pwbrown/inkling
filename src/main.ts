@@ -7,12 +7,16 @@ import { US_QWERTY } from './content/layouts/us-qwerty';
 import { autoPause, confirm, moveSelection, selectDifficulty, togglePause, typeChar } from './core/input';
 import { builtInPresets, matchingPreset, type Preset } from './core/keySelection';
 import { FixedStepLoop } from './core/loop';
+import { improvedKeys } from './core/mastery';
 import { createWorld, setContent, stepWorld, type GamePhase, type World } from './core/world';
 import { formatNumber, setLocale, t } from './i18n';
 import { bindKeyboard } from './input/keyboard';
 import { registerOffline } from './pwa';
 import { difficultyLabel, type OverlayLinkId } from './render/overlay';
+import { Sfx, type Sound } from './audio/sfx';
 import { createRenderer } from './render/renderer';
+import { keyLabel, prefersReducedMotion, setTheme } from './render/theme';
+import { TEXT_SCALE, loadSettings, reducedMotion, saveSettings, type Settings } from './settings';
 import {
   continueNotebook,
   keyWeights,
@@ -23,6 +27,7 @@ import {
 } from './storage/progress';
 import { openBackend, SaveStore } from './storage/store';
 import { openSaveData } from './ui/saveData';
+import { openSettings } from './ui/settingsDialog';
 import { openTypeCase, presetName } from './ui/typeCase';
 
 async function main(): Promise<void> {
@@ -36,11 +41,23 @@ async function main(): Promise<void> {
   const presets = builtInPresets(layout);
   const store = await SaveStore.open(await openBackend());
 
+  // Comfort settings (REQUIREMENTS §10), applied before anything is drawn.
+  let settings: Settings = loadSettings();
+  const sfx = new Sfx();
+  const applyColors = () => {
+    setTheme(settings.theme);
+    document.documentElement.dataset.theme = settings.theme;
+    sfx.setVolume(settings.volume, settings.muted);
+  };
+  applyColors();
+
   const customPresets = (): Preset[] => store.data.customPresets.map((p) => ({ ...p, builtIn: false }));
   /** A menu screen (Type Case, Save data) is open and owns the keyboard. */
   let dialogOpen = false;
   /** Set when the last notebook ended with a new best score, for the game-over card. */
   let newBest = false;
+  /** Keys that became mastered on the page just finished, for the graded page. */
+  let newlyMastered: string[] = [];
 
   const describeKeys = (keys: readonly string[]) => {
     const preset = matchingPreset([...presets, ...customPresets()], keys);
@@ -69,6 +86,11 @@ async function main(): Promise<void> {
           : null;
       },
       extraLines: (w) => {
+        if (w.phase === 'pageCleared') {
+          return newlyMastered.length > 0
+            ? [t('overlay.newlyMastered', { keys: newlyMastered.map(keyLabel).join('  ') })]
+            : [];
+        }
         if (w.phase === 'gameOver') {
           return newBest ? [t('overlay.gameOver.newBest', { difficulty: difficultyLabel(w.difficulty) })] : [];
         }
@@ -85,7 +107,10 @@ async function main(): Promise<void> {
             ]
           : [];
       },
-    }),
+    }, () => ({
+      textScale: TEXT_SCALE[settings.textSize],
+      reducedMotion: reducedMotion(settings, prefersReducedMotion()),
+    })),
   ]);
 
   /** Content for a key set, weighted toward the player's weak keys. */
@@ -100,6 +125,12 @@ async function main(): Promise<void> {
 
   const game = createWorld({ content: contentFor(store.data.keys), difficulty: store.data.difficulty });
   world = game;
+  /** Large text uses every other line so targets don't overlap. */
+  const applyLayout = () => {
+    game.targetScale = TEXT_SCALE[settings.textSize];
+    game.laneStep = game.targetScale > 1 ? 2 : 1;
+  };
+  applyLayout();
   const loop = new FixedStepLoop((stepMs) => stepWorld(game, stepMs));
 
   /** Re-read keys and difficulty from the save (after an import or erase). */
@@ -132,6 +163,7 @@ async function main(): Promise<void> {
       builtInPresets: presets,
       customPresets: customPresets(),
       initial: game.keys,
+      keyStats: store.data.keyStats,
       countWords: (keys) => countTypeableWords(pack.words, keys),
       minWords: MIN_WORD_POOL,
       onDone: (keys) => {
@@ -172,9 +204,33 @@ async function main(): Promise<void> {
     });
   };
 
+  const openSettingsDialog = () => {
+    if (dialogOpen || (game.phase !== 'ready' && game.phase !== 'paused')) return;
+    dialogOpen = true;
+    openSettings(document.body, {
+      settings,
+      onChange: (next) => {
+        const redraw = next.theme !== settings.theme || next.textSize !== settings.textSize || next.motion !== settings.motion;
+        settings = next;
+        saveSettings(settings);
+        applyColors();
+        applyLayout();
+        if (redraw) renderer.rebuild();
+      },
+      onTestSound: () => {
+        sfx.unlock();
+        sfx.play('page');
+      },
+      onClose: () => {
+        dialogOpen = false;
+      },
+    });
+  };
+
   actions.onLink = (id) => {
     if (id === 'continue') continueSaved();
     else if (id === 'keys') openKeys();
+    else if (id === 'settings') openSettingsDialog();
     else openSaves();
   };
 
@@ -193,7 +249,9 @@ async function main(): Promise<void> {
         break;
       case 'pageCleared':
         store.update((save) => {
+          const before = structuredClone(save.keyStats);
           mergeKeyStats(save, game.pageStats);
+          newlyMastered = improvedKeys(before, save.keyStats);
           recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);
           save.notebook = snapshotNotebook(game, nextPagePosition(game.page));
         });
@@ -210,13 +268,15 @@ async function main(): Promise<void> {
     }
   };
 
-  const shortcuts: Record<string, () => void> = { k: openKeys, b: openSaves, c: continueSaved };
+  const shortcuts: Record<string, () => void> = { k: openKeys, b: openSaves, c: continueSaved, s: openSettingsDialog };
 
   bindKeyboard(
     window,
     {
       onChar: (char) => {
-        const shortcut = game.phase === 'ready' ? shortcuts[char.toLowerCase()] : undefined;
+        const lower = char.toLowerCase();
+        const shortcut =
+          game.phase === 'ready' ? shortcuts[lower] : game.phase === 'paused' && lower === 's' ? openSettingsDialog : undefined;
         if (shortcut) shortcut();
         else typeChar(game, char);
       },
@@ -241,16 +301,35 @@ async function main(): Promise<void> {
   });
   window.addEventListener('pagehide', () => void store.flush());
 
+  // Audio may only start after a user gesture.
+  window.addEventListener('keydown', () => sfx.unlock());
+  window.addEventListener('pointerdown', () => sfx.unlock());
+
+  const soundFor: Partial<Record<string, Sound>> = {
+    locked: 'key',
+    progress: 'key',
+    destroyed: 'pop',
+    error: 'error',
+    marginHit: 'leak',
+  };
+
   renderer.app.ticker.add((ticker) => {
     const alpha = loop.advance(ticker.deltaMS);
-    // Look at phase changes before the renderer consumes the events.
-    for (const event of game.events) if (event.type === 'phase') onPhase(event.phase);
+    // Look at events before the renderer consumes them: saving and sound.
+    for (const event of game.events) {
+      if (event.type === 'phase') {
+        onPhase(event.phase);
+        if (event.phase === 'pageCleared') sfx.play('page');
+      }
+      const sound = soundFor[event.type];
+      if (sound) sfx.play(sound);
+    }
     renderer.sync(game, alpha, ticker.deltaMS);
   });
 
   if (import.meta.env.DEV) {
     // Handy for poking at state from the console during development.
-    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, openKeys, openSaves };
+    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, openKeys, openSaves, openSettings: openSettingsDialog };
   }
 }
 

@@ -1,0 +1,71 @@
+/**
+ * Player settings: comfort and accessibility options (REQUIREMENTS §10).
+ * Small, so they live in localStorage (REQUIREMENTS §8) rather than the save.
+ */
+import { THEMES, type ThemeId } from './render/theme';
+
+export type TextSize = 'normal' | 'large' | 'larger';
+export type MotionSetting = 'system' | 'reduced' | 'full';
+
+export const TEXT_SIZES: readonly TextSize[] = ['normal', 'large', 'larger'];
+export const MOTION_SETTINGS: readonly MotionSetting[] = ['system', 'reduced', 'full'];
+
+/** How much bigger targets and their text get. */
+export const TEXT_SCALE: Record<TextSize, number> = { normal: 1, large: 1.2, larger: 1.4 };
+
+export interface Settings {
+  textSize: TextSize;
+  theme: ThemeId;
+  motion: MotionSetting;
+  /** Sound effects volume, 0..1. */
+  volume: number;
+  muted: boolean;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  textSize: 'normal',
+  theme: 'classic',
+  motion: 'system',
+  volume: 0.6,
+  muted: false,
+};
+
+const STORAGE_KEY = 'inkling.settings';
+
+/** Validate whatever was stored, keeping good fields and defaulting the rest. */
+export function parseSettings(raw: unknown): Settings {
+  const s = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const pick = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
+    allowed.includes(value as T) ? (value as T) : fallback;
+  const volume = typeof s.volume === 'number' && Number.isFinite(s.volume) ? Math.min(1, Math.max(0, s.volume)) : DEFAULT_SETTINGS.volume;
+  return {
+    textSize: pick(s.textSize, TEXT_SIZES, DEFAULT_SETTINGS.textSize),
+    theme: pick(s.theme, THEMES, DEFAULT_SETTINGS.theme),
+    motion: pick(s.motion, MOTION_SETTINGS, DEFAULT_SETTINGS.motion),
+    volume,
+    muted: typeof s.muted === 'boolean' ? s.muted : DEFAULT_SETTINGS.muted,
+  };
+}
+
+/** Read settings. Storage can be blocked (private windows), so fall back to defaults. */
+export function loadSettings(storage: Pick<Storage, 'getItem'> | undefined = globalThis.localStorage): Settings {
+  try {
+    const text = storage?.getItem(STORAGE_KEY);
+    return parseSettings(text ? JSON.parse(text) : {});
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+export function saveSettings(settings: Settings, storage: Pick<Storage, 'setItem'> | undefined = globalThis.localStorage): void {
+  try {
+    storage?.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    // Not fatal: the settings just won't be remembered.
+  }
+}
+
+/** Resolve the motion setting against the OS preference. */
+export function reducedMotion(settings: Settings, osPrefersReduced: boolean): boolean {
+  return settings.motion === 'system' ? osPrefersReduced : settings.motion === 'reduced';
+}

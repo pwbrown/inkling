@@ -122,6 +122,29 @@ export const GAME_CONFIG = {
     ['blotling', 'drip', 'blotling', 'drip', 'blotling'],
   ] as TargetKind[][],
 
+  /** When a key counts as practiced or mastered (DESIGN §4). */
+  mastery: {
+    /** Correct presses before a key is "practicing" rather than "unfamiliar". */
+    practicingHits: 10,
+    /** Correct presses needed for "mastered"… */
+    masteredHits: 50,
+    /** …at this accuracy or better. */
+    masteredAccuracy: 0.94,
+    /** Suggest new keys once this share of the selected keys is mastered. */
+    suggestWhenMastered: 0.75,
+    /** How many new keys to suggest at a time. */
+    suggestCount: 2,
+  },
+
+  /** Page grades by accuracy, best first. Each leak lowers it (see grade.ts). */
+  grades: [
+    { grade: 'A', minAccuracy: 0.95 },
+    { grade: 'B', minAccuracy: 0.9 },
+    { grade: 'C', minAccuracy: 0.8 },
+    { grade: 'D', minAccuracy: 0.7 },
+    { grade: 'F', minAccuracy: 0 },
+  ],
+
   /** Each target's speed varies randomly by up to ±this fraction. */
   speedJitter: 0.15,
   /** Empty space to keep behind the last target in a lane before spawning another. */

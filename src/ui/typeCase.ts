@@ -16,6 +16,7 @@ import {
   toggleRegion,
   type Preset,
 } from '../core/keySelection';
+import { keyAccuracy, masteryLevel, masteryProgress, suggestNextKeys, type KeyCounts } from '../core/mastery';
 import { formatNumber, t, type MessageKey } from '../i18n';
 import { h } from './dom';
 
@@ -25,6 +26,8 @@ export interface TypeCaseOptions {
   customPresets: readonly Preset[];
   /** Currently selected characters. */
   initial: readonly string[];
+  /** Saved per-key hits and misses, for mastery display and suggestions. */
+  keyStats: Readonly<Record<string, KeyCounts>>;
   /** Number of dictionary words the keys can make. */
   countWords(keys: readonly string[]): number;
   /** Below this many words, warn that made-up strings will be mixed in. */
@@ -88,16 +91,28 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
   // --- Key caps ---------------------------------------------------------------
 
   const charButton = (ch: string, part: 'base' | 'shift' | 'solo') => {
+    const stat = options.keyStats[ch];
+    const level = masteryLevel(stat);
+    const mastery = t(`mastery.${level}` as MessageKey);
     const button = h(
       'button',
       {
         type: 'button',
         className: `tc-char tc-${part}`,
-        'aria-label': t('typeCase.key', { char: capLabel(ch) }),
+        'data-mastery': level,
+        'aria-label': t('typeCase.key', { char: capLabel(ch), mastery }),
+        title: t('typeCase.keyStats', {
+          char: capLabel(ch),
+          hits: formatNumber(stat?.hits ?? 0),
+          accuracy: formatNumber(Math.round(keyAccuracy(stat) * 100)),
+          mastery,
+        }),
         onClick: () => toggleChar(ch),
       },
       [capLabel(ch)],
     );
+    // Ink fill for the practice bar (DESIGN §4).
+    button.style.setProperty('--fill', masteryProgress(stat).toFixed(3));
     const list = charButtons.get(ch) ?? [];
     list.push(button);
     charButtons.set(ch, list);
@@ -111,6 +126,8 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
     cap.append(charButton(key.base, key.shift ? 'base' : 'solo'));
     return cap;
   };
+
+  const suggestion = h('div', { className: 'tc-suggest', 'aria-live': 'polite' });
 
   const keyboard = h(
     'div',
@@ -192,7 +209,8 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
   const panel = h('div', { className: 'tc-panel' }, [
     h('header', {}, [h('h2', { id: 'tc-title' }, [t('typeCase.title')]), h('p', { className: 'tc-intro' }, [t('typeCase.intro')])]),
     h('section', {}, [h('h3', {}, [t('typeCase.presets')]), presetList, customSection]),
-    keyboard,
+    suggestion,
+    h('div', {}, [keyboard, h('p', { className: 'tc-legend' }, [t('typeCase.legend')])]),
     h('section', {}, [h('h3', {}, [t('typeCase.groups')]), regions]),
     h('footer', {}, [
       h('div', { className: 'tc-status' }, [summary, warning]),
@@ -234,6 +252,20 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
             ? t('typeCase.warnFewWords')
             : '';
     doneButton.disabled = keys.length === 0;
+
+    // Apprentice path: suggest the next keys once these are mostly mastered.
+    const next = suggestNextKeys(orderedSelection(layout, selection), options.keyStats);
+    suggestion.hidden = next.length === 0;
+    suggestion.replaceChildren(
+      ...(next.length === 0
+        ? []
+        : [
+            h('p', {}, [t('typeCase.suggest', { keys: next.map(capLabel).join(' + ') })]),
+            h('button', { type: 'button', className: 'tc-secondary', onClick: () => set(new Set([...selection, ...next])) }, [
+              t('typeCase.suggestAdd'),
+            ]),
+          ]),
+    );
   }
 
   // --- Keyboard -------------------------------------------------------------

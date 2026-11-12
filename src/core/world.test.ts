@@ -85,6 +85,23 @@ describe('world', () => {
     expect(renderX(target, 0.5)).toBeCloseTo(SPAWN_X - 25);
   });
 
+  it('uses every other line when laneStep is 2', () => {
+    expect(laneCount(2)).toBe(Math.floor(laneCount() / 2));
+    expect(laneY(1, 2)).toBe(laneY(2));
+    const world = playingWorld();
+    world.laneStep = 2;
+    const target = spawnTarget(world)!;
+    expect((target.y - laneY(0)) % (2 * (laneY(1) - laneY(0)))).toBe(0);
+  });
+
+  it('counts targets that reach the margin', () => {
+    const world = playingWorld();
+    spawnTarget(world, { x: MARGIN_X + 1, speed: 1000 });
+    stepWorld(world, 16);
+    expect(world.stats.leaks).toBe(1);
+    expect(world.pageStats.leaks).toBe(1);
+  });
+
   it('drains ink, breaks the combo and drops the lock when a target reaches the margin', () => {
     const world = playingWorld();
     const target = spawnTarget(world, { x: MARGIN_X + 1, speed: 1000 })!;

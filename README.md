@@ -18,6 +18,7 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | K | Open the **Type Case** from the new-notebook screen to choose which keys to practice |
 | C | Continue your saved notebook from the start of the page you reached |
 | B | Open **Save data**: export or import a backup, or erase everything |
+| S | Open **Settings** (also from the pause screen): text size, colors, motion, sound |
 | Enter | Start a notebook, turn the page, or return to the new-notebook screen after running out of ink |
 | Esc | Pause or resume (the game also pauses when the window loses focus) |
 
@@ -28,6 +29,23 @@ A notebook is a series of **chapters**, each made of a few **pages**. Each page 
 The **Type Case** shows a keyboard where every key has two halves: its plain character below and its Shift character on top. Click a half, or press that key on your real keyboard, to add or remove it. You can also start from a preset (Home row, All letters, Numbers, Code symbols…), toggle whole groups (digits, top row, left hand…), or save your own presets. New players start on the home row (`a s d f g h j k l ;`).
 
 The game builds everything from your keys: drips use them directly, and word pages use real words that only need those letters. Selected capitals and punctuation show up in words too. If too few words fit, made-up strings are mixed in, and the Type Case warns you when that will happen.
+
+### After each page
+
+Each page is graded in red pen (A+ to F) from your accuracy, dropping a letter if ink reached the margin. The page also circles the keys you missed most, adds a teacher's note, and lists any keys you newly mastered.
+
+### Mastery
+
+In the Type Case, a bar under each key fills as you practice it, and mastered keys get a gold edge. A key is mastered after 50 correct presses at 94% accuracy or better. Once most of your keys are mastered, the Type Case suggests the next two to learn, in the order typing courses usually teach them.
+
+### Settings
+
+- **Text size:** Normal, Large or Larger. The larger sizes use every other line on the page.
+- **Colors:** Classic paper, High contrast or Night.
+- **Motion:** match your system, reduced, or full.
+- **Sound effects:** volume and mute. The sounds are synthesized in the browser, so there are no audio files.
+
+Settings are stored in your browser's localStorage.
 
 ### Saving
 
@@ -64,7 +82,8 @@ The service worker is only registered in production builds. Use `npm run build &
 | `src/content/` | Word pool, fallback string generator, profanity guard, and per-locale content packs (`en/`). |
 | `scripts/` | Build-time tools: the word pack and the app icons. |
 | `src/storage/` | Save format and migrations, IndexedDB storage, and progress tracking. |
-| `src/ui/` | DOM screens: the Type Case and Save data dialogs. |
+| `src/ui/` | DOM screens: the Type Case, Save data and Settings dialogs. |
+| `src/audio/` | Synthesized sound effects (Web Audio API). |
 | `src/input/` | DOM keyboard listener that turns key presses into game actions. |
 | `src/i18n/` | UI strings and the `t()` lookup (English only for now). |
 | `src/render/` | PixiJS rendering: page, targets, Nib, effects, HUD and overlays. Reads game state, never changes it. |

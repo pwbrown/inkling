@@ -98,18 +98,25 @@ export interface World {
   keys: readonly string[];
   /** Supplies drip characters and Blotling words for those keys. */
   content: ContentSource;
+  /** Use every `laneStep`-th ruled line (2 for large text). */
+  laneStep: number;
+  /** Size of targets on screen, for spacing them (matches the text-size setting). */
+  targetScale: number;
   nextId: number;
   /** Injected so tests are deterministic. Returns [0, 1). */
   random: () => number;
 }
 
-/** Ruled lines that targets can travel on. */
-export function laneCount(): number {
-  return Math.floor((WORLD_HEIGHT - FIRST_LINE_Y - LINE_SPACING) / LINE_SPACING);
+/**
+ * Ruled lines that targets can travel on. With `step` 2, only every other
+ * line is used, leaving room for larger text (REQUIREMENTS §10).
+ */
+export function laneCount(step = 1): number {
+  return Math.floor((WORLD_HEIGHT - FIRST_LINE_Y - LINE_SPACING) / (LINE_SPACING * step));
 }
 
-export function laneY(lane: number): number {
-  return FIRST_LINE_Y + lane * LINE_SPACING;
+export function laneY(lane: number, step = 1): number {
+  return FIRST_LINE_Y + lane * LINE_SPACING * step;
 }
 
 function pick<T>(items: readonly T[], random: () => number): T {
@@ -162,6 +169,8 @@ export function createWorld(options: WorldOptions = {}): World {
     events: [],
     keys: content.keys,
     content,
+    laneStep: 1,
+    targetScale: 1,
     nextId: 1,
     random: options.random ?? Math.random,
   };
@@ -187,6 +196,8 @@ export function setPhase(world: World, phase: GamePhase): void {
 export function resetWorld(world: World, difficulty: Difficulty = world.difficulty): void {
   const fresh = createWorld({ random: world.random, content: world.content, difficulty });
   fresh.nextId = world.nextId;
+  fresh.laneStep = world.laneStep;
+  fresh.targetScale = world.targetScale;
   Object.assign(world, fresh);
 }
 
@@ -194,19 +205,19 @@ export function resetWorld(world: World, difficulty: Difficulty = world.difficul
  * Rough on-page width of a target, for spacing. Matches the renderer's
  * shapes closely enough without depending on font measurement.
  */
-export function estimateWidth(target: Pick<Target, 'kind' | 'text'>): number {
-  return target.kind === 'drip' ? 58 : 36 + 15 * [...target.text].length;
+export function estimateWidth(target: Pick<Target, 'kind' | 'text'>, scale = 1): number {
+  return (target.kind === 'drip' ? 58 : 36 + 15 * [...target.text].length) * scale;
 }
 
 /** Lanes whose most recent target has moved far enough in to make room. */
 function freeLanes(world: World): number[] {
   const busy = new Set(
     world.targets
-      .filter((t) => t.x + estimateWidth(t) > SPAWN_X - GAME_CONFIG.laneGapPx)
+      .filter((t) => t.x + estimateWidth(t, world.targetScale) > SPAWN_X - GAME_CONFIG.laneGapPx)
       .map((t) => t.lane),
   );
   const lanes: number[] = [];
-  for (let lane = 0; lane < laneCount(); lane++) if (!busy.has(lane)) lanes.push(lane);
+  for (let lane = 0; lane < laneCount(world.laneStep); lane++) if (!busy.has(lane)) lanes.push(lane);
   return lanes;
 }
 
@@ -250,7 +261,7 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
     typed: 0,
     x: SPAWN_X,
     prevX: SPAWN_X,
-    y: laneY(lane),
+    y: laneY(lane, world.laneStep),
     lane,
     speed: Math.min(leaderSpeed, speed * (1 + (world.random() * 2 - 1) * jitter)),
     ...overrides,
@@ -297,6 +308,8 @@ export function stepWorld(world: World, stepMs: number): void {
     world.ink = Math.max(0, world.ink - inkLost);
     world.stats.combo = 0;
     world.pageStats.combo = 0;
+    world.stats.leaks++;
+    world.pageStats.leaks++;
     if (world.lockedId === target.id) world.lockedId = null;
     world.events.push({ type: 'marginHit', target, inkLost });
   }
