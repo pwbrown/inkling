@@ -4,6 +4,9 @@
  */
 export type Hand = 'left' | 'right' | 'both';
 
+/** Touch-typing finger for a key. */
+export type Finger = 'pinky' | 'ring' | 'middle' | 'index' | 'thumb';
+
 /** 0 = number row, 1 = top, 2 = home, 3 = bottom, 4 = space bar row. */
 export type RowIndex = 0 | 1 | 2 | 3 | 4;
 
@@ -16,6 +19,8 @@ export interface LayoutKey {
   shift?: string;
   /** Hand used in standard touch typing. */
   hand: Hand;
+  /** Finger used in standard touch typing. */
+  finger: Finger;
   /** Relative key width (1 = a normal key). */
   width?: number;
 }

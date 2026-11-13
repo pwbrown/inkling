@@ -1,9 +1,10 @@
 /** Heads-up display: ink well (health), score, combo and page progress (DESIGN §6). */
 import { Container, Graphics, Text } from 'pixi.js';
+import { APPRENTICE_CHAPTERS, newKeysFor } from '../core/campaign';
 import { multiplier } from '../core/input';
 import { WORLD_HEIGHT, WORLD_WIDTH, type World } from '../core/world';
 import { formatNumber, t } from '../i18n';
-import { COLORS, TEXT_FONT } from './theme';
+import { COLORS, TEXT_FONT, keyLabel } from './theme';
 
 const BAR_WIDTH = 180;
 const BAR_HEIGHT = 14;
@@ -56,15 +57,23 @@ export class Hud {
     setText(this.combo, mult > 1 ? t('hud.multiplier', { multiplier: mult }) : '');
 
     const { spawned, params, chapter, index, pageCount } = world.page;
+    const progress = {
+      chapter: chapter + 1,
+      page: index + 1,
+      pages: pageCount,
+      done: spawned - world.targets.length,
+      total: params.size,
+    };
+    // In the Apprentice campaign, say what this chapter is teaching.
     setText(
       this.page,
-      t('hud.page', {
-        chapter: chapter + 1,
-        page: index + 1,
-        pages: pageCount,
-        done: spawned - world.targets.length,
-        total: params.size,
-      }),
+      world.mode === 'apprentice'
+        ? t('hud.apprentice', {
+            ...progress,
+            chapters: APPRENTICE_CHAPTERS,
+            keys: newKeysFor(chapter).map(keyLabel).join(' '),
+          })
+        : t('hud.page', progress),
     );
   }
 }

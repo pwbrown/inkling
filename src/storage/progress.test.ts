@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { createContentSource } from '../content/contentSource';
 import { createStats } from '../core/stats';
 import { createPage, createWorld } from '../core/world';
 import {
   continueNotebook,
+  recordApprenticePage,
   keyWeights,
   mergeKeyStats,
   nextPagePosition,
@@ -78,5 +80,41 @@ describe('keyWeights', () => {
     expect(weights.d).toBe(1);
     expect(weights.s).toBeGreaterThan(2.5);
     expect(weights.s).toBeLessThan(5);
+  });
+});
+
+describe('recordApprenticePage', () => {
+  it('keeps the best stars per page and opens the next chapter after the last page', () => {
+    const save = defaultSave();
+    recordApprenticePage(save, 0, 0, 2, false);
+    recordApprenticePage(save, 0, 0, 1, false);
+    expect(save.apprentice.stars['0-0']).toBe(2);
+    expect(save.apprentice.unlocked).toBe(1);
+    recordApprenticePage(save, 0, 2, 3, true);
+    expect(save.apprentice.unlocked).toBe(2);
+    expect(save.apprentice.completed).toBe(false);
+  });
+
+  it('marks the notebook complete after the last chapter', () => {
+    const save = defaultSave();
+    recordApprenticePage(save, 9, 4, 3, true);
+    expect(save.apprentice.completed).toBe(true);
+    expect(save.apprentice.unlocked).toBe(10);
+  });
+});
+
+describe('continuing an Apprentice notebook', () => {
+  it('restores the mode and the chapter keys', () => {
+    const played = createWorld({ makeContent: (keys) => createContentSource({ keys }) });
+    played.mode = 'apprentice';
+    played.page = createPage('normal', 4, 1, played.content, 'apprentice');
+    const saved = snapshotNotebook(played);
+    expect(saved.mode).toBe('apprentice');
+
+    const resumed = createWorld({ makeContent: (keys) => createContentSource({ keys }) });
+    continueNotebook(resumed, saved);
+    expect(resumed.mode).toBe('apprentice');
+    expect(resumed.page.chapter).toBe(4);
+    expect(resumed.keys).toContain('w');
   });
 });

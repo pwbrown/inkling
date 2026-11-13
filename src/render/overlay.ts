@@ -4,7 +4,9 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Difficulty } from '../core/config';
+import { APPRENTICE_CHAPTERS, newKeysFor, starText, starsForGrade } from '../core/campaign';
 import { pageGrade, teacherNote, type Grade } from '../core/grade';
+import { US_QWERTY, findKey } from '../content/layouts/us-qwerty';
 import { accuracy, topMissedKeys, wpm, type Stats } from '../core/stats';
 import { WORLD_HEIGHT, WORLD_WIDTH, isLastPageOfChapter, type World } from '../core/world';
 import { formatNumber, t, type MessageKey } from '../i18n';
@@ -26,6 +28,8 @@ export interface OverlayContent {
   lines: string[];
   /** Keys drawn circled in red, the teacher's way of flagging them. */
   circled?: string[];
+  /** Label before the circled keys (default "Keys to watch:"). */
+  circledLabel?: string;
   /** Teacher's note in the margin. */
   note?: string;
   /** Clickable links above the prompt (e.g. "Main menu"). */
@@ -80,6 +84,7 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
       const grade = pageGrade(stats, world.page.params.size);
       const note = teacherNote(stats, grade);
       const lines = [summaryLine(stats)];
+      if (world.mode === 'apprentice') lines.unshift(t('overlay.stars', { stars: starText(starsForGrade(grade)) }));
       if (stats.leaks > 0) lines.push(t('overlay.leaks', { leaks: stats.leaks }));
       const lastPage = isLastPageOfChapter(world.page);
       if (lastPage && world.inkRefilled > 0) lines.push(t('overlay.chapterCleared.refill', { ink: world.inkRefilled }));
@@ -106,6 +111,36 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
           { id: 'mainMenu', label: t('overlay.gameOver.mainMenu') },
         ],
         prompt: t('overlay.gameOver.prompt'),
+      };
+    case 'intro': {
+      const keys = newKeysFor(world.page.chapter);
+      const fingers = keys.map((key) => {
+        const k = findKey(US_QWERTY, key);
+        if (!k) return keyLabel(key);
+        return k.finger === 'thumb'
+          ? t('overlay.intro.thumb', { key: keyLabel(key) })
+          : t('overlay.intro.finger', {
+              key: keyLabel(key),
+              hand: t(`hand.${k.hand}` as MessageKey),
+              finger: t(`finger.${k.finger}` as MessageKey),
+            });
+      });
+      return {
+        title: t('overlay.intro.title', { chapter, total: APPRENTICE_CHAPTERS }),
+        lines: [
+          fingers.join('   ·   '),
+          t(world.page.chapter === 0 ? 'overlay.intro.first' : 'overlay.intro.body'),
+        ],
+        circled: keys,
+        circledLabel: t('overlay.intro.newKeys'),
+        prompt: t('overlay.intro.prompt'),
+      };
+    }
+    case 'notebookComplete':
+      return {
+        title: t('overlay.complete.title'),
+        lines: [t('overlay.complete.body'), ...statLines(world.stats).slice(0, 1), ...extra],
+        prompt: t('overlay.complete.prompt'),
       };
     case 'ready':
     case 'paused':
@@ -194,7 +229,7 @@ export class Overlay {
     this.prompt.text = content.prompt;
 
     const linksHeight = this.layoutLinks(content.links ?? []);
-    const circledHeight = this.layoutCircled(content.circled ?? []);
+    const circledHeight = this.layoutCircled(content.circled ?? [], content.circledLabel ?? t('overlay.circled'));
     this.note.text = content.note ?? '';
     this.note.visible = Boolean(content.note);
     const noteHeight = content.note ? this.note.height + 12 : 0;
@@ -237,11 +272,11 @@ export class Overlay {
   }
 
   /** "Keys to watch:" with each key circled in red pen. Returns the height used. */
-  private layoutCircled(keys: string[]): number {
+  private layoutCircled(keys: string[], labelText: string): number {
     for (const child of this.circledLayer.removeChildren()) child.destroy({ children: true });
     if (keys.length === 0) return 0;
 
-    const label = new Text({ text: t('overlay.circled'), style: { fontFamily: TEXT_FONT, fontSize: 17, fill: COLORS.inkLight } });
+    const label = new Text({ text: labelText, style: { fontFamily: TEXT_FONT, fontSize: 17, fill: COLORS.inkLight } });
     label.anchor.set(0, 0.5);
     const items: Container[] = [label];
     for (const key of keys) {

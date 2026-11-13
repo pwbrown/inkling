@@ -9,13 +9,27 @@ import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { t, type MessageKey } from '../i18n';
 import { h } from './dom';
 
-export type MenuScreen = 'title' | 'newNotebook' | 'howToPlay' | 'pause';
+export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause';
+
+export interface ChapterEntry {
+  /** 0-based. */
+  chapter: number;
+  /** e.g. "R U". */
+  newKeys: string;
+  stars: { earned: number; max: number };
+  locked: boolean;
+}
 
 export interface MenuHooks {
   /** Saved notebook to continue, if any. */
   continueDetail(): string | null;
   /** e.g. "Home row · 10 keys". */
   keysSummary(): string;
+  /** e.g. "Chapter 3 of 10 · ★ 14 of 102". */
+  apprenticeDetail(): string;
+  /** Every Apprentice chapter, for the Contents page. */
+  chapters(): ChapterEntry[];
+  onStartApprentice(chapter: number): void;
   /** e.g. "Best on Normal: 1,200 · reached chapter 3", or null. */
   bestLine(difficulty: Difficulty): string | null;
   /** Stats line for the page in progress, shown when paused. */
@@ -99,6 +113,9 @@ export class Menu {
       case 'newNotebook':
         this.panel.replaceChildren(...this.newNotebook());
         break;
+      case 'contents':
+        this.panel.replaceChildren(...this.contents());
+        break;
       case 'howToPlay':
         this.panel.replaceChildren(...this.howToPlay());
         break;
@@ -145,12 +162,15 @@ export class Menu {
       ]),
       h('nav', { className: 'menu-list' }, [
         cont ? this.button('continue', t('menu.continue'), () => this.hooks.onContinue(), { detail: cont, key: 'c', primary: true }) : null,
-        this.button('new', t('menu.newNotebook'), () => this.show('newNotebook'), {
-          detail: t('menu.newNotebookDetail'),
-          key: 'n',
+        this.button('apprentice', t('menu.apprentice'), () => this.show('contents'), {
+          detail: this.hooks.apprenticeDetail(),
+          key: 'a',
           primary: !cont,
         }),
-        this.button('keys', t('menu.keys'), () => this.hooks.onKeys(), { detail: this.hooks.keysSummary(), key: 'k' }),
+        this.button('practice', t('menu.practice'), () => this.show('newNotebook'), {
+          detail: t('menu.practiceDetail', { keys: this.hooks.keysSummary() }),
+          key: 'p',
+        }),
         this.button('words', t('menu.wordLists'), () => this.hooks.onWordLists(), { key: 'w' }),
         h('div', { className: 'menu-row' }, [
           this.button('settings', t('menu.settings'), () => this.hooks.onSettings(), { key: 's' }),
@@ -162,37 +182,85 @@ export class Menu {
     ];
   }
 
-  private newNotebook(): HTMLElement[] {
+  /** Difficulty choice, shared by the Contents and Practice screens. */
+  private difficultyPicker(compact: boolean): HTMLElement {
     const selected = this.hooks.selectedDifficulty();
+    return h(
+      'div',
+      { className: `menu-difficulties${compact ? ' menu-difficulties-compact' : ''}`, role: 'radiogroup', 'aria-label': t('newNotebook.intro') },
+      DIFFICULTIES.map((d, i) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            role: 'radio',
+            'aria-checked': String(d === selected),
+            className: 'menu-btn menu-difficulty',
+            'data-id': `difficulty-${d}`,
+            'data-key': String(i + 1),
+            onClick: () => {
+              this.hooks.onSelectDifficulty(d);
+              this.render(false);
+            },
+          },
+          [
+            h('span', { className: 'menu-label' }, [t(`difficulty.${d}` as MessageKey)]),
+            compact ? null : h('span', { className: 'menu-detail' }, [t(`difficulty.${d}.description` as MessageKey)]),
+            h('kbd', { className: 'menu-key', 'aria-hidden': 'true' }, [String(i + 1)]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /** The Apprentice notebook's table of contents: pick a chapter to play. */
+  private contents(): HTMLElement[] {
+    const chapters = this.hooks.chapters();
+    const nextOpen = [...chapters].reverse().find((c) => !c.locked);
+    return [
+      h('h2', { id: 'menu-title' }, [t('contents.title')]),
+      h('p', { className: 'tc-intro' }, [t('contents.intro')]),
+      this.difficultyPicker(true),
+      h(
+        'ol',
+        { className: 'menu-chapters' },
+        chapters.map((c) =>
+          h('li', {}, [
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'menu-btn menu-chapter',
+                'data-id': `chapter-${c.chapter}`,
+                'data-autofocus': c === nextOpen ? true : undefined,
+                disabled: c.locked,
+                'aria-label': c.locked
+                  ? t('contents.lockedLabel', { chapter: c.chapter + 1 })
+                  : t('contents.chapterLabel', { chapter: c.chapter + 1, keys: c.newKeys, earned: c.stars.earned, max: c.stars.max }),
+                onClick: () => this.hooks.onStartApprentice(c.chapter),
+              },
+              [
+                h('span', { className: 'menu-label' }, [t('contents.chapter', { chapter: c.chapter + 1 })]),
+                h('span', { className: 'menu-detail' }, [c.locked ? t('contents.locked') : t('contents.keys', { keys: c.newKeys })]),
+                h('span', { className: 'menu-stars', 'aria-hidden': 'true' }, [
+                  c.locked ? '🔒' : `★ ${c.stars.earned}/${c.stars.max}`,
+                ]),
+              ],
+            ),
+          ]),
+        ),
+      ),
+      h('div', { className: 'tc-actions' }, [
+        h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'back', onClick: () => this.show('title') }, [t('menu.back')]),
+      ]),
+    ];
+  }
+
+  private newNotebook(): HTMLElement[] {
     return [
       h('h2', { id: 'menu-title' }, [t('newNotebook.title')]),
       h('p', { className: 'tc-intro' }, [t('newNotebook.intro')]),
-      h(
-        'div',
-        { className: 'menu-difficulties', role: 'radiogroup', 'aria-label': t('newNotebook.title') },
-        DIFFICULTIES.map((d, i) =>
-          h(
-            'button',
-            {
-              type: 'button',
-              role: 'radio',
-              'aria-checked': String(d === selected),
-              className: 'menu-btn menu-difficulty',
-              'data-id': `difficulty-${d}`,
-              'data-key': String(i + 1),
-              onClick: () => {
-                this.hooks.onSelectDifficulty(d);
-                this.render(false);
-              },
-            },
-            [
-              h('span', { className: 'menu-label' }, [t(`difficulty.${d}` as MessageKey)]),
-              h('span', { className: 'menu-detail' }, [t(`difficulty.${d}.description` as MessageKey)]),
-              h('kbd', { className: 'menu-key', 'aria-hidden': 'true' }, [String(i + 1)]),
-            ],
-          ),
-        ),
-      ),
+      this.difficultyPicker(false),
       h('p', { className: 'menu-keys-line' }, [
         t('newNotebook.keys', { keys: this.hooks.keysSummary() }),
         ' ',
@@ -216,6 +284,7 @@ export class Menu {
     return [
       h('h2', { id: 'menu-title' }, [t('how.title')]),
       section('how.goalTitle', p('how.goal')),
+      section('how.modesTitle', p('how.modes')),
       section(
         'how.creaturesTitle',
         h('ul', { className: 'how-list' }, (['how.drip', 'how.blotling', 'how.runon', 'how.misprint'] as const).map((k) => h('li', {}, [t(k)]))),

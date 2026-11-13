@@ -198,3 +198,58 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Apprentice contents page. */
+.menu[data-screen='contents'] .menu-panel {
+  width: min(640px, 100%);
+}
+
+.menu-difficulties-compact {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.menu-difficulties-compact .menu-btn {
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.menu-difficulties-compact .menu-key {
+  display: none;
+}
+
+.menu-chapters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  max-height: 46vh;
+  overflow: auto;
+}
+
+.menu .menu-chapter {
+  width: 100%;
+  padding-right: 76px;
+}
+
+.menu-stars {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.menu .menu-chapter:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .menu-chapters,
+  .menu-difficulties-compact {
+    grid-template-columns: 1fr;
+  }
+}

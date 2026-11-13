@@ -13,6 +13,8 @@ import {
   restartPage,
   retryChapter,
   selectDifficulty,
+  startApprentice,
+  startPractice,
   togglePause,
   typeChar,
   type EditKey,
@@ -21,7 +23,9 @@ import { builtInPresets, matchingPreset, type Preset } from './core/keySelection
 import { FixedStepLoop } from './core/loop';
 import { improvedKeys } from './core/mastery';
 import { accuracy, wpm } from './core/stats';
-import { createWorld, setContent, stepWorld, type GamePhase } from './core/world';
+import { APPRENTICE_CHAPTERS, LESSONS, NEW_KEY_WEIGHT, chapterStars, starsForGrade, totalStars } from './core/campaign';
+import { pageGrade } from './core/grade';
+import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, setLocale, t } from './i18n';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { loadFonts } from './fonts';
@@ -37,6 +41,7 @@ import {
   keyWeights,
   mergeKeyStats,
   nextPagePosition,
+  recordApprenticePage,
   recordResult,
   snapshotNotebook,
 } from './storage/progress';
@@ -101,6 +106,10 @@ async function main(): Promise<void> {
         if (w.phase === 'gameOver') {
           return newBest ? [t('overlay.gameOver.newBest', { difficulty: difficultyLabel(w.difficulty) })] : [];
         }
+        if (w.phase === 'notebookComplete') {
+          const { earned, max } = totalStars(store.data.apprentice.stars);
+          return [t('overlay.complete.stars', { earned, max })];
+        }
         return [];
       },
     }, () => ({
@@ -109,18 +118,28 @@ async function main(): Promise<void> {
     })),
   ]);
 
-  /** Content for a key set, weighted toward the player's weak keys. */
-  const contentFor = (keys: readonly string[]) =>
-    createContentSource({
+  /**
+   * Content for a key set, weighted toward the player's weak keys and, in the
+   * Apprentice campaign, toward the chapter's new (`focus`) keys.
+   */
+  const contentFor = (keys: readonly string[], focus: readonly string[] = []) => {
+    const weights = keyWeights(store.data.keyStats, keys);
+    for (const key of focus) weights[key] = (weights[key] ?? 1) * NEW_KEY_WEIGHT;
+    return createContentSource({
       keys,
       words: pack.words,
       blocklist: pack.blocklist,
       trustedWords: true,
-      keyWeights: keyWeights(store.data.keyStats, keys),
+      keyWeights: weights,
       topicWords: store.data.vocab.filter((list) => list.enabled).flatMap((list) => list.words),
     });
+  };
 
-  const game = createWorld({ content: contentFor(store.data.keys), difficulty: store.data.difficulty });
+  const game = createWorld({
+    content: contentFor(store.data.keys),
+    difficulty: store.data.difficulty,
+    makeContent: contentFor,
+  });
   /** Large text uses every other line so targets don't overlap. */
   const applyLayout = () => {
     game.targetScale = TEXT_SCALE[settings.textSize];
@@ -133,21 +152,36 @@ async function main(): Promise<void> {
   const applySave = () => {
     setContent(game, contentFor(store.data.keys));
     game.selectedDifficulty = store.data.difficulty;
+    menu.refresh();
   };
 
   /** Enter on an in-game card (next page, or retry after game over), or Start on the menu. */
   actions.start = () => {
     if (dialogOpen) return;
-    // Refresh weak-key weights from the latest stats before a new notebook.
-    if (game.phase === 'ready') setContent(game, contentFor(game.keys));
-    confirm(game);
+    if (game.phase === 'notebookComplete') {
+      goToMenu();
+      return;
+    }
+    if (game.phase === 'ready') {
+      // A Practice notebook uses the player's own keys, with fresh weak-key weights.
+      setContent(game, contentFor(store.data.keys));
+      startPractice(game);
+    } else {
+      confirm(game);
+    }
+    loop.reset();
+  };
+
+  const startChapter = (chapter: number) => {
+    if (dialogOpen || game.phase !== 'ready') return;
+    startApprentice(game, chapter);
     loop.reset();
   };
 
   const continueSaved = () => {
     const saved = store.data.notebook;
     if (dialogOpen || game.phase !== 'ready' || !saved) return;
-    setContent(game, contentFor(game.keys));
+    setContent(game, contentFor(store.data.keys));
     continueNotebook(game, saved);
     loop.reset();
   };
@@ -159,7 +193,7 @@ async function main(): Promise<void> {
       layout,
       builtInPresets: presets,
       customPresets: customPresets(),
-      initial: game.keys,
+      initial: store.data.keys,
       keyStats: store.data.keyStats,
       countWords: (keys) => countTypeableWords(pack.words, keys),
       minWords: MIN_WORD_POOL,
@@ -230,14 +264,14 @@ async function main(): Promise<void> {
     if (dialogOpen || game.phase !== 'ready') return;
     dialogOpen = true;
     /** Rebuild content so word pages pick up list changes. */
-    const refresh = () => setContent(game, contentFor(game.keys));
+    const refresh = () => setContent(game, contentFor(store.data.keys));
     openWordLists(document.body, {
       lists: store.data.vocab,
       blocklist: pack.blocklist,
       countFitting: (words) =>
         countTypeableWords(
           words.map((word) => ({ word, tier: 0 })),
-          game.keys,
+          store.data.keys,
         ),
       onAdd: (list) => {
         store.update((save) => {
@@ -288,7 +322,21 @@ async function main(): Promise<void> {
         ? t('menu.continueDetail', { difficulty: difficultyLabel(saved.difficulty), chapter: saved.chapter + 1, page: saved.page + 1 })
         : null;
     },
-    keysSummary: () => `${describeKeys(game.keys)} · ${t('menu.keyCount', { count: game.keys.length })}`,
+    keysSummary: () => `${describeKeys(store.data.keys)} · ${t('menu.keyCount', { count: store.data.keys.length })}`,
+    apprenticeDetail: () => {
+      const { earned, max } = totalStars(store.data.apprentice.stars);
+      return store.data.apprentice.completed
+        ? t('menu.apprenticeDone', { earned, max })
+        : t('menu.apprenticeDetail', { chapter: store.data.apprentice.unlocked, total: APPRENTICE_CHAPTERS, earned, max });
+    },
+    chapters: () =>
+      LESSONS.map((lesson, chapter) => ({
+        chapter,
+        newKeys: lesson.newKeys.map(keyLabel).join(' '),
+        stars: chapterStars(store.data.apprentice.stars, chapter),
+        locked: chapter >= store.data.apprentice.unlocked,
+      })),
+    onStartApprentice: (chapter) => after(() => startChapter(chapter)),
     bestLine: (d) => {
       const best = store.data.records.bestScore[d];
       return best
@@ -366,8 +414,17 @@ async function main(): Promise<void> {
           const before = structuredClone(save.keyStats);
           mergeKeyStats(save, game.pageStats);
           newlyMastered = improvedKeys(before, save.keyStats);
+          if (game.mode === 'apprentice') {
+            const stars = starsForGrade(pageGrade(game.pageStats, game.page.params.size));
+            recordApprenticePage(save, game.page.chapter, game.page.index, stars, isLastPageOfChapter(game.page));
+          }
           recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);
           save.notebook = snapshotNotebook(game, nextPagePosition(game.page));
+        });
+        break;
+      case 'notebookComplete':
+        store.update((save) => {
+          save.notebook = null;
         });
         break;
       case 'gameOver':
@@ -421,7 +478,9 @@ async function main(): Promise<void> {
       onSpecial: (key) => handleSpecial(key),
       onPause: () =>
         after(() => {
-          togglePause(game);
+          // On a chapter's new-keys card, Esc backs out to the menu instead.
+          if (game.phase === 'intro') goToMenu();
+          else togglePause(game);
           loop.reset();
         }),
     },

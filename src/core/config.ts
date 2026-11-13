@@ -244,8 +244,9 @@ export function pageParams(
   chapter: number,
   page: number,
   canUse: (kind: TargetKind) => boolean = () => true,
+  /** Page types for this chapter (the Apprentice campaign has its own). */
+  plan: readonly TargetKind[] = chapterPlan(chapter),
 ): PageParams {
-  const plan = chapterPlan(chapter);
   const planned = plan[page % plan.length] ?? 'drip';
   const kind = canUse(planned) ? planned : 'blotling';
   const base = GAME_CONFIG.base[kind];

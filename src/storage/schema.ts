@@ -5,9 +5,10 @@
  * Bump SAVE_VERSION and add a step to `MIGRATIONS` whenever the shape
  * changes, so older saves (and exported backups) keep loading.
  */
+import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
 import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from '../core/config';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -24,6 +25,8 @@ export interface SavedPreset {
 
 /** A notebook in progress, saved at the start of each page so it can be continued. */
 export interface SavedNotebook {
+  /** Added in version 3; older saves were all Practice. */
+  mode: GameMode;
   difficulty: Difficulty;
   /** Chapter and page to resume at (0-based). */
   chapter: number;
@@ -50,6 +53,16 @@ export interface VocabList {
   fetchedAt: string;
 }
 
+/** Apprentice campaign progress (added in version 3). */
+export interface ApprenticeProgress {
+  /** How many chapters are open to play (at least 1). */
+  unlocked: number;
+  /** Best stars (1–3) per page, keyed "chapter-page" (see starKey). */
+  stars: Record<string, number>;
+  /** The last chapter has been finished at least once. */
+  completed: boolean;
+}
+
 export interface Records {
   bestScore: Partial<Record<Difficulty, number>>;
   /** Highest chapter reached (1-based). */
@@ -66,6 +79,8 @@ export interface SaveData {
   notebook: SavedNotebook | null;
   /** Added in version 2. */
   vocab: VocabList[];
+  /** Added in version 3. */
+  apprentice: ApprenticeProgress;
 }
 
 /** File format for export/import. */
@@ -96,6 +111,7 @@ export function defaultSave(): SaveData {
     records: { bestScore: {}, furthestChapter: {} },
     notebook: null,
     vocab: [],
+    apprentice: { unlocked: 1, stars: {}, completed: false },
   };
 }
 
@@ -124,6 +140,7 @@ function difficultyRecord(v: unknown): Partial<Record<Difficulty, number>> {
 function sanitizeNotebook(v: unknown): SavedNotebook | null {
   if (!isObject(v) || !isDifficulty(v.difficulty)) return null;
   return {
+    mode: v.mode === 'apprentice' ? 'apprentice' : 'practice',
     difficulty: v.difficulty,
     chapter: count(v.chapter),
     page: count(v.page),
@@ -158,6 +175,21 @@ function sanitizeVocab(v: unknown): VocabList[] {
   });
 }
 
+function sanitizeApprentice(v: unknown): ApprenticeProgress {
+  const a = isObject(v) ? v : {};
+  const stars: Record<string, number> = {};
+  if (isObject(a.stars)) {
+    for (const [key, value] of Object.entries(a.stars)) {
+      if (/^\d+-\d+$/.test(key) && typeof value === 'number' && value >= 1 && value <= 3) stars[key] = Math.floor(value);
+    }
+  }
+  return {
+    unlocked: Math.min(APPRENTICE_CHAPTERS, Math.max(1, count(a.unlocked) || 1)),
+    stars,
+    completed: a.completed === true,
+  };
+}
+
 /** Check every field of a current-version save. */
 function sanitize(v: Json): SaveData {
   const base = defaultSave();
@@ -189,6 +221,7 @@ function sanitize(v: Json): SaveData {
     records: { bestScore: difficultyRecord(records.bestScore), furthestChapter: difficultyRecord(records.furthestChapter) },
     notebook: sanitizeNotebook(v.notebook),
     vocab: sanitizeVocab(v.vocab),
+    apprentice: sanitizeApprentice(v.apprentice),
   };
 }
 
@@ -196,6 +229,13 @@ function sanitize(v: Json): SaveData {
 const MIGRATIONS: Record<number, (save: Json) => Json> = {
   // v2 added downloaded topic word lists.
   1: (save) => ({ ...save, version: 2, vocab: [] }),
+  // v3 added the Apprentice campaign; existing saved notebooks were Practice.
+  2: (save) => ({
+    ...save,
+    version: 3,
+    apprentice: { unlocked: 1, stars: {}, completed: false },
+    notebook: isObject(save.notebook) ? { ...save.notebook, mode: 'practice' } : null,
+  }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

@@ -34,6 +34,15 @@ The **Type Case** shows a keyboard where every key has two halves: its plain cha
 
 The game builds everything from your keys: drips use them directly, and word pages use real words that only need those letters. Selected capitals and punctuation show up in words too. If too few words fit, made-up strings are mixed in, and the Type Case warns you when that will happen.
 
+### Apprentice and Practice
+
+- **Apprentice** is a 10-chapter typing course.
+  - Chapter 1 teaches the home keys (`f j d k s l a ;`). Each later chapter adds one to three keys in the order typing courses use (`g h`, then `r u` and space, then `e i`, `w o`, `t y`, `q p`, `v m`, `c n`, `b x z`).
+  - Every chapter opens with a card showing its new keys and which finger types each one. The new keys come up three times as often as the others.
+  - Each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter.
+  - Finishing chapter 10 completes the notebook.
+- **Practice** uses exactly the keys you choose in the Type Case, with endless chapters.
+
 ### Target types
 
 - **Drips:** a single character.

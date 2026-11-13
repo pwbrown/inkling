@@ -28,6 +28,18 @@ describe('save schema', () => {
     expect(save.difficulty).toBe('hard');
   });
 
+  it('upgrades version 2 saves: Apprentice progress starts fresh, old notebooks are Practice', () => {
+    const save = migrate({ version: 2, notebook: { difficulty: 'hard', chapter: 1, page: 2, ink: 50 } });
+    expect(save.version).toBe(3);
+    expect(save.apprentice).toEqual({ unlocked: 1, stars: {}, completed: false });
+    expect(save.notebook?.mode).toBe('practice');
+  });
+
+  it('keeps valid Apprentice progress and drops bad entries', () => {
+    const save = migrate({ version: 3, apprentice: { unlocked: 99, stars: { '0-1': 3, '2-0': 7, bad: 2 }, completed: true } });
+    expect(save.apprentice).toEqual({ unlocked: 10, stars: { '0-1': 3 }, completed: true });
+  });
+
   it('keeps valid word lists and drops bad ones', () => {
     const save = migrate({
       version: 2,

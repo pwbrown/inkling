@@ -7,6 +7,7 @@
  * - Buffer mode, for Run-ons and Misprints: keys edit a buffer with a cursor,
  *   so mistakes stay until fixed with Backspace, Delete and the arrow keys.
  */
+import { APPRENTICE_CHAPTERS } from './campaign';
 import { DIFFICULTIES, GAME_CONFIG, type Difficulty } from './config';
 import { applyEdit, correctPrefix, editDistance, isTextEdit, type EditAction } from './editing';
 import { createStats, type Stats } from './stats';
@@ -23,6 +24,7 @@ import {
   type StartSnapshot,
   type Target,
   type World,
+  useApprenticeKeys,
 } from './world';
 
 /** Current score multiplier for a combo length. */
@@ -255,25 +257,63 @@ export function moveSelection(world: World, delta: number): void {
 /** Move on from a cleared page: the next page, or the next chapter's first page. */
 function turnPage(world: World): void {
   const { chapter, index } = world.page;
-  world.page = isLastPageOfChapter(world.page)
-    ? createPage(world.difficulty, chapter + 1, 0, world.content)
-    : createPage(world.difficulty, chapter, index + 1, world.content);
+  const newChapter = isLastPageOfChapter(world.page);
+  // A new Apprentice chapter brings its new keys.
+  if (newChapter && world.mode === 'apprentice') useApprenticeKeys(world, chapter + 1);
+  world.page = newChapter
+    ? createPage(world.difficulty, chapter + 1, 0, world.content, world.mode)
+    : createPage(world.difficulty, chapter, index + 1, world.content, world.mode);
   world.pageStats = createStats();
   world.inkRefilled = 0;
+}
+
+/** True when the page just cleared was the last page of the last Apprentice chapter. */
+export function finishedNotebook(world: World): boolean {
+  return (
+    world.mode === 'apprentice' && isLastPageOfChapter(world.page) && world.page.chapter >= APPRENTICE_CHAPTERS - 1
+  );
+}
+
+/**
+ * Start (or replay) an Apprentice chapter: its keys, its first page, and the
+ * card introducing its new keys.
+ */
+export function startApprentice(world: World, chapter: number, difficulty: Difficulty = world.selectedDifficulty): void {
+  resetWorld(world, difficulty);
+  world.mode = 'apprentice';
+  const ch = Math.max(0, Math.min(chapter, APPRENTICE_CHAPTERS - 1));
+  useApprenticeKeys(world, ch);
+  world.page = createPage(difficulty, ch, 0, world.content, 'apprentice');
+  markPageStart(world);
+  setPhase(world, 'intro');
+}
+
+/** Start an endless Practice notebook with the player's own keys. */
+export function startPractice(world: World, difficulty: Difficulty = world.selectedDifficulty): void {
+  resetWorld(world, difficulty);
+  world.mode = 'practice';
+  markPageStart(world);
+  setPhase(world, 'playing');
 }
 
 /** Enter: start a notebook, turn the page, or go back to the new-notebook screen. */
 export function confirm(world: World): void {
   switch (world.phase) {
     case 'ready':
-      resetWorld(world, world.selectedDifficulty);
-      markPageStart(world);
+      startPractice(world);
+      break;
+    case 'intro':
       setPhase(world, 'playing');
       break;
     case 'pageCleared':
+      if (finishedNotebook(world)) {
+        setPhase(world, 'notebookComplete');
+        break;
+      }
       turnPage(world);
       markPageStart(world);
-      setPhase(world, 'playing');
+      // Each Apprentice chapter opens with its new-keys card.
+      setPhase(world, world.mode === 'apprentice' && world.page.index === 0 ? 'intro' : 'playing');
       break;
     case 'gameOver':
       retryChapter(world);
@@ -285,7 +325,7 @@ export function confirm(world: World): void {
 
 /** Put the page back to how it began: same page, ink and score as at its start. */
 function restoreTo(world: World, snapshot: StartSnapshot): void {
-  world.page = createPage(world.difficulty, world.page.chapter, snapshot.pageIndex, world.content);
+  world.page = createPage(world.difficulty, world.page.chapter, snapshot.pageIndex, world.content, world.mode);
   world.targets = [];
   world.lockedId = null;
   world.ink = Math.max(1, snapshot.ink);

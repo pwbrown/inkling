@@ -27,7 +27,7 @@
 
 | Requirements term | In-world name | Notes |
 |---|---|---|
-| Campaign | **Notebook** | A save slot, with its own difficulty and Type Case |
+| Campaign | **Notebook** | **Apprentice** (a 10-chapter course that teaches keys, with stars and a finish) or **Practice** (your own keys, endless) |
 | Level | **Chapter** | Shown as a notebook tab. Finishing one refills 30% of the ink well. |
 | Wave | **Page** | Single target type per page |
 | Summary screen | **Graded page** | See §6 |

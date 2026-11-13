@@ -2,9 +2,19 @@
  * Bridges the running game and the save: per-key stats, records, and
  * saving/resuming a notebook. Pure functions, so they're easy to test.
  */
+import { APPRENTICE_CHAPTERS, starKey } from '../core/campaign';
 import type { Difficulty } from '../core/config';
 import type { Stats } from '../core/stats';
-import { createPage, isLastPageOfChapter, markPageStart, resetWorld, setPhase, type PageState, type World } from '../core/world';
+import {
+  createPage,
+  isLastPageOfChapter,
+  markPageStart,
+  resetWorld,
+  setPhase,
+  useApprenticeKeys,
+  type PageState,
+  type World,
+} from '../core/world';
 import type { KeyStat, SaveData, SavedNotebook } from './schema';
 
 /** Add a page's (or notebook's) per-key hits and misses to the saved totals. */
@@ -43,6 +53,7 @@ export function snapshotNotebook(
 ): SavedNotebook {
   const s = from.stats;
   return {
+    mode: world.mode,
     difficulty: world.difficulty,
     chapter: at.chapter,
     page: at.page,
@@ -60,7 +71,9 @@ export function snapshotNotebook(
 /** Resume a saved notebook at the start of its page. */
 export function continueNotebook(world: World, saved: SavedNotebook): void {
   resetWorld(world, saved.difficulty);
-  world.page = createPage(saved.difficulty, saved.chapter, saved.page, world.content);
+  world.mode = saved.mode;
+  if (saved.mode === 'apprentice') useApprenticeKeys(world, saved.chapter);
+  world.page = createPage(saved.difficulty, saved.chapter, saved.page, world.content, saved.mode);
   world.ink = Math.min(world.maxInk, Math.max(1, saved.ink));
   Object.assign(world.stats, {
     score: saved.score,
@@ -90,4 +103,17 @@ export function keyWeights(keyStats: Readonly<Record<string, KeyStat>>, keys: re
     weights[key] = 1 + 4 * missRate;
   }
   return weights;
+}
+
+/**
+ * Record a cleared Apprentice page: keep the best stars for it, and open the
+ * next chapter once a chapter's last page is cleared.
+ */
+export function recordApprenticePage(save: SaveData, chapter: number, page: number, stars: 1 | 2 | 3, lastPage: boolean): void {
+  const key = starKey(chapter, page);
+  save.apprentice.stars[key] = Math.max(save.apprentice.stars[key] ?? 0, stars);
+  if (lastPage) {
+    save.apprentice.unlocked = Math.min(APPRENTICE_CHAPTERS, Math.max(save.apprentice.unlocked, chapter + 2));
+    if (chapter >= APPRENTICE_CHAPTERS - 1) save.apprentice.completed = true;
+  }
 }

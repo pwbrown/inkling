@@ -3,6 +3,7 @@
  * can be unit tested directly (REQUIREMENTS §7).
  */
 import { createContentSource, type ContentSource } from '../content/contentSource';
+import { apprenticeKeys, apprenticePlan, newKeysFor, type GameMode } from './campaign';
 import {
   DEFAULT_DIFFICULTY,
   DEFAULT_KEYS,
@@ -62,7 +63,11 @@ export interface Target {
   speed: number;
 }
 
-export type GamePhase = 'ready' | 'playing' | 'paused' | 'pageCleared' | 'gameOver';
+/**
+ * - ready: on the menus. intro: an Apprentice chapter's "new keys" card.
+ * - notebookComplete: the last Apprentice chapter is done.
+ */
+export type GamePhase = 'ready' | 'intro' | 'playing' | 'paused' | 'pageCleared' | 'gameOver' | 'notebookComplete';
 
 /** Things that happened this frame, for the renderer to animate. */
 export type GameEvent =
@@ -131,6 +136,13 @@ export interface World {
   keys: readonly string[];
   /** Supplies drip characters and Blotling words for those keys. */
   content: ContentSource;
+  /** Apprentice (the course) or Practice (free key choice, endless). */
+  mode: GameMode;
+  /**
+   * Builds content for a key set, with `focus` keys appearing more often.
+   * The Apprentice campaign uses it to switch keys between chapters.
+   */
+  makeContent: (keys: readonly string[], focus: readonly string[]) => ContentSource;
   /** Use every `laneStep`-th ruled line (2 for large text). */
   laneStep: number;
   /** Size of targets on screen, for spacing them (matches the text-size setting). */
@@ -163,12 +175,14 @@ export function createPage(
   chapter: number,
   index: number,
   content?: Pick<ContentSource, 'supports'>,
+  mode: GameMode = 'practice',
 ): PageState {
+  const plan = mode === 'apprentice' ? apprenticePlan(chapter) : chapterPlan(chapter);
   return {
     chapter,
     index,
-    pageCount: chapterPlan(chapter).length,
-    params: pageParams(difficulty, chapter, index, content ? (kind) => content.supports(kind) : undefined),
+    pageCount: plan.length,
+    params: pageParams(difficulty, chapter, index, content ? (kind) => content.supports(kind) : undefined, plan),
     spawned: 0,
     // Spawn the first target right away.
     spawnTimerMs: 0,
@@ -186,6 +200,7 @@ export interface WorldOptions {
   keys?: readonly string[];
   content?: ContentSource;
   difficulty?: Difficulty;
+  makeContent?: (keys: readonly string[], focus: readonly string[]) => ContentSource;
 }
 
 export function createWorld(options: WorldOptions = {}): World {
@@ -209,11 +224,19 @@ export function createWorld(options: WorldOptions = {}): World {
     events: [],
     keys: content.keys,
     content,
+    mode: 'practice',
+    makeContent: options.makeContent ?? ((keys) => createContentSource({ keys })),
     laneStep: 1,
     targetScale: 1,
     nextId: 1,
     random: options.random ?? Math.random,
   };
+}
+
+/** Load the keys for an Apprentice chapter, its new keys weighted up. */
+export function useApprenticeKeys(world: World, chapter: number): void {
+  world.content = world.makeContent(apprenticeKeys(chapter), newKeysFor(chapter));
+  world.keys = world.content.keys;
 }
 
 /**
@@ -244,8 +267,9 @@ export function setPhase(world: World, phase: GamePhase): void {
 
 /** Start a fresh notebook, keeping the same object (and its key set). */
 export function resetWorld(world: World, difficulty: Difficulty = world.difficulty): void {
-  const fresh = createWorld({ random: world.random, content: world.content, difficulty });
+  const fresh = createWorld({ random: world.random, content: world.content, difficulty, makeContent: world.makeContent });
   fresh.nextId = world.nextId;
+  fresh.mode = world.mode;
   fresh.laneStep = world.laneStep;
   fresh.targetScale = world.targetScale;
   Object.assign(world, fresh);
