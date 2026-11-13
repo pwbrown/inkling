@@ -5,7 +5,7 @@ Inkling collects **nothing** about you.
 - **No analytics, tracking, ads, crash reporting or third-party scripts.** The game's code only talks to the site it was loaded from, plus the optional word download described below.
 - **Your data stays in your browser.** Your chosen keys, presets, progress, best scores and per-key typing stats are stored on your device (IndexedDB) and never sent anywhere. Display and sound settings are kept in the browser's local storage.
 - **Players.** Several people can play on one browser, each with their own save. A player is just a name and an ink-drop color you choose, stored with the saves on your device. There are no accounts and nothing is shared between devices.
-- **You control it.** In the game, open **Save data** (press **B** on the main menu) to export a backup of the current player's save, import one, or erase it. **Switch player** (U) lets you rename or delete players. Clearing your browser's site data for Inkling erases everything.
+- **You control it.** In the game, open **Manage saves** (press **B** on the main menu) to export a backup of the current player's save, import one, or erase it. **Switch player** (U) lets you rename or delete players. Clearing your browser's site data for Inkling erases everything.
 - **Offline.** After the first visit, the game runs from your browser's cache and doesn't need a connection.
 
 ## The website host

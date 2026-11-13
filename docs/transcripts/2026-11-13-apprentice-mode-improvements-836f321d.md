@@ -1,6 +1,6 @@
 # Apprentice mode improvements
 
-Claude Code session started 2026-11-13. 12 prompts.
+Claude Code session started 2026-11-13. 15 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -2401,6 +2401,104 @@ I played chapter 1 through to page 3 in the browser. It shows a single "fjjf" Bl
   - The keys-to-tell-apart cap now covers Blotling pages as well as drips
   - Test for chapter 1's Blotlings; update README; ex
   … (252 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The early Blotlings change is committed as `250bb4b`, together with the updated transcript, which has no private details. I merged it into `main` and deleted the branch.
+
+`main` is now 3 commits ahead of GitHub, none of them pushed yet:
+- `708b40c`: the playtest fixes
+- `631fd48`: the word filter
+- `250bb4b`: Blotlings from chapter 1
+
+## 🧑 Prompt
+
+> Push main
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main to GitHub
+
+  ```bash
+  git push origin main 2>&1 | tail -2 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` to GitHub (`bd874fa..250bb4b`), and it now matches `origin/main`. That starts the GitHub Pages deploy of the playtest fixes, the word filter and the early Blotlings. I haven't checked whether the deploy finished; I can do that the same way as last time if you like.
+
+## 🧑 Prompt
+
+> On the main menu, one player was confused by the "Save data" button and was afraid to click it even though it goes to a sub menu. Let's rename it to something like "Manage Save Data" (or something else if you have a suggestion)
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Find "Save data" label uses
+
+  ```bash
+  grep -rn "Save data\|saveData.title\|menu.saveData" src/i18n/en.ts README.md PRIVACY.md docs/*.md | grep -v transcripts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I'll use **"Manage saves"**. It's short enough for the two-column button row, and "Manage" makes it clear it opens choices rather than doing something straight away. The dialog's title will match.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Rename Save data to Manage saves
+
+  ```bash
+  git checkout -q -b fix/manage-saves-label && sed -i '' -e "s/  'saveData.title': 'Save data',/  'saveData.title': 'Manage saves',/" -e "s/  'menu.saveData': 'Save data',/  'menu.saveData': 'Manage saves',/" src/i18n/en.ts && sed -i '' 's/open \*\*Save data\*\* (press \*\*B\*\* on the main menu)/open **Manage saves** (press **B** on the main menu)/' PRIVACY.md && sed -i '' -e 's/\*\*Save data\*\* (B)/**Manage saves** (B)/' -e 's/Word lists, Save data and Settings dialogs/Word lists, Manage saves and Settings dialogs/' README.md && grep -rn "Save data" src/i18n/en.ts README.md PRIVACY.md; grep -
+  … (60 more characters)
+  ```
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); await new Promise(r=>setTimeout(r,1500)); 'ok'"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,1000)); inkling.menu.show('title'); await new Promise(r=>setTimeout(r,50)); document.querySelector('[data-id=\"saves\"]').click(); await new Promise(r=>setTimeout(r,100)); ({btn: 'clicked', title: document.querySelector('#sd-title
+… (19 more characters)`
+- **computer** `{"action":"key","text":"Escape","action_summary":"Closes the Manage saves dialog"}`
+- **computer** `{"action":"screenshot","scale":0.6}`
+- **Shell:** Run checks
+
+  ```bash
+  npm run check 2>&1 | grep -E "×|FAIL|Tests|error" | head -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The **Save data** button is now **Manage saves**, and the dialog it opens has the same title. "Manage" makes it clearer that the button opens a set of choices rather than doing something right away. It also fits on the half-width button without wrapping, as the screenshot shows.
+
+The B shortcut still works, and `README.md` and `PRIVACY.md` use the new name. `npm run check` passes (247 tests). The change is on `fix/manage-saves-label` and isn't committed yet.
+
+If you'd like a friendlier name for kids, "My saves" would fit just as well.
+
+## 🧑 Prompt
+
+> Commit, merge, push
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript, commit, merge, delete branch and push
+
+  ```bash
+  npm run transcript 2>&1 | grep Wrote; git diff docs/transcripts | grep "^+" | grep -i -E "[removed]|[removed]|gmail|/Users/[a-z]" | grep -v "grep -i" | head -5; git add -A && git commit -q -F - <<'EOF'
+  Rename "Save data" to "Manage saves"
+
+  - The main menu button and its dialog now read "Manage saves", so it's
+    clear the button opens choices rather than doing something at once
+  - Update README and PRIVACY; export the latest transcript
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git checkout -q main && git merge --ff-only fix/manage-saves-label | head -1 && git branch -d fix/m
+  … (84 more characters)
   ```
 
 </details>

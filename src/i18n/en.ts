@@ -57,7 +57,7 @@ export const en = {
   'settings.close': 'Done',
   'overlay.gameOver.newBest': 'New best score for {difficulty}!',
 
-  'saveData.title': 'Save data',
+  'saveData.title': 'Manage saves',
   'saveData.privacy': 'Everything Inkling remembers (your keys, presets, progress and typing stats) stays in this browser on this device. Nothing is sent anywhere, and there are no analytics.',
   'saveData.host': 'If you play on a website, its host may keep ordinary server logs (like any site you visit). Inkling adds nothing to them.',
   'saveData.notPersistent': 'This browser is blocking storage (for example in a private window), so progress will be forgotten when you close the page. Export a backup to keep it.',
@@ -164,7 +164,7 @@ export const en = {
   'menu.practiceDetail': 'Your own keys, endless pages · {keys}',
   'menu.wordLists': 'Word lists',
   'menu.settings': 'Settings',
-  'menu.saveData': 'Save data',
+  'menu.saveData': 'Manage saves',
   'menu.howToPlay': 'How to play',
   'menu.best': 'Best on {difficulty}: {score} · reached chapter {chapter}',
   'menu.back': 'Back',

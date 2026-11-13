@@ -24,7 +24,7 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | Enter | While playing: fire the **Blotter** (when charged). On a card: begin, turn the page, or retry the chapter after running out of ink |
 | R / M | After running out of ink: **Retry chapter** or go to the **Main menu** |
 
-The **main menu** has buttons for everything: **Continue** (C), **Apprentice** (A), **Practice** (P, then pick a difficulty with 1–4 and change keys), **Word lists** (W), **Desk** (D), **Settings** (S), **Save data** (B), **How to play** (H), **About** (I, with links to the source code and a form for ideas and bug reports) and **Switch player** (U). Use the arrow keys or Tab and Enter, or the mouse.
+The **main menu** has buttons for everything: **Continue** (C), **Apprentice** (A), **Practice** (P, then pick a difficulty with 1–4 and change keys), **Word lists** (W), **Desk** (D), **Settings** (S), **Manage saves** (B), **How to play** (H), **About** (I, with links to the source code and a form for ideas and bug reports) and **Switch player** (U). Use the arrow keys or Tab and Enter, or the mouse.
 
 A notebook is a series of **chapters**, each made of a few **pages**. Each page is mostly **drips** (single characters) or mostly **Blotlings** (words); from chapter 4, Blotling pages now and then slip in a **Run-on** or **Misprint** (at most one on screen and three per page). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. Drip and Blotling pages never show more targets at once than you have keys to tell them apart. All of these numbers live in `src/core/config.ts`. 
 
@@ -139,7 +139,7 @@ The service worker is only registered in production builds. Use `npm run build &
 | `scripts/` | Build-time tools: the word pack, the app icons and the transcript export. |
 | `docs/transcripts/` | The Claude Code conversations that built the game. |
 | `src/storage/` | Save format and migrations, IndexedDB storage, and progress tracking. |
-| `src/ui/` | DOM screens: the main and pause menus, How to play, and the Type Case, Word lists, Save data and Settings dialogs. |
+| `src/ui/` | DOM screens: the main and pause menus, How to play, and the Type Case, Word lists, Manage saves and Settings dialogs. |
 | `src/audio/` | Synthesized sound effects (Web Audio API). |
 | `src/input/` | DOM keyboard listener that turns key presses into game actions. |
 | `src/i18n/` | UI strings and the `t()` lookup (English only for now). |
