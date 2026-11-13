@@ -282,8 +282,11 @@
   gap: 8px;
 }
 
+/* Fixed-size cards, so choosing one never moves the others. */
 .menu .desk-option {
-  padding: 8px 14px;
+  width: 132px;
+  align-content: start;
+  padding: 8px 10px;
   text-align: center;
 }
 
@@ -291,8 +294,17 @@
   background: var(--tc-highlight);
 }
 
-.menu .desk-option[aria-checked='true'] .menu-label::before {
-  content: '✓ ';
+.menu .desk-option .menu-label {
+  font-size: 16px;
+}
+
+/* The check sits in a corner rather than in the text, so nothing reflows. */
+.menu .desk-option[aria-checked='true']::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-weight: 700;
 }
 
 .menu .desk-option:disabled {

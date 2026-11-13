@@ -47,6 +47,14 @@ const ALLOW: string[] = [
   'swingers', 'debugger', 'debuggers', 'heroine', 'heroines', 'prickle', 'prickled', 'prickles',
   'pricklier', 'prickliest', 'prickling', 'prickly', 'pricked', 'pricking', 'pinprick', 'pinpricks',
   'scrappy', 'crapes', 'retardant', 'retardants',
+  // Harmless words containing a term from the kid-friendliness review.
+  'abreast', 'breastplate', 'breastplates', 'breastbone', 'breastbones', 'breaststroke',
+  'breastwork', 'breastworks', 'redbreast', 'redbreasts', 'condominium', 'condominiums',
+  'crotchet', 'crotchets', 'crotchety', 'oxymoron', 'squawk', 'squawked', 'squawking', 'squawks',
+  'burnoose', 'burnooses', 'congenital', 'congenitally', 'deuterium', 'neutering', 'scrapped',
+  'scrapping', 'scrappier', 'scrappiest', 'psychology', 'psychologies', 'psychologist',
+  'psychologists', 'angiosperm', 'angiosperms', 'gymnosperm', 'gymnosperms', 'spotty',
+  'spottier', 'spottiest', 'spottiness',
 ];
 
 /**
@@ -57,6 +65,54 @@ const EXTRA_BLOCK: string[] = [
   'retard', 'chink', 'dyke', 'gook', 'gyp', 'gypped', 'damn', 'crap', 'crappy', 'piss',
   'bugger', 'prick', 'slag', 'hussy', 'harlot', 'strumpet', 'pimp', 'sodomite', 'shag',
   'suicide', 'cocaine', 'heroin',
+  // Kid-friendliness review (2026-11): words that aren't swearing but don't
+  // belong in a children's typing game. Inflections are matched automatically;
+  // terms of 5+ letters also block longer words containing them.
+  // Sex, reproduction and private parts.
+  'sperm', 'sexist', 'sexism', 'nonsexist', 'unisex', 'cybersex', 'oversexed', 'sexily', 'sexiness',
+  'sexless', 'sexpot', 'sexting', 'sexton', 'sextet', 'sextant', 'sexagenarian', 'genital', 'genitalia',
+  'pubic', 'puberty', 'testicle', 'scrotum', 'scrota', 'ovary', 'ovaries', 'ovarian', 'ovulate',
+  'ovulation', 'uterus', 'uteri', 'uterine', 'womb', 'clitoral', 'phallus', 'phalli', 'phallic',
+  'erection', 'erectile', 'ejaculate', 'copulate', 'copulation', 'coitus', 'fornicate', 'fornication',
+  'adultery', 'adulterer', 'adulteress', 'adulterous', 'adulteries', 'breast', 'bosom', 'teat',
+  'lactate', 'lactation', 'menstrual', 'menstruate', 'menstruation', 'tampon', 'condom', 'pregnant',
+  'pregnancy', 'pregnancies', 'abortion', 'abortionist', 'fetus', 'placenta', 'miscarriage',
+  'stillbirth', 'afterbirth', 'virgin', 'virginity', 'virginal', 'lust', 'lustful', 'lustily',
+  'lustiness', 'lewd', 'smutty', 'smuttier', 'smuttiest', 'raunchy', 'raunchiness', 'raunchier',
+  'raunchiest', 'bawdy', 'bawdily', 'bawdiness', 'bawdier', 'bawdiest', 'brothel', 'prostitute',
+  'prostitution', 'courtesan', 'concubine', 'seduce', 'seduction', 'seductive', 'seducer', 'lecher',
+  'lecherous', 'lechery', 'pervert', 'perversion', 'kinkier', 'kinkiest', 'fetish', 'orgies',
+  'orgiastic', 'nudist', 'nudism', 'stripper', 'striptease', 'lingerie', 'brassiere', 'crotch',
+  'groin', 'buttock', 'bum', 'rectum', 'rectal', 'bowel', 'excrement', 'turd', 'enema', 'laxative',
+  'constipate', 'constipation', 'transvestite', 'transvestism', 'castrate', 'castration',
+  'circumcise', 'circumcision', 'infidelity', 'infidelities', 'spank', 'spanking', 'sadist',
+  'sadistic', 'masochist', 'masochism', 'masochistic', 'syphilis', 'syphilitic', 'herpes', 'venereal',
+  // Crude words and insults.
+  'jackass', 'damnation', 'damnable', 'damnably', 'damnedest', 'goddamn', 'hellhole', 'crapped',
+  'crapping', 'crappier', 'crappiest', 'bloody', 'freaking', 'idiot', 'idiotic', 'moron', 'imbecile',
+  'imbecilic', 'imbecility', 'stupid', 'bimbo', 'floozy', 'sluttish', 'trollop', 'wench', 'gigolo',
+  'queer', 'queerly', 'queerness', 'cripple', 'midget', 'psycho', 'gringo', 'redskin', 'squaw',
+  'gypsy', 'satanic', 'satanism', 'satanically',
+  // Drugs, alcohol and tobacco.
+  'opium', 'opiate', 'morphine', 'methadone', 'amphetamine', 'marijuana', 'cannabis', 'hashish',
+  'narcotic', 'stoned', 'junkie', 'overdose', 'booze', 'boozer', 'drunk', 'drunken', 'drunkard',
+  'drunkenly', 'drunkenness', 'liquor', 'whiskys', 'vodka', 'tequila', 'hangover', 'tipsy', 'beer',
+  'wine', 'winery', 'wineries', 'wineglass', 'alcohol', 'alcoholic', 'alcoholism', 'cigar', 'cigarette',
+  'cigarillo', 'tobacco', 'tobacconist', 'nicotine',
+  // Graphic violence and death.
+  'murder', 'murderer', 'murderous', 'murderess', 'murderously', 'homicide', 'homicidal',
+  'slaughter', 'slaughterer', 'massacre', 'genocide', 'assassin', 'assassinate', 'strangle',
+  'strangler', 'stranglehold', 'behead', 'decapitate', 'decapitation', 'dismember', 'mutilate',
+  'mutilation', 'torture', 'torturer', 'maim', 'corpse', 'cadaver', 'cadaverous', 'suicidal',
+  'lynch', 'lynching', 'gallows', 'noose', 'molest', 'molestation', 'molester', 'kidnap', 'kidnapper',
+  'kidnapping', 'terrorism', 'terrorist', 'holocaust', 'executioner', 'electrocute', 'guillotine',
+  'bloodbath', 'gunshot', 'gunman', 'gunmen', 'gunpoint', 'shootings',
+  // Identity words: not offensive, but best explained by a grown-up rather
+  // than met as a typing target in the family-friendly default.
+  'gay', 'gayer', 'gayest', 'gayness', 'lesbian', 'lesbianism',
+  // Toilet humor.
+  'poop', 'nincompoop', 'fart', 'pee', 'weeing', 'burp', 'belch', 'puke', 'vomit', 'snot', 'snotty',
+  'snottier', 'snottiest', 'flatulence', 'flatulent', 'potty', 'tush', 'fanny',
 ];
 
 function readJson<T>(modulePath: string): T {

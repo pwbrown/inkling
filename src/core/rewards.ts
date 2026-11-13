@@ -1,7 +1,9 @@
 /**
  * Ink earned (XP), levels, ranks and cosmetic unlocks: the reward loop that
  * makes progress visible over many sessions. Pure data and functions.
+ * Tuning numbers are in GAME_CONFIG.rewards.
  */
+import { GAME_CONFIG } from './config';
 
 export type NibStyle = 'classic' | 'quill' | 'brush' | 'gold';
 export type SplatterColor = 'ink' | 'crimson' | 'violet' | 'teal' | 'gold';
@@ -17,11 +19,14 @@ export const DEFAULT_COSMETICS: Cosmetics = { nib: 'classic', splatter: 'ink', p
 
 export type CosmeticSlot = keyof Cosmetics;
 
-/** Level each cosmetic unlocks at. */
+/**
+ * Level each cosmetic unlocks at. Spread out, with gaps growing, so each
+ * new thing is something to work toward (most levels unlock nothing).
+ */
 export const UNLOCKS: { [S in CosmeticSlot]: Record<Cosmetics[S], number> } = {
-  nib: { classic: 1, quill: 3, brush: 6, gold: 10 },
-  splatter: { ink: 1, crimson: 2, violet: 4, teal: 7, gold: 12 },
-  paper: { ruled: 1, graph: 5, parchment: 9 },
+  nib: { classic: 1, quill: 4, brush: 8, gold: 14 },
+  splatter: { ink: 1, crimson: 2, violet: 5, teal: 10, gold: 16 },
+  paper: { ruled: 1, graph: 6, parchment: 12 },
 };
 
 export type Rank = 'scribbler' | 'doodler' | 'scribe' | 'penman' | 'calligrapher' | 'illuminator' | 'master';
@@ -37,10 +42,10 @@ export const RANKS: readonly { rank: Rank; from: number }[] = [
   { rank: 'master', from: 23 },
 ];
 
-/** Total ink needed to reach `level` (level 1 needs none). Gaps grow by 100 each level. */
+/** Total ink needed to reach `level` (level 1 needs none). Each level's gap grows by 2 × `levelStep`. */
 export function inkForLevel(level: number): number {
   const n = Math.max(0, level - 1);
-  return 50 * n * (n + 1);
+  return GAME_CONFIG.rewards.levelStep * n * (n + 1);
 }
 
 export function levelForInk(ink: number): number {
@@ -62,13 +67,14 @@ export function levelProgress(ink: number): { level: number; into: number; neede
   return { level, into: ink - start, needed: inkForLevel(level + 1) - start };
 }
 
-/** Ink earned for a cleared page: a tenth of its score, plus a bonus per star. */
+/** Ink earned for a cleared page: a share of its score, plus a bonus per star. */
 export function inkForPage(pageScore: number, stars = 0): number {
-  return Math.max(0, Math.round(pageScore / 10)) + stars * 15;
+  const r = GAME_CONFIG.rewards;
+  return Math.max(0, Math.round(pageScore * r.inkPerScore)) + stars * r.inkPerStar;
 }
 
 /** Bonus ink for completing the Apprentice notebook. */
-export const NOTEBOOK_BONUS = 250;
+export const NOTEBOOK_BONUS = GAME_CONFIG.rewards.notebookBonus;
 
 export function isUnlocked<S extends CosmeticSlot>(slot: S, item: Cosmetics[S], level: number): boolean {
   return level >= (UNLOCKS[slot] as Record<string, number>)[item]!;

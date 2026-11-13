@@ -28,9 +28,6 @@ import { createCreature, type CreatureView } from './creatures';
 import { InkShots, SHOT_SPEED } from './shots';
 import { COLORS, prefersReducedMotion } from './theme';
 
-/** How long the red-pen tick takes to draw over a beaten creature. */
-const DEFEAT_MARK_MS = 140;
-
 const NIB_LENGTH = 56;
 const NIB_HOME = { x: MARGIN_X - 90, y: WORLD_HEIGHT / 2 };
 
@@ -171,9 +168,9 @@ export async function createRenderer(
   /**
    * Creatures already finished in the game, still on screen until the final
    * drop of ink lands. They show they're beaten straight away (x x eyes and a
-   * red-pen tick), so it's clear the word is done even with the sound off.
+   * quick squash), so it's clear the word is done even with the sound off.
    */
-  let dying: { view: CreatureView; target: Target; x: number; y: number; speed: number; mark: Graphics; sinceMs: number }[] = [];
+  let dying: { view: CreatureView; target: Target; x: number; y: number; speed: number; sinceMs: number }[] = [];
   let guide!: Graphics;
   let targetLayer!: Container;
   let nib!: Graphics;
@@ -308,10 +305,8 @@ export async function createRenderer(
         // Keep the creature crawling until the final drop of ink reaches it,
         // already marked as beaten.
         views.delete(event.target.id);
-        const mark = new Graphics();
-        view.root.addChild(mark);
         view.root.zIndex = -1;
-        const ghost = { view, target: event.target, x: event.target.x, y: event.target.y, speed: event.target.speed, mark, sinceMs: 0 };
+        const ghost = { view, target: event.target, x: event.target.x, y: event.target.y, speed: event.target.speed, sinceMs: 0 };
         dying.push(ghost);
         shoot(ghost, view, -1, () => {
           finish({ x: ghost.x + view.width / 2, y: ghost.y - LINE_SPACING / 2 });
@@ -381,27 +376,8 @@ export async function createRenderer(
     }
   };
 
-  /** A red-pen tick drawn over a beaten creature, with a quick squash. */
-  const drawDefeatMark = (mark: Graphics, view: CreatureView, sinceMs: number) => {
-    const grow = Math.min(1, sinceMs / DEFEAT_MARK_MS);
-    const cx = view.width / 2;
-    const size = Math.min(26, Math.max(16, view.height * 0.45));
-    const points = [
-      [cx - size * 0.7, -size * 0.05],
-      [cx - size * 0.15, size * 0.5],
-      [cx + size * 0.9, -size * 0.75],
-    ] as const;
-    mark.clear();
-    // Draw the tick stroke by stroke as it appears.
-    const first = Math.min(1, grow * 2.5);
-    const second = Math.max(0, Math.min(1, grow * 2.5 - 1) / 1.5);
-    const [a, b, c] = points;
-    mark.moveTo(a[0], a[1]).lineTo(a[0] + (b[0] - a[0]) * first, a[1] + (b[1] - a[1]) * first);
-    if (second > 0) mark.lineTo(b[0] + (c[0] - b[0]) * second, b[1] + (c[1] - b[1]) * second);
-    mark.stroke({ width: 6, color: COLORS.paper, cap: 'round', join: 'round' });
-    mark.moveTo(a[0], a[1]).lineTo(a[0] + (b[0] - a[0]) * first, a[1] + (b[1] - a[1]) * first);
-    if (second > 0) mark.lineTo(b[0] + (c[0] - b[0]) * second, b[1] + (c[1] - b[1]) * second);
-    mark.stroke({ width: 3.5, color: COLORS.margin, cap: 'round', join: 'round' });
+  /** A beaten creature squashes once and fades a little. */
+  const showDefeat = (view: CreatureView, sinceMs: number) => {
     if (!reducedMotion) {
       const squash = 1 - 0.12 * Math.sin(Math.min(1, sinceMs / 160) * Math.PI);
       view.root.scale.set(2 - squash, squash);
@@ -481,7 +457,7 @@ export async function createRenderer(
           const y = d.y - LINE_SPACING / 2;
           d.view.highlight.visible = false;
           d.view.update(d.target, { timeMs, dtMs: frameMs, locked: false, lookX: nib.x - d.x, lookY: nib.y - y, reducedMotion, defeated: true });
-          drawDefeatMark(d.mark, d.view, d.sinceMs);
+          showDefeat(d.view, d.sinceMs);
         }
       }
       shots.update(frameMs);

@@ -51,7 +51,7 @@ Several people can share one browser. Each player has their own notebook, stars,
 
 ### Ink, ranks and your desk
 
-- **Ink:** every page you finish earns ink (XP): a tenth of its score, plus 15 per star. Completing the Apprentice notebook adds 250.
+- **Ink:** every page you finish earns ink (XP): a tenth of its score, plus 15 per star. Completing the Apprentice notebook adds 500. Each level needs more ink than the last, and new things unlock only every few levels (the gold nib at level 14), so they're worth working toward.
 - **Ranks:** ink raises your level, and you rise from Scribbler through Doodler, Scribe, Penman, Calligrapher and Illuminator to Master Inkling.
 - **Unlocks:** levels unlock things for your **Desk** (D on the main menu): pens (fountain nib, quill, brush, gold nib), splatter ink colors and paper (ruled, graph, parchment). When you unlock something, a card shows a picture of it with a **Use it now** button, and the Desk shows a picture of every item.
 
@@ -62,7 +62,7 @@ Several people can share one browser. Each player has their own notebook, stars,
 
 ### Ink shots
 
-Every correct key flicks a drop of ink from your pen at the letter you typed. The pen aims ahead of the moving creature so the drop meets the letter, and a creature you finish stays on the page until the last drop lands, already showing it's beaten (x x eyes and a red tick) so you know the word is done even with the sound off. A wrong key still fires, but the drop misses and splats on the page. The locked creature is always drawn in front of any it overlaps.
+Every correct key flicks a drop of ink from your pen at the letter you typed. The pen aims ahead of the moving creature so the drop meets the letter, and a creature you finish stays on the page until the last drop lands, already showing it's beaten (x x eyes and a squash) so you know the word is done even with the sound off. A wrong key still fires, but the drop misses and splats on the page. The locked creature is always drawn in front of any it overlaps.
 
 ### Target types
 
@@ -70,7 +70,7 @@ Every correct key flicks a drop of ink from your pen at the letter you typed. Th
 - **Blotlings:** a word.
 - **Run-ons** (sprinkled in from chapter 4): a phrase. Mistakes stay, struck through in red, until you erase them with Backspace. They need the space key, so without it they don't appear.
 - **Misprints** (sprinkled in from chapter 5): a crooked rubber stamp with a misspelled word and the correct spelling pencilled above. Start fixing it with Backspace, Delete, the arrow keys or Tab, then type. (When only Misprints are on the page, typing goes straight to the nearest one.) Edits that bring it closer to right score, and edits that make it worse count as mistakes.
-- **Tougher ink:** some drips and Blotlings come in **crimson**, which need two words (or characters), or **violet**, which need three. Their words are shorter to make up for it, and each has its own look: crimson ones are spiky with horns, violet ones are lumpy with a crown and a third eye. Dots above them show how many are left. You can switch to other creatures between words, and they never repeat a word back to back. **Ghosts** in invisible ink hide their text until somewhere between a quarter and half way across the page. In Practice crimson starts in chapter 2, ghosts in 3 and violet in 5; in Apprentice they start later.
+- **Tougher ink:** some drips and Blotlings come in **crimson**, which need two words (or characters), or **violet**, which need three. Their words are shorter to make up for it, and each has its own look: crimson ones are spiky with horns, violet ones are lumpy with a crown and a third eye. Dots above them show how many are left. You can switch to other creatures between words, and they never repeat a word back to back. **Ghosts** in invisible ink hide their text until they're a quarter to half of the way in from the right edge. In Practice crimson starts in chapter 2, ghosts in 3 and violet in 5; in Apprentice they start later.
 
 ### Word lists
 

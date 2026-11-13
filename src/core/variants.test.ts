@@ -117,9 +117,9 @@ describe('switching between words', () => {
 });
 
 describe('ghosts', () => {
-  it('reveal somewhere between a quarter and half way across the page', () => {
-    expect(GHOST_REVEAL_MIN_X).toBe(1280 * 0.25);
-    expect(GHOST_REVEAL_MAX_X).toBe(1280 * 0.5);
+  it('reveal a quarter to half of the way in from the right edge', () => {
+    expect(GHOST_REVEAL_MIN_X).toBe(1280 * 0.5);
+    expect(GHOST_REVEAL_MAX_X).toBe(1280 * 0.75);
     expect(ghostRevealX(0)).toBe(GHOST_REVEAL_MIN_X);
     expect(ghostRevealX(0.999)).toBeLessThan(GHOST_REVEAL_MAX_X);
     const world = playingWorld();

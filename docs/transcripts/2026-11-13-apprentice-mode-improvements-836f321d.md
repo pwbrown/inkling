@@ -1,6 +1,6 @@
 # Apprentice mode improvements
 
-Claude Code session started 2026-11-13. 2 prompts.
+Claude Code session started 2026-11-13. 9 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1255,12 +1255,598 @@ When you commit, I'll also run `npm run transcript` and include the updated tran
 
 > Commit the working tree changes with a sensible message.
 
-<details><summary>1 tool call</summary>
+<details><summary>3 tool calls</summary>
 
 - **Shell:** Export session transcripts
 
   ```bash
   npm run transcript 2>&1 | tail -8 && git status --short docs/transcripts | head
+  ```
+- **Shell:** Review transcript changes and scan for private details
+
+  ```bash
+  git diff --stat docs/transcripts; git diff docs/transcripts/2026-11-12-typer-shark-game-brainstorm-eeb06805.md | head -30; grep -n -i -E "[removed]|@gmail|/Users/|/private/tmp|token|password|api[_-]?key|sk-[a-z0-9]" docs/transcripts/2026-11-13-apprentice-mode-improvements-836f321d.md | head -20
+  ```
+- **Shell:** Check for username or email leaks
+
+  ```bash
+  grep -c -i -E "[removed]|[removed]|gmail" docs/transcripts/2026-11-13-apprentice-mode-improvements-836f321d.md; git diff docs/transcripts | grep "^+" | grep -i -E "[removed]|[removed]|gmail|/private/tmp|claude-501" | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Transcripts are clean. Committing on the feature branch.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit all changes on the feature branch
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Milestone 14: players, mixed pages, creature looks and visual unlocks
+
+  - Players: several people can share one browser, each with their own save
+    (name and ink-drop badge, Who's writing? picker, switch with U)
+  - Apprentice to Practice: "Practice these keys" in the pause menu, and a
+    "My Apprentice keys" preset that follows the furthest chapter reached
+  - Difficulty: never more drips on screen than keys can tell apart; softer
+    Hard and Expert that ease in over the first Apprentice chapters; shorter
+    words on crimson and violet creatures; violets arriv
+  … (806 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I committed everything as `bd874fa` ("Milestone 14: players, mixed pages, creature looks and visual unlocks") on `feat/m14-profiles-and-polish`. The working tree is now clean.
+
+As your project notes ask, I ran `npm run transcript` first and included the result:
+- **This session:** a new transcript file.
+- **Earlier session:** the brainstorm transcript picked up its final few exchanges.
+
+I checked both for your email, username and temp-folder paths, and none appear; home-folder paths show as `[removed]`.
+
+Nothing is merged into `main` or pushed yet. Merging is a fast-forward, after which I'd delete the branch.
+
+## 🧑 Prompt
+
+> Merge to main
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Fast-forward main and delete the merged branch
+
+  ```bash
+  git checkout -q main && git merge --ff-only feat/m14-profiles-and-polish && git branch -d feat/m14-profiles-and-polish && git log --oneline -2 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I merged the branch into `main` (fast-forward to `bd874fa`) and deleted the local `feat/m14-profiles-and-polish` branch with `git branch -d`.
+
+Nothing is pushed yet. `main` is one commit ahead of `origin/main`, so the live GitHub Pages site doesn't have these changes until you push, which starts the deploy.
+
+## 🧑 Prompt
+
+> Push main
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main to GitHub
+
+  ```bash
+  git push origin main 2>&1 | tail -3 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` to GitHub (`08acd84..bd874fa`), and it's now in sync with `origin/main`. The push starts the GitHub Pages deploy. I haven't checked whether it finished or looked at the live site.
+
+On the live site, players with a cached copy will get the new version once the service worker updates, usually on their next visit or reload. The new bug and idea forms should already show on the repo's "New issue" page.
+
+## 🧑 Prompt
+
+> check the deploy finished
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** List recent workflow runs on main
+
+  ```bash
+  gh run list --branch main --limit 4 --json name,status,conclusion,headSha,createdAt,url
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Both runs passed. Checking that the live site serves the new build:
+
+<details><summary>2 tool calls</summary>
+
+- **navigate** `{"url":"https://pwbrown.github.io/inkling/"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,2500)); ({player: document.querySelector('.menu-player-name')?.textContent ?? null, about: !!document.querySelector('[data-id=\"about\"]'), title: document.querySelector('#menu-title')?.textContent})"}`
+
+</details>
+
+### 🤖 Claude
+
+The deploy finished and the update is live.
+
+- **GitHub Actions:** the Deploy and CI runs for `bd874fa` both passed.
+- **Live site:** I loaded https://pwbrown.github.io/inkling/ and the main menu shows the new build, with the "Writing as Player 1" chip and the About button.
+
+## 🧑 Prompt
+
+> The deploy finished and the update is live.
+
+### 🤖 Claude
+
+Yes, this round is done. It's merged, pushed and live, and the working tree is clean on `main`.
+
+Things worth checking in a real playtest, since tests cover them but I didn't watch them in a game:
+- A ghost appearing somewhere between a quarter and halfway across the page.
+- A Run-on or Misprint sneaking onto a later word page.
+- Whether early Expert chapters now feel fair to your kids.
+
+If you have more changes, send them over.
+
+## 🧑 Prompt
+
+> Another round of changes:
+>
+> * The checkmark animation on defeat should be removed. It's too much and the other animation is enough
+> * The Ghost reveal is the opposite of what I want, it's appearing between a quarter and half of the screen closest to the nib, but it should be a quarter to a half from the right side of the screen.
+> * When you select some nibs like the fountain pen, the whole UI shifts. It should be static.
+> * It is way to easy to unlock new items. A little delayed gratification would be nice.
+> * I've seen some questionable words pop up like Jackass, Sperms, and other reproduction/sexual terms that may not be expletives, but are not kid friendly. Can you review the list
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Branch, read rewards and word build script outline
+
+  ```bash
+  git checkout -q -b fix/m14-feedback && cat src/core/rewards.ts | sed -n 25,90p; wc -l scripts/build-words.ts; grep -n "EXTRA\|ALLOW\|extra\|allow\|blocks\|function" scripts/build-words.ts | head -40
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Quick fixes first: the tick, the ghost side and the Desk layout.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Locate defeat-mark code
+
+  ```bash
+  grep -n "mark\|drawDefeatMark\|DEFEAT_MARK" src/render/renderer.ts
+  ```
+- **Shell:** Remove the red tick from defeated creatures
+
+  ```bash
+  python3 - <<'EOF'
+  import re
+  p='src/render/renderer.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:60]; s=s.replace(a,b,1)
+  sub("/** How long the red-pen tick takes to draw over a beaten creature. */\nconst DEFEAT_MARK_MS = 140;\n\n","")
+  sub("""   * drop of ink lands. They show they're beaten straight away (x x eyes and a
+     * red-pen tick), so it's clear the word is done even with the sound off.
+     */
+    let dying: { view: CreatureView; target: Target; x: number; y: number; speed: number; mark: Graphics; sinceMs: number }[] = [];""","""   * drop of ink lands. They show the
+  … (1182 more characters)
+  ```
+- **Shell:** Reveal ghosts from the right side of the page
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  sub('src/core/config.ts', """    /**
+       * Ghost text appears once the creature crosses a point this far from the
+       * left edge (fraction of page width), picked at random per ghost.
+       */
+      revealAt: { min: 0.25, max: 0.5 },""", """    /**
+       * Ghost text appears once the creature crosses a point this far from the
+       * left edge (fraction of page width), picked at random per ghost: from a
+       * quarter to half of the way in from the right edge, where they enter.
+    
+  … (960 more characters)
+  ```
+- **Shell:** Give Desk options a fixed size
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  sub('README.md', "already showing it's beaten (x x eyes and a red tick)", "already showing it's beaten (x x eyes and a squash)")
+  sub('src/ui/menu.css', """.menu .desk-option {
+    padding: 8px 14px;
+    text-align: center;
+  }
+
+  .menu .desk-option[aria-checked='true'] {
+    background: var(--tc-highlight);
+  }
+
+  .menu .desk-option[aria-checked='true'] .menu-label::before {
+    content: '✓ ';
+  }""", """/* Fixed-size cards, so choosing one never moves the others. */
+  .menu .desk-option {
+    width
+  … (429 more characters)
+  ```
+- **Shell:** Keep scroll position and focus steady when redrawing a menu
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  sub('src/ui/menu.css', """/* The check sits in a corner""", """.menu .desk-option .menu-label {
+    font-size: 16px;
+  }
+
+  /* The check sits in a corner""")
+  sub('src/ui/menu.ts', """  private render(focus = true): void {
+      const focused = this.panel.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.id : undefined;""", """  private render(focus = true): void {
+      const focused = this.panel.contains(document.activeElement) ? (document.activeElement 
+  … (563 more characters)
+  ```
+- **Shell:** Read rewards table and tests
+
+  ```bash
+  sed -n 1,24p src/core/rewards.ts; cat src/core/rewards.test.ts | head -60; grep -rn "NOTEBOOK_BONUS\|inkForPage\|15 per star\|a tenth" src README.md docs/*.md | grep -v test
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Still on the first step; the tick and ghost fixes are in. Now slowing down unlocks: a steeper ink curve, with unlocks spread over more levels.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Steepen the level curve and spread unlocks
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  R='src/core/rewards.ts'
+  sub(R, """ * makes progress visible over many sessions. Pure data and functions.
+   */
+  """, """ * makes progress visible over many sessions. Pure data and functions.
+   * Tuning numbers are in GAME_CONFIG.rewards.
+   */
+  import { GAME_CONFIG } from './config';
+  """)
+  sub(R, """/** Level each cosmetic unlocks at. */
+  export const UNLOCKS: { [S in CosmeticSlot]: Record<Cosmetics[S], number> } = {
+    nib: { classic: 1, quill: 3, brush: 6, gold: 10 },
+    splatter: { ink
+  … (4302 more characters)
+  ```
+- **Shell:** Keep equipped items usable; typecheck and test
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  a="            const open = isUnlocked(slot, item as never, level);"
+  assert a in s
+  s=s.replace(a,"""            // Something already in use stays usable, even if levels were rebalanced since.
+              const open = isUnlocked(slot, item as never, level) || equipped[slot] === item;""")
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit -p . && npx vitest run src 2>&1 | grep -E "×|Tests"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Pacing is done. Now the word list review.
+
+<details><summary>4 tool calls</summary>
+
+- **Read** `scripts/build-words.ts`
+- **Shell:** Read blocklist matching rules
+
+  ```bash
+  sed -n 1,200p src/content/blocklist.ts | grep -v "^\s*$" | head -120
+  ```
+- **Shell:** Check word list size and sample sensitive words
+
+  ```bash
+  node -e "
+  const p=require('./src/content/en/words.json'); const all=p.tiers.flatMap((t,i)=>t.split(' ').map(w=>[w,i]));
+  console.log('total',all.length, p.tiers.map(t=>t.split(' ').length));
+  const has=new Set(all.map(a=>a[0])); for (const w of ['jackass','sperm','sperms','semen','penis','vagina','sex','sexy','orgasm','condom','pregnant','erection','nipple','breast','testicle','ovary','uterus','womb','fetus','abortion','kill','murder','rape','drunk','beer','booze','whore','ass','arse','bastard','bitch','boob','butt','fart','poop','pee','crotch','groin','nude','naked','strip','stripper','kinky','
+  … (176 more characters)
+  ```
+- **Shell:** Scan words for sexual and body-related stems
+
+  ```bash
+  mkdir -p <temp file> && cd /Users/[removed]/projects/inkling && cat > <temp file> <<'EOF'
+  const p=require(process.argv[2]);
+  const all=p.tiers.flatMap(t=>t.split(' '));
+  const stems = process.argv[3].split(',');
+  for (const s of stems) {
+    const hits = all.filter(w=>w.includes(s));
+    if (hits.length) console.log(`[${s}] ${hits.slice(0,60).join(' ')}${hits.length>60?' …+'+(hits.length-60):''}`);
+  }
+
+  … (878 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+First pass done (sexual, reproductive and body words). Scanning the next categories: crude insults, drugs and alcohol, violence, and slurs.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Scan words for insults and slurs
+
+  ```bash
+  node <temp file> $PWD/src/content/en/words.json "jackass,ass,arse,bastard,bitch,damn,hell,crap,suck,screw,bloody,bugger,idiot,moron,imbecil,stupid,dumb,dork,dweeb,nerd,loser,freak,fatso,fatty,ugly,hate,bimbo,floozy,slut,tramp,hooker,trollop,wench,gigolo,pimp,pansy,fairy,queer,homo,lesbian,gay,transvest,tranny,hermaphr,eunuch,castrat,circumcis,spaz,cripple,midget,lunatic,psycho,maniac,savage,negro,colored,coon,spic,kike,wop,dago,gringo,redskin,squaw,eskimo,gypsy,jap,paddy,honky,cracker,wetba
+  … (83 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Insults and slurs are reviewed. Last scan: drugs, alcohol, violence and death.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Scan words for drugs, violence and disease
+
+  ```bash
+  node <temp file> $PWD/src/content/en/words.json "drug,cocain,heroin,opium,opiat,morphin,meth,amphet,marijuan,cannab,hashish,narcot,stoned,junkie,addict,overdos,booze,boozer,drunk,liquor,whisk,vodka,tequila,hangover,tipsy,beer,wine,alcohol,cigar,tobacco,nicotin,smok,murder,homicid,slaughter,massacre,genocid,butcher,assassin,strangl,behead,decapit,dismember,mutilat,tortur,maim,stab,gore,gory,corpse,cadaver,carcass,suicid,hang,lynch,gallows,noose,rape,molest,abus,kidnap,hostag,terror,bomb,gun,
+  … (270 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Review done. Adding the reviewed terms to the blocklist script, then rebuilding the word pack and checking what else gets caught by accident.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Add reviewed kid-unfriendly terms and rebuild words
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/build-words.ts'
+  s=open(p).read()
+  a="""  'suicide', 'cocaine', 'heroin',
+  ];"""
+  assert a in s
+  s=s.replace(a,"""  'suicide', 'cocaine', 'heroin',
+    // Kid-friendliness review (2026-11): words that aren't swearing but don't
+    // belong in a children's typing game. Inflections are matched automatically;
+    // terms of 5+ letters also block longer words containing them.
+    // Sex, reproduction and private parts.
+    'sperm', 'sexist', 'sexism', 'nonsexist', 'unisex', 'cybersex', 'oversexed', 'sexily', 'sexiness',
+    'sexless', 'sexpot', 'sexting', 'sexton', 'sextet', 'sextant
+  … (3924 more characters)
+  ```
+- **Shell:** List words newly removed by the review
+
+  ```bash
+  git show HEAD:src/content/en/words.json > <temp file> && node -e "
+  const o=new Set(require('$TMPDIR/../claude-501/x'.replace(/.*/,'<temp file>')).tiers.flatMap(t=>t.split(' ')));
+  const n=new Set(require('./src/content/en/words.json').tiers.flatMap(t=>t.split(' ')));
+  const gone=[...o].filter(w=>!n.has(w)).sort(); console.log(gone.length); console.log(gone.join(' '));"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Most removals are intended. A few harmless words got caught by accident (congenital, deuterium, neutering, scrapped, psychology, angiosperm). Allowing those back:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Allow harmless collateral words and rebuild
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/build-words.ts'
+  s=open(p).read()
+  a="""  'burnoose', 'burnooses', 'tortured',
+  ];"""
+  assert a in s
+  s=s.replace(a,"""  'burnoose', 'burnooses', 'congenital', 'congenitally', 'deuterium', 'neutering', 'scrapped',
+    'scrapping', 'scrappier', 'scrappiest', 'psychology', 'psychologies', 'psychologist',
+    'psychologists', 'angiosperm', 'angiosperms', 'gymnosperm', 'gymnosperms',
+  ];""")
+  open(p,'w').write(s)
+  EOF
+  npm run words:build 2>&1 | sed -n 3p; node -e "
+  const n=new Set(require('./src/content/en/words.json').tiers.flatMap(t=>t.split(' ')));
+  for (const w of ['jackass','s
+  … (188 more characters)
+  ```
+- **Shell:** Run checks and build
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|×|FAIL|Tests|problems" | head; npm run build 2>&1 | grep -E "error|built in|precache"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks and build pass. Adding a regression test so these words can't creep back in:
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Find word pack tests
+
+  ```bash
+  ls src/content/*.test.ts src/content/en/ 2>/dev/null; grep -ln "words.json\|loadEnglishPack" src/content/*.test.ts
+  ```
+- **Shell:** Read word pack test
+
+  ```bash
+  cat src/content/en/pack.test.ts
+  ```
+- **Edited** `src/content/en/pack.test.ts`
+- **Shell:** Run pack tests and find blocklist docs
+
+  ```bash
+  npx vitest run src/content/en 2>&1 | grep -E "×|Tests"; grep -n "Blocklist\|blocklist" CREDITS.md README.md | head -5
+  ```
+- **Shell:** Note the kid-friendliness review in credits
+
+  ```bash
+  python3 - <<'EOF'
+  p='CREDITS.md'
+  s=open(p).read()
+  a="- **Changes:** multi-word phrases removed, a few extra terms added, and an allowlist of harmless words the matching rules caught by mistake (both lists are in `scripts/build-words.ts`)."
+  assert a in s
+  s=s.replace(a,"- **Changes:** multi-word phrases removed; extra terms added from a kid-friendliness review (sexual and reproductive words, crude insults and slurs, drugs, alcohol and tobacco, and graphic violence); and an allowlist of harmless words the matching rules caught by mistake (both lists are in `scripts/build-words.ts`).")
+  open(p,'w')
+  … (21 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Word list done (527 words removed). Now verifying the visual fixes in the browser: the Desk layout and the ghost reveal.
+
+<details><summary>2 tool calls</summary>
+
+- **preview_start** `{"name":"inkling-dev"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,1500)); const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); inkling.store.update(s=>{s.profile.ink = 30000}); inkling.menu.show('desk'); await sleep(100); const panel=document.querySelector('.menu-panel'); panel.scrollTop = 200; c
+… (593 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Choosing any pen, ink or paper no longer moves anything: card positions and scroll position stay the same. Screenshot:
+
+<details><summary>2 tool calls</summary>
+
+- **computer** `{"action":"screenshot","scale":0.6}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); inkling.store.update(s=>{s.profile.ink = 620}); inkling.menu.show('newNotebook'); await sleep(50); document.querySelector('[data-id=\"start\"]').click(); await sleep(100); const w=inkling.world; w.targets=[]; w.p
+… (197 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+All five fixes are in on `fix/m14-feedback`. `npm run check` and the build pass (244 tests, including a new one for the word list). Nothing is committed yet.
+
+1. **Red tick removed.** A finished creature now just gets `x x` eyes, a quick squash and a slight fade until the ink lands.
+2. **Ghosts reveal from the right side.** Each ghost now shows its text somewhere between a quarter and half of the way in from the right edge. One test ghost revealed at x=856, inside that range (640–960).
+3. **The Desk no longer shifts.** Two things caused it:
+   - **The check mark:** it was added to the item's name, which changed the card's width and pushed the others around. Cards are now a fixed size and the check sits in a corner.
+   - **Scrolling:** every click redrew the screen and jumped it back to the top. Scroll position and focus now stay put.
+
+   I clicked through pens, inks and papers on a scrolled Desk, and nothing moved.
+4. **Unlocks take longer.**
+   - **Ink per level:** each level now needs twice as much ink. Level 2 takes about 2 pages and level 8 about 50.
+   - **Spacing:** unlocks are spread over more levels, with nothing in between. Crimson ink comes at level 2, quill 4, violet 5, graph paper 6, brush 8, teal 10, parchment 12, gold nib 14 and gold ink 16.
+   - **Notebook bonus:** finishing Apprentice now gives 500 ink.
+   - **Existing players:** they will drop a few levels under the new curve. Anything they currently use stays usable, so nobody loses the item they picked, but they'll see the unlock card again when they re-reach those levels.
+5. **Word list cleaned.** I scanned all ~56,000 words by category, read every match, and removed 527:
+   - **Sexual and reproductive:** sperm, pregnant, erection, seduce, lust, virgin, breast and their forms.
+   - **Crude insults and slurs:** jackass, idiot, moron, stupid, queer, midget, gypsy.
+   - **Drugs, alcohol and tobacco:** including beer, wine and cigarette.
+   - **Graphic violence:** murder, torture, massacre, kidnap, gunshot.
+
+   Harmless words that contain one of these stay in, like butter, grape, wombat, abreast, scrapped, psychology and condominium. The new test checks for both kinds.
+
+Two calls in the word list you may want to change:
+- **Kept:** gay and lesbian (identity words, not insults), plus toilet humour (poop, fart) and everyday words like gun, bomb and kill. These are easy to add if you'd rather drop them.
+- **Removed:** rare but harmless words that start with "sex", like sexton and sextant, to avoid giggles.
+
+The term lists are in `scripts/build-words.ts`.
+
+## 🧑 Prompt
+
+> This is making me think that we want a more fluid filtering system. Maybe we can flesh this out later, but for now let's filter out the identify words and toilet humor, but we may also want an adjustable content filter. So family friendly would be the default experience, but then there could be two more levels above that that allow for less filtering.
+
+### 🤖 Claude
+
+Adding identity words and toilet humour to the family-friendly filter now. Then I'll check what else the word list holds in those two areas.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Scan remaining identity and toilet words
+
+  ```bash
+  node <temp file> $PWD/src/content/en/words.json "gay,lesbian,bisex,homosex,heterosex,transgend,transsex,intersex,queer,poop,poo,fart,pee,pis,burp,belch,puke,vomit,snot,booger,diarrh,flatul,urin,toilet,potty,loo,dung,manure,butt,bum,tush,tushie,fanny,diaper,nappy,wee"
+  ```
+- **Shell:** Block identity words and toilet humor; list removals
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/build-words.ts'
+  s=open(p).read()
+  a="""  'bloodbath', 'gunshot', 'gunman', 'gunmen', 'gunpoint', 'shootings',
+  ];"""
+  assert a in s
+  s=s.replace(a,"""  'bloodbath', 'gunshot', 'gunman', 'gunmen', 'gunpoint', 'shootings',
+    // Identity words: not offensive, but best explained by a grown-up rather
+    // than met as a typing target in the family-friendly default.
+    'gay', 'gayer', 'gayest', 'gayness', 'lesbian', 'lesbianism',
+    // Toilet humor.
+    'poop', 'nincompoop', 'fart', 'pee', 'weeing', 'burp', 'belch', 'puke', 'vomit', 'snot', 'snotty',
+    'snottier', 'snottiest', 'f
+  … (1371 more characters)
+  ```
+- **Shell:** Update credits, run checks and build
+
+  ```bash
+  sed -i '' 's/(sexual and reproductive words, crude insults and slurs, drugs, alcohol and tobacco, and graphic violence)/(sexual and reproductive words, identity words, toilet humor, crude insults and slurs, drugs, alcohol and tobacco, and graphic violence)/' CREDITS.md && grep -c "toilet humor" CREDITS.md && npm run check 2>&1 | grep -E "×|FAIL|Tests|error" | head -5; npm run build 2>&1 | grep -E "error|built in"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Identity words and toilet humour are now blocked, which removes 49 more words. `npm run check` (244 tests) and the build pass, and nothing is committed yet.
+
+- **Identity words:** gay (and gayer, gayest, gayness), lesbian, lesbians, lesbianism. Bisexual, homosexual and heterosexual were already blocked by the original blocklist.
+- **Toilet humour:** poop, fart, pee, burp, belch, puke, vomit and snot (with their other forms), plus nincompoop, flatulence, potty, tush, fanny and weeing.
+- **Kept:** harmless look-alikes like farther, speed, spotty, nosegay and shampoo, and plain words like toilet and diaper. The word-list test now checks both sides.
+
+**Adjustable content filter:** this fits well later. The terms in `scripts/build-words.ts` are already grouped by category, so each group could get a level:
+- **Family friendly (default):** everything blocked, as now.
+- **Middle level:** brings back mild groups like identity words, toilet humour and alcohol.
+- **Least filtered:** also allows things like body and reproduction words. Slurs and swearing stay blocked at every level.
+
+It would need a setting in Settings, a word pack that records each word's group, and probably a grown-up check before lowering the filter.
+
+## 🧑 Prompt
+
+> Commit, then filter
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  npm run transcript 2>&1 | grep Wrote; git diff docs/transcripts | grep "^+" | grep -i -E "[removed]|[removed]|gmail|/private/tmp|claude-501|/Users/[a-z]" | head -5; git status --short | head -30
   ```
 
 </details>

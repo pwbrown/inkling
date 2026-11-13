@@ -148,6 +148,8 @@ export class Menu {
 
   private render(focus = true): void {
     const focused = this.panel.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.id : undefined;
+    // Redrawing the same screen keeps its scroll position, so choices don't jump.
+    const scrollTop = focus ? 0 : this.panel.scrollTop;
     switch (this.current) {
       case 'title':
         this.panel.replaceChildren(...this.title());
@@ -179,8 +181,9 @@ export class Menu {
       default:
         return;
     }
+    this.panel.scrollTop = scrollTop;
     const restore = focused ? this.panel.querySelector<HTMLElement>(`[data-id="${focused}"]`) : null;
-    if (restore) restore.focus();
+    if (restore) restore.focus({ preventScroll: true });
     else if (focus) (this.panel.querySelector<HTMLElement>('[data-autofocus]') ?? this.buttons()[0])?.focus();
   }
 
@@ -264,7 +267,8 @@ export class Menu {
           'div',
           { className: 'desk-options', role: 'radiogroup', 'aria-label': t(`desk.${slot}` as MessageKey) },
           Object.entries(UNLOCKS[slot]).map(([item, at]) => {
-            const open = isUnlocked(slot, item as never, level);
+            // Something already in use stays usable, even if levels were rebalanced since.
+            const open = isUnlocked(slot, item as never, level) || equipped[slot] === item;
             return h(
               'button',
               {

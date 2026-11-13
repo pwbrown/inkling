@@ -214,9 +214,10 @@ export const GAME_CONFIG = {
     ghost: { fromChapter: 2, start: 0.08, perChapter: 0.03, max: 0.25 },
     /**
      * Ghost text appears once the creature crosses a point this far from the
-     * left edge (fraction of page width), picked at random per ghost.
+     * left edge (fraction of page width), picked at random per ghost: from a
+     * quarter to half of the way in from the right edge, where they enter.
      */
-    revealAt: { min: 0.25, max: 0.5 },
+    revealAt: { min: 0.5, max: 0.75 },
   },
 
   /**
@@ -262,6 +263,19 @@ export const GAME_CONFIG = {
      */
     profileEaseChapters: 10,
     profileEaseFloor: 0.35,
+  },
+
+  /**
+   * Ink (XP) and levels (rewards.ts). Level n needs levelStep × (n−1) × n ink
+   * in total: about 2 pages for level 2, 10 for level 4, 50 for level 8 and
+   * 200 for level 15, so unlocks take a while to earn.
+   */
+  rewards: {
+    levelStep: 100,
+    /** Ink per point of page score. */
+    inkPerScore: 0.1,
+    inkPerStar: 15,
+    notebookBonus: 500,
   },
 
   /** Each target's speed varies randomly by up to ±this fraction. */

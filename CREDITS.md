@@ -14,7 +14,7 @@ Third-party content bundled with Inkling, with its source and license (REQUIREME
 - **What:** terms in `src/content/en/blocklist.json`, used to filter the word list and every generated string.
 - **Source:** [List of Dirty, Naughty, Obscene, and Otherwise Bad Words](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) (LDNOOBW), via the [`naughty-words`](https://github.com/LDNOOBW/naughty-words-js) npm package.
 - **License:** [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
-- **Changes:** multi-word phrases removed, a few extra terms added, and an allowlist of harmless words the matching rules caught by mistake (both lists are in `scripts/build-words.ts`).
+- **Changes:** multi-word phrases removed; extra terms added from a kid-friendliness review (sexual and reproductive words, identity words, toilet humor, crude insults and slurs, drugs, alcohol and tobacco, and graphic violence); and an allowlist of harmless words the matching rules caught by mistake (both lists are in `scripts/build-words.ts`).
 
 ## Topic word lists (optional download)
 
