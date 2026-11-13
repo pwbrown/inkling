@@ -28,7 +28,7 @@ export interface CreatureView {
   update(target: Target, ctx: FrameContext): void;
 }
 
-export type Mood = 'calm' | 'worried' | 'scared' | 'happy' | 'hurt';
+export type Mood = 'calm' | 'worried' | 'scared' | 'happy' | 'hurt' | 'angry';
 
 export const measure = (text: string, style: TextStyle) => CanvasTextMetrics.measureText(text, style).width;
 
@@ -76,9 +76,11 @@ export class MoodTracker {
           ? 'happy'
           : ctx.locked
             ? 'scared'
-            : target.x < MARGIN_X + 240
-              ? 'worried'
-              : 'calm';
+            : target.boss
+              ? 'angry'
+              : target.x < MARGIN_X + 240
+                ? 'worried'
+                : 'calm';
     return { mood, blink: t < this.blinkUntil && mood !== 'hurt', hurtMs: Math.max(0, this.hurtUntil - t) };
   }
 }
@@ -127,6 +129,12 @@ export function drawFace(
       const scared = mood === 'scared';
       g.circle(ex, cy, r * (scared ? 1.15 : 1)).fill(white);
       g.circle(ex + dx, cy + dy, r * (scared ? 0.32 : 0.55)).fill(pupil);
+      if (mood === 'angry') {
+        // Brows slanting down toward the middle.
+        g.moveTo(ex - side * r * 1.1, cy - r * 1.5)
+          .lineTo(ex + side * r * 0.4, cy - r * 1.05)
+          .stroke({ width: Math.max(1.5, r * 0.3), color: white, cap: 'round' });
+      }
       if (mood === 'worried') {
         // Brows tilted up toward the middle.
         g.moveTo(ex - side * r * 0.9, cy - r * 1.25)
@@ -148,6 +156,7 @@ export function drawFace(
       break;
     case 'worried':
     case 'hurt':
+    case 'angry':
       g.moveTo(x - w, y + w * 0.3)
         .quadraticCurveTo(x - w * 0.5, y - w * 0.2, x, y + w * 0.3)
         .quadraticCurveTo(x + w * 0.5, y + w * 0.8, x + w, y + w * 0.3)

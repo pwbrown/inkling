@@ -15,6 +15,7 @@ import {
   selectDifficulty,
   startApprentice,
   startPractice,
+  useBlotter,
   togglePause,
   typeChar,
   type EditKey,
@@ -26,7 +27,9 @@ import { accuracy, wpm } from './core/stats';
 import { APPRENTICE_CHAPTERS, LESSONS, NEW_KEY_WEIGHT, chapterStars, starsForGrade, totalStars } from './core/campaign';
 import { pageGrade } from './core/grade';
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
-import { formatNumber, setLocale, t } from './i18n';
+import { formatNumber, setLocale, t, type MessageKey } from './i18n';
+import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel } from './core/rewards';
+import type { SaveData } from './storage/schema';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { loadFonts } from './fonts';
 import { registerOffline } from './pwa';
@@ -79,6 +82,8 @@ async function main(): Promise<void> {
   let newBest = false;
   /** Keys that became mastered on the page just finished, for the graded page. */
   let newlyMastered: string[] = [];
+  /** Ink earned on the page just finished, and any level-up, for the graded page. */
+  let reward: { ink: number; levelUp: number | null; unlocked: string[] } = { ink: 0, levelUp: null, unlocked: [] };
 
   const describeKeys = (keys: readonly string[]) => {
     const preset = matchingPreset([...presets, ...customPresets()], keys);
@@ -99,22 +104,32 @@ async function main(): Promise<void> {
       onLink: (id) => actions.onLink(id),
       extraLines: (w) => {
         if (w.phase === 'pageCleared') {
-          return newlyMastered.length > 0
-            ? [t('overlay.newlyMastered', { keys: newlyMastered.map(keyLabel).join('  ') })]
-            : [];
+          const lines = [];
+          if (newlyMastered.length > 0) lines.push(t('overlay.newlyMastered', { keys: newlyMastered.map(keyLabel).join('  ') }));
+          if (reward.ink > 0) lines.push(t('overlay.inkEarned', { ink: reward.ink }));
+          if (reward.levelUp) {
+            lines.push(t('overlay.levelUp', { level: reward.levelUp, rank: t(`rank.${rankForLevel(reward.levelUp)}` as MessageKey) }));
+          }
+          if (reward.unlocked.length > 0) lines.push(t('overlay.unlocked', { items: reward.unlocked.join(', ') }));
+          return lines;
         }
         if (w.phase === 'gameOver') {
           return newBest ? [t('overlay.gameOver.newBest', { difficulty: difficultyLabel(w.difficulty) })] : [];
         }
         if (w.phase === 'notebookComplete') {
           const { earned, max } = totalStars(store.data.apprentice.stars);
-          return [t('overlay.complete.stars', { earned, max })];
+          const lines = [t('overlay.complete.stars', { earned, max }), t('overlay.inkEarned', { ink: reward.ink })];
+          if (reward.levelUp) {
+            lines.push(t('overlay.levelUp', { level: reward.levelUp, rank: t(`rank.${rankForLevel(reward.levelUp)}` as MessageKey) }));
+          }
+          return lines;
         }
         return [];
       },
     }, () => ({
       textScale: TEXT_SCALE[settings.textSize],
       reducedMotion: reducedMotion(settings, prefersReducedMotion()),
+      cosmetics: store.data.profile.cosmetics,
     })),
   ]);
 
@@ -160,6 +175,11 @@ async function main(): Promise<void> {
     if (dialogOpen) return;
     if (game.phase === 'notebookComplete') {
       goToMenu();
+      return;
+    }
+    // Enter while playing fires the Blotter, if charged.
+    if (game.phase === 'playing') {
+      useBlotter(game);
       return;
     }
     if (game.phase === 'ready') {
@@ -337,6 +357,22 @@ async function main(): Promise<void> {
         locked: chapter >= store.data.apprentice.unlocked,
       })),
     onStartApprentice: (chapter) => after(() => startChapter(chapter)),
+    rankLine: () => {
+      const { level, into, needed } = levelProgress(store.data.profile.ink);
+      return t('menu.rank', { rank: t(`rank.${rankForLevel(level)}` as MessageKey), level, into, needed });
+    },
+    levelFraction: () => {
+      const { into, needed } = levelProgress(store.data.profile.ink);
+      return needed > 0 ? into / needed : 1;
+    },
+    level: () => levelForInk(store.data.profile.ink),
+    cosmetics: () => store.data.profile.cosmetics,
+    onEquip: (slot, item) => {
+      store.update((save) => {
+        (save.profile.cosmetics as unknown as Record<string, string>)[slot] = item;
+      });
+      renderer.rebuild();
+    },
     bestLine: (d) => {
       const best = store.data.records.bestScore[d];
       return best
@@ -387,6 +423,18 @@ async function main(): Promise<void> {
     }
   }
 
+  /** Add ink to the profile; report the ink, any new level, and new unlocks by name. */
+  const earnInk = (save: SaveData, ink: number) => {
+    const before = levelForInk(save.profile.ink);
+    save.profile.ink += ink;
+    const after = levelForInk(save.profile.ink);
+    return {
+      ink,
+      levelUp: after > before ? after : null,
+      unlocked: newUnlocks(before, after).map(({ slot, item }) => t(`${slot}.${item}` as MessageKey)),
+    };
+  };
+
   /** Phase before the latest change, to tell starting a page from resuming one. */
   let lastPhase: GamePhase = game.phase;
 
@@ -414,10 +462,14 @@ async function main(): Promise<void> {
           const before = structuredClone(save.keyStats);
           mergeKeyStats(save, game.pageStats);
           newlyMastered = improvedKeys(before, save.keyStats);
+          let stars = 0;
           if (game.mode === 'apprentice') {
-            const stars = starsForGrade(pageGrade(game.pageStats, game.page.params.size));
-            recordApprenticePage(save, game.page.chapter, game.page.index, stars, isLastPageOfChapter(game.page));
+            const earned = starsForGrade(pageGrade(game.pageStats, game.page.params.size));
+            stars = earned;
+            recordApprenticePage(save, game.page.chapter, game.page.index, earned, isLastPageOfChapter(game.page));
           }
+          // Ink (XP): level-ups and unlocks show on the graded page.
+          reward = earnInk(save, inkForPage(game.pageStats.score, stars));
           recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);
           save.notebook = snapshotNotebook(game, nextPagePosition(game.page));
         });
@@ -425,6 +477,7 @@ async function main(): Promise<void> {
       case 'notebookComplete':
         store.update((save) => {
           save.notebook = null;
+          reward = earnInk(save, NOTEBOOK_BONUS);
         });
         break;
       case 'gameOver':

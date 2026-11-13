@@ -188,6 +188,20 @@ export const GAME_CONFIG = {
     revealAt: 0.55,
   },
 
+  /**
+   * The Blotter: a power charged by long runs of correct keys. Press Enter
+   * while playing to blot every creature on the page (except a boss) for a
+   * share of their points.
+   */
+  blotter: { comboPerCharge: 25, maxCharges: 2, pointsShare: 0.5 },
+
+  /**
+   * The Spill: a boss on the last page of every Apprentice chapter. A big,
+   * slow Blotling with three lives and longer words, which splits into small
+   * Blotlings when finally blotted.
+   */
+  boss: { lives: 3, speedFactor: 0.6, complexityBonus: 0.3, inkLossFactor: 2, splits: 3, splitSpeedFactor: 1.4 },
+
   /** Each target's speed varies randomly by up to ±this fraction. */
   speedJitter: 0.15,
   /** Empty space to keep behind the last target in a lane before spawning another. */

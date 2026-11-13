@@ -253,3 +253,39 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Desk (cosmetics). */
+.menu[data-screen='desk'] .menu-panel {
+  width: min(620px, 100%);
+}
+
+.desk-bar {
+  height: 12px;
+  border: 1.5px solid var(--tc-ink);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--tc-ink) var(--fill, 0%), transparent var(--fill, 0%));
+}
+
+.desk-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.menu .desk-option {
+  padding: 8px 14px;
+  text-align: center;
+}
+
+.menu .desk-option[aria-checked='true'] {
+  background: var(--tc-highlight);
+}
+
+.menu .desk-option[aria-checked='true'] .menu-label::before {
+  content: '✓ ';
+}
+
+.menu .desk-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

@@ -53,6 +53,8 @@ export interface Target {
   lives: number;
   /** Invisible ink: the text stays hidden until the creature is halfway across. */
   ghost: boolean;
+  /** The Spill: a chapter's boss. */
+  boss?: boolean;
   /** Current position (left edge of the target body). */
   x: number;
   y: number;
@@ -76,6 +78,14 @@ export type GameEvent =
   | { type: 'destroyed'; target: Target; points: number }
   /** A crimson or violet creature lost a life and got a new payload. */
   | { type: 'hit'; target: Target; points: number }
+  /** The Spill (boss) appeared. */
+  | { type: 'boss'; target: Target }
+  /** The Spill was blotted and split into smaller creatures. */
+  | { type: 'split'; target: Target }
+  /** The Blotter gained a charge. */
+  | { type: 'blotterCharged'; charges: number }
+  /** The Blotter was used. */
+  | { type: 'blotter' }
   | { type: 'marginHit'; target: Target; inkLost: number }
   | { type: 'error'; key: string; targetId: number | null }
   | { type: 'phase'; phase: GamePhase }
@@ -97,6 +107,9 @@ export interface PageState {
   index: number;
   /** Pages in this chapter. */
   pageCount: number;
+  /** This page has a Spill (boss) to spawn: the last page of an Apprentice chapter. */
+  hasBoss: boolean;
+  bossSpawned: boolean;
   params: PageParams;
   spawned: number;
   /** Counts down to the next spawn. */
@@ -143,6 +156,8 @@ export interface World {
    * The Apprentice campaign uses it to switch keys between chapters.
    */
   makeContent: (keys: readonly string[], focus: readonly string[]) => ContentSource;
+  /** Blotter charges ready to use (see GAME_CONFIG.blotter). */
+  blotter: number;
   /** Use every `laneStep`-th ruled line (2 for large text). */
   laneStep: number;
   /** Size of targets on screen, for spacing them (matches the text-size setting). */
@@ -182,6 +197,8 @@ export function createPage(
     chapter,
     index,
     pageCount: plan.length,
+    hasBoss: mode === 'apprentice' && index === plan.length - 1,
+    bossSpawned: false,
     params: pageParams(difficulty, chapter, index, content ? (kind) => content.supports(kind) : undefined, plan),
     spawned: 0,
     // Spawn the first target right away.
@@ -226,6 +243,7 @@ export function createWorld(options: WorldOptions = {}): World {
     content,
     mode: 'practice',
     makeContent: options.makeContent ?? ((keys) => createContentSource({ keys })),
+    blotter: 0,
     laneStep: 1,
     targetScale: 1,
     nextId: 1,
@@ -378,6 +396,12 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
 
 function updateSpawner(world: World, stepMs: number): void {
   const page = world.page;
+  // The Spill arrives first on a boss page.
+  if (page.hasBoss && !page.bossSpawned) {
+    spawnBoss(world);
+    page.spawnTimerMs = page.params.spawnIntervalMs * 2;
+    return;
+  }
   const { size, spawnIntervalMs, maxOnScreen } = page.params;
   page.spawnTimerMs -= stepMs;
 
@@ -396,7 +420,53 @@ function updateSpawner(world: World, stepMs: number): void {
  */
 export function nextLife(world: World, target: Target): void {
   target.lives = Math.max(1, target.lives - 1);
+  if (target.boss) {
+    // The Spill keeps throwing longer words.
+    const complexity = Math.min(1, world.page.params.complexity + GAME_CONFIG.boss.complexityBonus);
+    Object.assign(target, { text: world.content.nextWord(complexity, world.random), typed: 0 });
+    return;
+  }
   Object.assign(target, payloadFor(world, target.kind), { typed: 0 });
+}
+
+/** Bring on the Spill: a big, slow, three-life Blotling in the middle of the page. */
+export function spawnBoss(world: World): Target {
+  const b = GAME_CONFIG.boss;
+  const { params } = world.page;
+  const target = spawnTarget(world, {
+    kind: 'blotling',
+    lane: Math.floor(laneCount(world.laneStep) / 2),
+    text: world.content.nextWord(Math.min(1, params.complexity + b.complexityBonus), world.random),
+    lives: b.lives,
+    ghost: false,
+    boss: true,
+    speed: params.speed * b.speedFactor,
+  })!;
+  world.page.bossSpawned = true;
+  world.events.push({ type: 'boss', target });
+  return target;
+}
+
+/** The Spill is blotted: it splits into small, quick Blotlings with short words. */
+export function splitBoss(world: World, boss: Target): void {
+  const b = GAME_CONFIG.boss;
+  const lanes = laneCount(world.laneStep);
+  for (let i = 0; i < b.splits; i++) {
+    const lane = Math.min(lanes - 1, Math.max(0, boss.lane + i - 1));
+    spawnTarget(world, {
+      kind: 'blotling',
+      lane,
+      x: boss.x + i * 40,
+      prevX: boss.x + i * 40,
+      y: laneY(lane, world.laneStep),
+      text: world.content.nextWord(0, world.random),
+      lives: 1,
+      ghost: false,
+      boss: false,
+      speed: boss.speed * b.splitSpeedFactor,
+    });
+  }
+  world.events.push({ type: 'split', target: boss });
 }
 
 /** Advance the simulation by one fixed step. Does nothing unless playing. */
@@ -419,7 +489,7 @@ export function stepWorld(world: World, stepMs: number): void {
       continue;
     }
 
-    const inkLost = world.page.params.inkLoss;
+    const inkLost = Math.round(world.page.params.inkLoss * (target.boss ? GAME_CONFIG.boss.inkLossFactor : 1));
     world.ink = Math.max(0, world.ink - inkLost);
     world.stats.combo = 0;
     world.pageStats.combo = 0;
@@ -434,7 +504,11 @@ export function stepWorld(world: World, stepMs: number): void {
   if (world.ink <= 0) {
     world.lockedId = null;
     setPhase(world, 'gameOver');
-  } else if (world.page.spawned >= world.page.params.size && world.targets.length === 0) {
+  } else if (
+    world.page.spawned >= world.page.params.size &&
+    world.targets.length === 0 &&
+    (!world.page.hasBoss || world.page.bossSpawned)
+  ) {
     if (isLastPageOfChapter(world.page)) {
       // A reward for finishing a chapter.
       const before = world.ink;

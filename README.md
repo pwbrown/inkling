@@ -21,7 +21,7 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | ← → / Home / End | Move the cursor in a Misprint |
 | Tab | Switch to the next target (nearest the margin first) |
 | Esc | Pause: **Resume**, **Restart page**, **Settings** or **Quit to menu** (the game also pauses when the window loses focus) |
-| Enter | Turn the page after a graded page; after running out of ink, retry the chapter |
+| Enter | While playing: fire the **Blotter** (when charged). On a card: begin, turn the page, or retry the chapter after running out of ink |
 | R / M | After running out of ink: **Retry chapter** or go to the **Main menu** |
 
 The **main menu** has buttons for everything: **Continue** (C), **New notebook** (N, then pick a difficulty with 1–4 or the arrow keys), **Choose keys** (K), **Word lists** (W), **Settings** (S), **Save data** (B) and **How to play** (H). Use the arrow keys or Tab and Enter, or the mouse.
@@ -42,6 +42,17 @@ The game builds everything from your keys: drips use them directly, and word pag
   - Each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter.
   - Finishing chapter 10 completes the notebook.
 - **Practice** uses exactly the keys you choose in the Type Case, with endless chapters.
+
+### Ink, ranks and your desk
+
+- **Ink:** every page you finish earns ink (XP): a tenth of its score, plus 15 per star. Completing the Apprentice notebook adds 250.
+- **Ranks:** ink raises your level, and you rise from Scribbler through Doodler, Scribe, Penman, Calligrapher and Illuminator to Master Inkling.
+- **Unlocks:** levels unlock things for your **Desk** (D on the main menu): pens (fountain nib, quill, brush, gold nib), splatter ink colors and paper (ruled, graph, parchment).
+
+### Powers and bosses
+
+- **The Blotter:** every 25 correct keys in a row charges it, up to 2 charges, shown as drops by the ink bar. Press **Enter** while playing to blot every creature on the page for half points.
+- **The Spill:** the last page of each Apprentice chapter starts with the Spill, a big, slow boss that needs three words in a row. It costs double ink if it reaches the margin and splits into three small Blotlings when blotted. The Blotter can't touch it.
 
 ### Target types
 

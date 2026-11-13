@@ -31,7 +31,7 @@
 | Level | **Chapter** | Shown as a notebook tab. Finishing one refills 30% of the ink well. |
 | Wave | **Page** | Single target type per page |
 | Summary screen | **Graded page** | See §6 |
-| Optional boss | **The Spill** | End-of-chapter large blot that splits into smaller ones (post-MVP idea) |
+| Boss | **The Spill** | Opens the last page of each Apprentice chapter: three lives, splits into small Blotlings (milestone 13) |
 
 ---
 
@@ -132,5 +132,5 @@ Other names considered:
 - [x] Final name: **Inkling**.
 - [ ] Should the Apprentice path be the default for new players, with Free Case unlocked from the start? (Free Case is the default. Milestone 7 added mastery inking and next-key suggestions inside it, rather than a separate locked path.)
 - [ ] Does the page get messier from errors permanently within a chapter, or reset every page?
-- [ ] Is the Spill boss part of the MVP or post-MVP?
+- [x] Is the Spill boss part of the MVP or post-MVP? Added in milestone 13.
 - [x] Ship night mode in the MVP? Yes, in milestone 7, alongside a high-contrast theme.

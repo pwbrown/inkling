@@ -21,6 +21,8 @@ import {
 import { Effects } from './effects';
 import { Hud } from './hud';
 import { Overlay, type OverlayActions } from './overlay';
+import { DEFAULT_COSMETICS, type Cosmetics } from '../core/rewards';
+import { t } from '../i18n';
 import { createCreature, type CreatureView } from './creatures';
 import { COLORS, prefersReducedMotion } from './theme';
 
@@ -36,17 +38,52 @@ export interface Renderer {
   destroy(): void;
 }
 
-/** Display options the renderer reads from the player's settings. */
+/** Display options the renderer reads from the player's settings and profile. */
 export interface DisplayOptions {
   /** Size multiplier for targets and their text (REQUIREMENTS §10). */
   textScale: number;
   reducedMotion: boolean;
+  /** Equipped cosmetics (unlocked by leveling up). */
+  cosmetics?: Cosmetics;
 }
 
-function drawPage(): Graphics {
-  const page = new Graphics();
-  page.rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(COLORS.paper);
+/** Blend two colors: t = 0 gives a, t = 1 gives b. */
+function mix(a: number, b: number, t: number): number {
+  const ch = (c: number, shift: number) => (c >> shift) & 0xff;
+  const lerp = (shift: number) => Math.round(ch(a, shift) + (ch(b, shift) - ch(a, shift)) * t) << shift;
+  return lerp(16) | lerp(8) | lerp(0);
+}
 
+const GOLD = 0xc9a227;
+
+/** Splatter colors for the unlockable ink choices. */
+function splatterColor(choice: Cosmetics['splatter']): number {
+  switch (choice) {
+    case 'crimson':
+      return COLORS.inkCrimson;
+    case 'violet':
+      return COLORS.inkViolet;
+    case 'teal':
+      return mix(COLORS.ink, 0x16a3a3, 0.75);
+    case 'gold':
+      return GOLD;
+    default:
+      return COLORS.ink;
+  }
+}
+
+function drawPage(style: Cosmetics['paper']): Graphics {
+  const page = new Graphics();
+  // Parchment warms the paper; strongest on the classic theme, a hint elsewhere.
+  const paper = style === 'parchment' ? mix(COLORS.paper, 0xe3c98f, 0.45) : COLORS.paper;
+  page.rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(paper);
+
+  if (style === 'graph') {
+    // Graph paper: a fine grid, with the writing lines a little stronger.
+    for (let x = 0; x < WORLD_WIDTH; x += LINE_SPACING / 2) page.moveTo(x, 0).lineTo(x, WORLD_HEIGHT);
+    for (let y = FIRST_LINE_Y - LINE_SPACING; y < WORLD_HEIGHT; y += LINE_SPACING / 2) page.moveTo(0, y).lineTo(WORLD_WIDTH, y);
+    page.stroke({ width: 1, color: COLORS.rule, alpha: 0.5 });
+  }
   for (let y = FIRST_LINE_Y - LINE_SPACING; y < WORLD_HEIGHT - LINE_SPACING / 2; y += LINE_SPACING) {
     page.moveTo(0, y).lineTo(WORLD_WIDTH, y);
   }
@@ -56,16 +93,37 @@ function drawPage(): Graphics {
   return page;
 }
 
-/** Placeholder Nib: a fountain-pen tip that points at what you're typing. */
-function drawNib(): Graphics {
-  return new Graphics()
-    .poly([0, -22, NIB_LENGTH, 0, 0, 22, 10, 0])
-    .fill(COLORS.ink)
-    .moveTo(14, 0)
-    .lineTo(NIB_LENGTH - 6, 0)
-    .stroke({ width: 2, color: COLORS.paper })
-    .circle(20, 0, 4)
-    .fill(COLORS.paper);
+/** The Nib, the player: a pen that points at what you're typing, in the equipped style. */
+function drawNib(style: Cosmetics['nib']): Graphics {
+  const g = new Graphics();
+  switch (style) {
+    case 'quill': {
+      // A feather quill: a long vane behind a fine tip.
+      g.poly([-46, -4, -30, -20, 6, -12, NIB_LENGTH, 0, 6, 8, -30, 10, -46, 2]).fill(COLORS.inkLight);
+      for (let x = -38; x < 4; x += 7) g.moveTo(x, -1).lineTo(x + 8, -13 + (x + 38) * 0.05).stroke({ width: 1, color: COLORS.paper, alpha: 0.6 });
+      g.moveTo(-50, 1).lineTo(NIB_LENGTH, 0).stroke({ width: 2, color: COLORS.ink });
+      break;
+    }
+    case 'brush': {
+      // A calligraphy brush: wooden handle, ferrule, and an inky tuft.
+      g.roundRect(-44, -5, 40, 10, 4).fill(0x8a5a33);
+      g.rect(-6, -7, 12, 14).fill(COLORS.pencil);
+      g.moveTo(6, -9).quadraticCurveTo(36, -8, NIB_LENGTH, 0).quadraticCurveTo(36, 8, 6, 9).fill(COLORS.ink);
+      break;
+    }
+    default: {
+      const color = style === 'gold' ? GOLD : COLORS.ink;
+      g.poly([0, -22, NIB_LENGTH, 0, 0, 22, 10, 0])
+        .fill(color)
+        .moveTo(14, 0)
+        .lineTo(NIB_LENGTH - 6, 0)
+        .stroke({ width: 2, color: COLORS.paper })
+        .circle(20, 0, 4)
+        .fill(COLORS.paper);
+      if (style === 'gold') g.poly([4, -14, 30, -6, 4, -6]).fill({ color: 0xfff1b8, alpha: 0.6 });
+    }
+  }
+  return g;
 }
 
 /** Exponential smoothing that behaves the same at any frame rate. */
@@ -111,19 +169,21 @@ export async function createRenderer(
   let overlay!: Overlay;
 
   const build = () => {
-    ({ reducedMotion, textScale } = display());
+    const options = display();
+    ({ reducedMotion, textScale } = options);
+    const cosmetics = options.cosmetics ?? DEFAULT_COSMETICS;
     for (const child of stage.removeChildren()) child.destroy({ children: true });
     views.clear();
     app.renderer.background.color = COLORS.desk;
 
-    effects = new Effects(reducedMotion);
+    effects = new Effects(reducedMotion, splatterColor(cosmetics.splatter));
     guide = new Graphics();
     targetLayer = new Container();
-    nib = drawNib();
+    nib = drawNib(cosmetics.nib);
     nib.position.set(NIB_HOME.x, NIB_HOME.y);
     hud = new Hud();
     overlay = new Overlay(actions);
-    stage.addChild(drawPage(), effects.stainLayer, guide, targetLayer, nib, effects.particleLayer, hud.root, overlay.root);
+    stage.addChild(drawPage(cosmetics.paper), effects.stainLayer, guide, targetLayer, nib, effects.particleLayer, hud.root, overlay.root);
 
     // Clip anything outside the page (targets spawn off the right edge).
     const mask = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(0xffffff);
@@ -165,6 +225,21 @@ export async function createRenderer(
         effects.popup(at.x, at.y - 30, `+${event.points}`);
         break;
       }
+      case 'boss':
+        effects.banner(WORLD_WIDTH / 2, WORLD_HEIGHT / 2 - 40, t('banner.boss'));
+        break;
+      case 'split': {
+        const at = center(event.target, views.get(event.target.id));
+        effects.splatter(at.x, at.y, 16);
+        break;
+      }
+      case 'blotter':
+        effects.blotterWave(WORLD_WIDTH, WORLD_HEIGHT);
+        effects.banner(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, t('banner.blotter'), COLORS.ink);
+        break;
+      case 'blotterCharged':
+        effects.popup(70 + 200, 60, '+1');
+        break;
       case 'marginHit':
         effects.marginStain(MARGIN_X, event.target.y - LINE_SPACING / 2);
         if (!reducedMotion) shakeMs = 300;

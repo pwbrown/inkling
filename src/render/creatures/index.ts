@@ -8,7 +8,11 @@ import { createRunon } from './runon';
 
 export type { CreatureView, FrameContext } from './common';
 
-export function createCreature(target: Target, scale: number): CreatureView {
+/** How much bigger the Spill (boss) is than a normal Blotling. */
+export const BOSS_SCALE = 1.5;
+
+export function createCreature(target: Target, baseScale: number): CreatureView {
+  const scale = target.boss ? baseScale * BOSS_SCALE : baseScale;
   switch (target.kind) {
     case 'drip':
       return createDrip(target, scale);

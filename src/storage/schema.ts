@@ -7,8 +7,9 @@
  */
 import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
 import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from '../core/config';
+import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -63,6 +64,13 @@ export interface ApprenticeProgress {
   completed: boolean;
 }
 
+/** Ink earned (XP) and equipped cosmetics (added in version 4). */
+export interface Profile {
+  /** Total ink earned; level and rank follow from it. */
+  ink: number;
+  cosmetics: Cosmetics;
+}
+
 export interface Records {
   bestScore: Partial<Record<Difficulty, number>>;
   /** Highest chapter reached (1-based). */
@@ -81,6 +89,8 @@ export interface SaveData {
   vocab: VocabList[];
   /** Added in version 3. */
   apprentice: ApprenticeProgress;
+  /** Added in version 4. */
+  profile: Profile;
 }
 
 /** File format for export/import. */
@@ -112,6 +122,7 @@ export function defaultSave(): SaveData {
     notebook: null,
     vocab: [],
     apprentice: { unlocked: 1, stars: {}, completed: false },
+    profile: { ink: 0, cosmetics: { ...DEFAULT_COSMETICS } },
   };
 }
 
@@ -190,6 +201,14 @@ function sanitizeApprentice(v: unknown): ApprenticeProgress {
   };
 }
 
+function sanitizeProfile(v: unknown): Profile {
+  const p = isObject(v) ? v : {};
+  const c = isObject(p.cosmetics) ? p.cosmetics : {};
+  const pick = <S extends keyof Cosmetics>(slot: S): Cosmetics[S] =>
+    typeof c[slot] === 'string' && c[slot] in UNLOCKS[slot] ? (c[slot] as Cosmetics[S]) : DEFAULT_COSMETICS[slot];
+  return { ink: count(p.ink), cosmetics: { nib: pick('nib'), splatter: pick('splatter'), paper: pick('paper') } };
+}
+
 /** Check every field of a current-version save. */
 function sanitize(v: Json): SaveData {
   const base = defaultSave();
@@ -222,6 +241,7 @@ function sanitize(v: Json): SaveData {
     notebook: sanitizeNotebook(v.notebook),
     vocab: sanitizeVocab(v.vocab),
     apprentice: sanitizeApprentice(v.apprentice),
+    profile: sanitizeProfile(v.profile),
   };
 }
 
@@ -236,6 +256,8 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
     apprentice: { unlocked: 1, stars: {}, completed: false },
     notebook: isObject(save.notebook) ? { ...save.notebook, mode: 'practice' } : null,
   }),
+  // v4 added ink (XP) and cosmetics.
+  3: (save) => ({ ...save, version: 4, profile: { ink: 0, cosmetics: { ...DEFAULT_COSMETICS } } }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

@@ -6,10 +6,11 @@
 import './dialog.css';
 import './menu.css';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
+import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
 import { t, type MessageKey } from '../i18n';
 import { h } from './dom';
 
-export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause';
+export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk';
 
 export interface ChapterEntry {
   /** 0-based. */
@@ -30,6 +31,13 @@ export interface MenuHooks {
   /** Every Apprentice chapter, for the Contents page. */
   chapters(): ChapterEntry[];
   onStartApprentice(chapter: number): void;
+  /** e.g. "Scribe · Level 5 · 120 of 600 ink to the next level". */
+  rankLine(): string;
+  /** Ink progress through the current level, 0..1. */
+  levelFraction(): number;
+  level(): number;
+  cosmetics(): Cosmetics;
+  onEquip(slot: CosmeticSlot, item: string): void;
   /** e.g. "Best on Normal: 1,200 · reached chapter 3", or null. */
   bestLine(difficulty: Difficulty): string | null;
   /** Stats line for the page in progress, shown when paused. */
@@ -116,6 +124,9 @@ export class Menu {
       case 'contents':
         this.panel.replaceChildren(...this.contents());
         break;
+      case 'desk':
+        this.panel.replaceChildren(...this.desk());
+        break;
       case 'howToPlay':
         this.panel.replaceChildren(...this.howToPlay());
         break;
@@ -172,13 +183,72 @@ export class Menu {
           key: 'p',
         }),
         this.button('words', t('menu.wordLists'), () => this.hooks.onWordLists(), { key: 'w' }),
+        this.button('desk', t('menu.desk'), () => this.show('desk'), { detail: t('menu.deskDetail'), key: 'd' }),
         h('div', { className: 'menu-row' }, [
           this.button('settings', t('menu.settings'), () => this.hooks.onSettings(), { key: 's' }),
           this.button('saves', t('menu.saveData'), () => this.hooks.onSaveData(), { key: 'b' }),
           this.button('how', t('menu.howToPlay'), () => this.show('howToPlay'), { key: 'h' }),
         ]),
       ]),
-      best ? h('p', { className: 'menu-best' }, [best]) : h('p', { className: 'menu-best' }),
+      h('p', { className: 'menu-best' }, [this.hooks.rankLine(), best ? h('br') : null, best]),
+    ];
+  }
+
+  /** The Desk: rank, level progress, and cosmetics to equip. */
+  private desk(): HTMLElement[] {
+    const level = this.hooks.level();
+    const equipped = this.hooks.cosmetics();
+    const bar = h('div', { className: 'desk-bar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100 });
+    const pct = Math.round(this.hooks.levelFraction() * 100);
+    bar.setAttribute('aria-valuenow', String(pct));
+    bar.style.setProperty('--fill', `${pct}%`);
+
+    const group = (slot: CosmeticSlot) =>
+      h('fieldset', { className: 'st-group' }, [
+        h('legend', {}, [t(`desk.${slot}` as MessageKey)]),
+        h(
+          'div',
+          { className: 'desk-options', role: 'radiogroup', 'aria-label': t(`desk.${slot}` as MessageKey) },
+          Object.entries(UNLOCKS[slot]).map(([item, at]) => {
+            const open = isUnlocked(slot, item as never, level);
+            return h(
+              'button',
+              {
+                type: 'button',
+                role: 'radio',
+                className: 'menu-btn desk-option',
+                'aria-checked': String(equipped[slot] === item),
+                'data-id': `${slot}-${item}`,
+                'data-slot': slot,
+                'data-item': item,
+                disabled: !open,
+                onClick: () => {
+                  this.hooks.onEquip(slot, item);
+                  this.render(false);
+                },
+              },
+              [
+                h('span', { className: 'menu-label' }, [t(`${slot}.${item}` as MessageKey)]),
+                open ? null : h('span', { className: 'menu-detail' }, [t('desk.locked', { level: at })]),
+              ],
+            );
+          }),
+        ),
+      ]);
+
+    return [
+      h('h2', { id: 'menu-title' }, [t('desk.title')]),
+      h('p', { className: 'tc-intro' }, [t('desk.intro')]),
+      h('p', { className: 'menu-keys-line' }, [this.hooks.rankLine()]),
+      bar,
+      group('nib'),
+      group('splatter'),
+      group('paper'),
+      h('div', { className: 'tc-actions' }, [
+        h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', 'data-autofocus': true, onClick: () => this.show('title') }, [
+          t('menu.back'),
+        ]),
+      ]),
     ];
   }
 
@@ -290,6 +360,7 @@ export class Menu {
         h('ul', { className: 'how-list' }, (['how.drip', 'how.blotling', 'how.runon', 'how.misprint'] as const).map((k) => h('li', {}, [t(k)]))),
       ),
       section('how.variantsTitle', p('how.variants')),
+      section('how.powersTitle', p('how.powers')),
       section('how.keysTitle', p('how.keys')),
       section('how.controlsTitle', p('how.controls')),
       h('div', { className: 'tc-actions' }, [

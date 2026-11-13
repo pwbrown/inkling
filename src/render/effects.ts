@@ -24,16 +24,39 @@ export class Effects {
   readonly particleLayer = new Container();
   private particles: Particle[] = [];
 
-  constructor(private readonly reducedMotion: boolean) {}
+  constructor(
+    private readonly reducedMotion: boolean,
+    /** Color of destroy splatters (an unlockable cosmetic). */
+    private readonly splatterColor: number = COLORS.ink,
+  ) {}
 
   /** Burst of ink droplets when a target is destroyed. */
   splatter(x: number, y: number, count = 9): void {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = this.reducedMotion ? 0 : 90 + Math.random() * 180;
-      const dot = new Graphics().circle(0, 0, 2.5 + Math.random() * 4.5).fill(COLORS.ink);
+      const dot = new Graphics().circle(0, 0, 2.5 + Math.random() * 4.5).fill(this.splatterColor);
       dot.position.set(x + (this.reducedMotion ? Math.cos(angle) * 14 : 0), y + (this.reducedMotion ? Math.sin(angle) * 14 : 0));
       this.add(dot, Math.cos(angle) * speed, Math.sin(angle) * speed - (this.reducedMotion ? 0 : 60), 420, 380 + Math.random() * 200);
+    }
+  }
+
+  /** Big centered announcement, e.g. "The Spill!", that rises and fades. */
+  banner(x: number, y: number, label: string, color: number = COLORS.margin): void {
+    const text = new Text({
+      text: label,
+      style: { fontFamily: 'Georgia, "Times New Roman", serif', fontSize: 54, fontStyle: 'italic', fontWeight: '700', fill: color },
+    });
+    text.anchor.set(0.5);
+    text.position.set(x, y);
+    this.add(text, 0, this.reducedMotion ? 0 : -25, 0, 1600);
+  }
+
+  /** The Blotter: a sweep of ink splashes across the whole page. */
+  blotterWave(width: number, height: number): void {
+    const count = this.reducedMotion ? 10 : 28;
+    for (let i = 0; i < count; i++) {
+      this.splatter(160 + Math.random() * (width - 200), 80 + Math.random() * (height - 140), 4);
     }
   }
 

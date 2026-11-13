@@ -19,6 +19,7 @@ import {
   isRevealed,
   markPageStart,
   nextLife,
+  splitBoss,
   resetWorld,
   setPhase,
   type StartSnapshot,
@@ -73,6 +74,38 @@ function registerHit(world: World, key: string): void {
     s.bestCombo = Math.max(s.bestCombo, s.combo);
     s.score += GAME_CONFIG.points.perChar * multiplier(s.combo);
   });
+  // A long run of correct keys charges the Blotter.
+  const { comboPerCharge, maxCharges } = GAME_CONFIG.blotter;
+  if (world.stats.combo % comboPerCharge === 0 && world.blotter < maxCharges) {
+    world.blotter++;
+    world.events.push({ type: 'blotterCharged', charges: world.blotter });
+  }
+}
+
+/**
+ * Enter while playing: spend a Blotter charge to blot every creature on the
+ * page except the Spill, for a share of their points. Returns whether it fired.
+ */
+export function useBlotter(world: World): boolean {
+  if (world.phase !== 'playing' || world.blotter <= 0) return false;
+  const victims = visibleTargets(world).filter((t) => !t.boss);
+  if (victims.length === 0) return false;
+
+  world.blotter--;
+  world.events.push({ type: 'blotter' });
+  const { pointsShare } = GAME_CONFIG.blotter;
+  const { perChar, perTarget } = GAME_CONFIG.points;
+  for (const target of victims) {
+    const points = Math.round((perTarget + perChar * [...target.text].length) * pointsShare);
+    bothStats(world, (s) => {
+      s.score += points;
+      s.destroyed++;
+    });
+    world.events.push({ type: 'destroyed', target, points });
+  }
+  world.targets = world.targets.filter((t) => !victims.includes(t));
+  if (!world.targets.some((t) => t.id === world.lockedId)) world.lockedId = null;
+  return true;
 }
 
 /**
@@ -94,6 +127,7 @@ function destroyTarget(world: World, target: Target, scoreBefore: number): void 
   bothStats(world, (s) => {
     s.destroyed++;
   });
+  if (target.boss) splitBoss(world, target);
   // Points from the finishing keystroke plus the completion bonus.
   world.events.push({ type: 'destroyed', target, points: world.stats.score - scoreBefore });
 }

@@ -255,6 +255,16 @@ Inkling is **open source** and will be **publicly hosted** as a static web app.
 
 ---
 
+## 13b. Round 2 milestones (after playtesting)
+
+| # | Milestone | Scope |
+|---|---|---|
+| 9 | **Menus** | Main menu with logo, pause menu (resume, restart page, settings, quit), retry chapter, How to play |
+| 10 | **Readability** | Bundled Atkinson Hyperlegible fonts; shorter, later Run-ons |
+| 11 | **Creatures** | Animated creatures with faces and moods; crimson/violet/ghost variants |
+| 12 | **Campaign** | Apprentice course (10 chapters of new keys), stars, Contents page, notebook finish; Practice mode |
+| 13 | **Rewards** | Ink (XP), levels and ranks, cosmetic unlocks on the Desk, the Blotter power, the Spill boss |
+
 ## 14. Open Questions / TODO
 
 - [x] **Theme, art direction and audio.** See [DESIGN.md](DESIGN.md) (Inkwell direction). Name: **Inkling**.

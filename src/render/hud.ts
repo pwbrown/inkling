@@ -1,6 +1,7 @@
 /** Heads-up display: ink well (health), score, combo and page progress (DESIGN §6). */
 import { Container, Graphics, Text } from 'pixi.js';
 import { APPRENTICE_CHAPTERS, newKeysFor } from '../core/campaign';
+import { GAME_CONFIG } from '../core/config';
 import { multiplier } from '../core/input';
 import { WORLD_HEIGHT, WORLD_WIDTH, type World } from '../core/world';
 import { formatNumber, t } from '../i18n';
@@ -16,6 +17,10 @@ export class Hud {
   private readonly combo: Text;
   private readonly page: Text;
   private lastInk = -1;
+  /** Blotter charges, drawn as ink drops beside the ink bar. */
+  private readonly blotterDrops = new Graphics();
+  private readonly blotterHint: Text;
+  private lastBlotter = -1;
 
   constructor() {
     const label = new Text({ text: t('hud.ink'), style: { fontFamily: TEXT_FONT, fontSize: 16, fontWeight: '600', fill: COLORS.ink } });
@@ -37,10 +42,27 @@ export class Hud {
     this.page.anchor.set(0.5, 1);
     this.page.position.set(WORLD_WIDTH / 2, WORLD_HEIGHT - 12);
 
-    this.root.addChild(label, this.inkFill, frame, this.score, this.combo, this.page);
+    this.blotterHint = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 15, fontWeight: '700', fill: COLORS.inkLight } });
+    this.blotterHint.position.set(70 + BAR_WIDTH + 52, 18);
+    this.root.addChild(label, this.inkFill, frame, this.blotterDrops, this.blotterHint, this.score, this.combo, this.page);
   }
 
   update(world: World): void {
+    if (world.blotter !== this.lastBlotter) {
+      this.lastBlotter = world.blotter;
+      const g = this.blotterDrops.clear();
+      const max = GAME_CONFIG.blotter.maxCharges;
+      for (let i = 0; i < max; i++) {
+        const x = 70 + BAR_WIDTH + 20 + i * 18;
+        const filled = i < world.blotter;
+        g.circle(x, 31, 6).poly([x - 5, 28, x, 18, x + 5, 28]);
+        if (filled) g.fill(COLORS.ink);
+        else g.stroke({ width: 1.5, color: COLORS.inkFaded });
+      }
+      this.blotterHint.x = 70 + BAR_WIDTH + 20 + max * 18;
+      this.blotterHint.text = world.blotter > 0 ? t('hud.blotter') : '';
+    }
+
     if (world.ink !== this.lastInk) {
       this.lastInk = world.ink;
       const ratio = world.ink / world.maxInk;
