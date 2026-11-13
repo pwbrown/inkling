@@ -1,6 +1,6 @@
 # Apprentice mode improvements
 
-Claude Code session started 2026-11-13. 10 prompts.
+Claude Code session started 2026-11-13. 12 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -2230,6 +2230,177 @@ The feedback fixes are committed as `708b40c` on `fix/m14-feedback`, along with 
 
   ```bash
   npm run transcript 2>&1 | grep Wrote; git diff docs/transcripts | grep "^+" | grep -i -E "[removed]|[removed]|gmail|/Users/[a-z]" | grep -v "grep -i" | head -5; git status --short
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Transcript is clean. Committing and merging:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit filter, fast-forward main, delete branches
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Word filter: Family friendly, Older kids and Grown-ups per player
+
+  - Group the kid-friendliness terms in src/content/contentFilter.ts and say
+    which groups each filter level lets through; swearing and slurs stay
+    blocked at every level
+  - words:build files each word under the strictest level that allows it;
+    the pack loader serves words and a blocklist per level
+  - Each player's save keeps their level (save version 6, default Family
+    friendly); downloaded topic words are re-checked against it
+  - Edit player has a Word filter choice; loosening it asks a
+  … (408 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I committed the word filter as `631fd48` with the updated transcript, which I checked for private details. I then fast-forwarded `main` to include both commits:
+
+- `708b40c`: the playtest fixes (ghosts reveal from the right, the Desk stays still, slower unlocks, the cleaner word list).
+- `631fd48`: the word filter for each player.
+
+Both branches are deleted. `main` is 2 commits ahead of `origin/main` and not pushed, so the live site doesn't have these yet.
+
+## 🧑 Prompt
+
+> Not yet, I want to add one more thing. I want to add blotlings a bit earlier in the apprentice journey. Even in Chapter one where it's only j and f. In situations where words cannot be generated just generate gibberish using the keys that are available so far
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Branch and read the gibberish generator
+
+  ```bash
+  git checkout -q -b feat/early-blotlings && cat src/content/generator.ts | sed -n 1,80p; grep -n "supports\|MIN_WORD_POOL =\|useWords" src/content/contentSource.ts
+  ```
+- **Shell:** Find drip cap references
+
+  ```bash
+  grep -rn "dripsPerKeys" src README.md | cat
+  ```
+- **Shell:** Read drip cap code
+
+  ```bash
+  sed -n 155,162p src/core/config.ts; sed -n 226,234p src/core/world.ts
+  ```
+- **Shell:** Add Blotlings to the first chapters and cap them by keys
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  sub('src/core/config.ts', """  /**
+     * Drip pages never have more drips on screen than the player has keys
+     * (minus `keysMinus`), so the first keystroke always says which drip you mean.
+     */
+    dripsPerKeys: { keysMinus: 1, min: 2 },""", """  /**
+     * Drip and Blotling pages never have more targets on screen than the player
+     * has keys (minus `keysMinus`), so the first keystroke always says which
+     * one you mean. Matters most with a beginner's two or three keys.
+     */
+   
+  … (1990 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Tests still pass. Adding tests for chapter 1's Blotling page:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Test early Blotlings use only learned keys
+
+  ```bash
+  grep -n "spawnTarget\|^import" src/core/campaign.test.ts | head; python3 - <<'EOF'
+  p='src/core/campaign.test.ts'
+  s=open(p).read()
+  a="  it('keeps violets back until late in the course', () => {"
+  assert a in s
+  s=s.replace(a,"""  it('brings Blotlings from chapter 1, made of the keys learned so far when no words fit', () => {
+      const world = createWorld({ difficulty: 'normal' });
+      startApprentice(world, 0, 'normal');
+      world.page = createPage('normal', 0, 2, world.content, 'apprentice');
+      expect(world.page.params.kind).toBe('blotling');
+      expect(world.page.params.maxOnScreen).toBeLessT
+  … (516 more characters)
+  ```
+- **Shell:** Find docs describing early drip-only chapters
+
+  ```bash
+  grep -n -i "drips only\|all drips\|drips first" README.md docs/*.md src/i18n/en.ts
+  ```
+- **Shell:** Update README, run checks and build
+
+  ```bash
+  python3 - <<'EOF'
+  p='README.md'
+  s=open(p).read()
+  a="the first chapters are drips only, then short words."
+  assert a in s
+  s=s.replace(a,"every chapter, even the first (just `f` and `j`), has a Blotling page. Until there are enough keys for real words, Blotlings carry short made-up strings of the keys learned so far, like `fjf`.")
+  a="Drip pages never show more drips at once than you have keys to tell them apart."
+  assert a in s
+  s=s.replace(a,"Drip and Blotling pages never show more targets at once than you have keys to tell them apart.")
+  open(p,'w').write(s)
+  EOF
+  npm run check 2>&1 | grep -E "×|FAI
+  … (71 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks pass. Now checking chapter 1's Blotling page in the real game:
+
+<details><summary>5 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); 'ok'"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); await sleep(1500); inkling.menu.show('contents'); await sleep(50); document.querySelector('[data-id=\"chapter-0\"]').click(); await sleep(100); const w=inkling.world; w.phase='playing'; w.events.push({type:'phase
+… (211 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); 'ok'"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); await sleep(1500); inkling.menu.show('contents'); await sleep(50); document.querySelector('[data-id=\"chapter-0\"]').click(); await sleep(100); const enter=()=>window.dispatchEvent(new KeyboardEvent('keydown',{ke
+… (400 more characters)`
+- **computer** `{"action":"screenshot","scale":0.6}`
+
+</details>
+
+### 🤖 Claude
+
+Blotlings now appear from chapter 1. It's on `feat/early-blotlings`, and `npm run check` (247 tests) and the build pass. It isn't committed yet, and `main` is still unpushed.
+
+- **Chapters 1–4** (2 to 5 keys) used to be three drip pages. They're now drip, drip, then a Blotling page, the same as chapters 5–7. Each chapter keeps the same number of pages, so stars earned so far still line up.
+- **Made-up words:** when there aren't enough real words for the keys learned so far, Blotlings carry short strings made of those keys, like `fjf` or `jffj`. Early chapters get 2–4 letters, and the same letter never comes three times in a row. Once a few real words fit, they're mixed in, and from 25 words on only real words appear.
+- **One at a time:** the rule that keeps drips from crowding a beginner now covers Blotlings too. With only `f` and `j` there's at most one Blotling on screen in chapter 1, and never more than two while you know few keys.
+
+I played chapter 1 through to page 3 in the browser. It shows a single "fjjf" Blotling, as in the screenshot. A new test checks that chapter 1's Blotlings only use `f` and `j`, at 2–4 letters. I also updated the README.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript, commit, merge and delete branch
+
+  ```bash
+  npm run transcript 2>&1 | grep Wrote; git diff docs/transcripts | grep "^+" | grep -i -E "[removed]|[removed]|gmail|/Users/[a-z]" | grep -v "grep -i" | head -5; git add -A && git commit -q -F - <<'EOF'
+  Blotlings from Apprentice chapter 1, with made-up words for few keys
+
+  - Chapters 1-4 now end with a Blotling page (same page counts, so stars
+    still line up); with too few keys for real words, Blotlings carry short
+    made-up strings of the keys learned so far, like "fjf"
+  - The keys-to-tell-apart cap now covers Blotling pages as well as drips
+  - Test for chapter 1's Blotlings; update README; ex
+  … (252 more characters)
   ```
 
 </details>

@@ -15,7 +15,7 @@ import {
 } from './campaign';
 import { confirm, finishedNotebook, retryChapter, startApprentice, startPractice } from './input';
 import { GAME_CONFIG } from './config';
-import { createPage, createWorld, type World } from './world';
+import { createPage, createWorld, spawnTarget, type World } from './world';
 
 describe('lessons', () => {
   it('teach every letter exactly once, starting with F and J, then one key at a time', () => {
@@ -27,7 +27,7 @@ describe('lessons', () => {
   });
 
   it('start with drips only while there are few keys', () => {
-    expect(apprenticePlan(0)).toEqual(['drip', 'drip', 'drip']);
+    expect(apprenticePlan(0)).toEqual(['drip', 'drip', 'blotling']);
     expect(apprenticePlan(APPRENTICE_CHAPTERS - 1)).toContain('blotling');
   });
 
@@ -165,6 +165,21 @@ describe('Apprentice pacing', () => {
         startApprentice(world, c, d);
         expect(world.page.params.maxOnScreen).toBeLessThanOrEqual(Math.max(2, world.keys.length - 1));
       }
+    }
+  });
+
+  it('brings Blotlings from chapter 1, made of the keys learned so far when no words fit', () => {
+    const world = createWorld({ difficulty: 'normal' });
+    startApprentice(world, 0, 'normal');
+    world.page = createPage('normal', 0, 2, world.content, 'apprentice');
+    expect(world.page.params.kind).toBe('blotling');
+    expect(world.page.params.maxOnScreen).toBeLessThanOrEqual(2);
+    world.phase = 'playing';
+    for (let i = 0; i < 30; i++) {
+      world.targets = [];
+      const t = spawnTarget(world)!;
+      expect(t.kind).toBe('blotling');
+      expect(t.text).toMatch(/^[fj]{2,4}$/);
     }
   });
 

@@ -155,10 +155,11 @@ export const GAME_CONFIG = {
   },
 
   /**
-   * Drip pages never have more drips on screen than the player has keys
-   * (minus `keysMinus`), so the first keystroke always says which drip you mean.
+   * Drip and Blotling pages never have more targets on screen than the player
+   * has keys (minus `keysMinus`), so the first keystroke always says which
+   * one you mean. Matters most with a beginner's two or three keys.
    */
-  dripsPerKeys: { keysMinus: 1, min: 2 },
+  targetsPerKeys: { keysMinus: 1, min: 2 },
 
   /** Run-on phrases: how many words, growing with complexity. */
   phraseWords: {

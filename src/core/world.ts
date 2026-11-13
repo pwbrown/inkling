@@ -225,10 +225,10 @@ export function createPage(
   } else {
     params = pageParams(difficulty, chapter, index, canUse, plan);
   }
-  // Never more drips than keys to tell them apart.
+  // Never more targets than keys to tell them apart by their first letter.
   const keyCount = content?.keys?.length;
-  if (params.kind === 'drip' && keyCount) {
-    const { keysMinus, min } = GAME_CONFIG.dripsPerKeys;
+  if ((params.kind === 'drip' || params.kind === 'blotling') && keyCount) {
+    const { keysMinus, min } = GAME_CONFIG.targetsPerKeys;
     params.maxOnScreen = Math.min(params.maxOnScreen, Math.max(min, keyCount - keysMinus));
   }
   return {

@@ -41,14 +41,14 @@ const SPACE_CHAPTER = LESSONS.findIndex((l) => l.newKeys.includes(' '));
 
 /**
  * Pages in an Apprentice chapter. Every chapter opens with drips, where the
- * new key comes up often. The first few chapters are all drips; short
- * "words" join once there are enough keys. Pages are only ever drips or
- * Blotlings: Run-ons (once space is learned) and Misprints are sprinkled
+ * new key comes up often, and ends with Blotlings, from chapter 1 on. With
+ * too few keys for real words, Blotlings carry short made-up strings of the
+ * keys learned so far ("fjf"), see generator.ts. Pages are only ever drips
+ * or Blotlings: Run-ons (once space is learned) and Misprints are sprinkled
  * into Blotling pages instead (GAME_CONFIG.sprinkles).
  */
 export function apprenticePlan(chapter: number): TargetKind[] {
   const keys = apprenticeKeys(chapter).length;
-  if (keys <= 5) return ['drip', 'drip', 'drip'];
   if (keys <= 8) return ['drip', 'drip', 'blotling'];
   if (chapter < SPACE_CHAPTER + 6) return ['drip', 'blotling', 'drip', 'blotling'];
   return ['drip', 'blotling', 'blotling', 'drip', 'blotling'];
