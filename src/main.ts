@@ -9,7 +9,9 @@ import {
   confirm,
   cycleLock,
   editKey,
-  moveSelection,
+  quitToMenu,
+  restartPage,
+  retryChapter,
   selectDifficulty,
   togglePause,
   typeChar,
@@ -18,11 +20,13 @@ import {
 import { builtInPresets, matchingPreset, type Preset } from './core/keySelection';
 import { FixedStepLoop } from './core/loop';
 import { improvedKeys } from './core/mastery';
-import { createWorld, setContent, stepWorld, type GamePhase, type World } from './core/world';
+import { accuracy, wpm } from './core/stats';
+import { createWorld, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, setLocale, t } from './i18n';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { registerOffline } from './pwa';
 import { difficultyLabel, type OverlayLinkId } from './render/overlay';
+import { Menu } from './ui/menu';
 import { Sfx, type Sound } from './audio/sfx';
 import { createRenderer } from './render/renderer';
 import { keyLabel, prefersReducedMotion, setTheme } from './render/theme';
@@ -63,7 +67,7 @@ async function main(): Promise<void> {
   applyColors();
 
   const customPresets = (): Preset[] => store.data.customPresets.map((p) => ({ ...p, builtIn: false }));
-  /** A menu screen (Type Case, Save data) is open and owns the keyboard. */
+  /** A dialog (Type Case, Save data…) is open and owns the keyboard. */
   let dialogOpen = false;
   /** Set when the last notebook ended with a new best score, for the game-over card. */
   let newBest = false;
@@ -75,27 +79,14 @@ async function main(): Promise<void> {
     return preset ? presetName(preset) : t('preset.custom');
   };
 
-  // `world` is assigned once the word pack loads; the overlay's handlers only run after that.
-  let world: World | null = null;
+  // The overlay's handlers only run once the game exists, after the word pack loads.
   const actions: { onLink: (id: OverlayLinkId) => void; start: () => void } = { onLink: () => {}, start: () => {} };
 
   const [pack, renderer] = await Promise.all([
     loadEnglishPack(),
     createRenderer(host, {
-      onPick: (difficulty) => world && !dialogOpen && selectDifficulty(world, difficulty),
       onConfirm: () => actions.start(),
       onLink: (id) => actions.onLink(id),
-      describeKeys,
-      continueLabel: () => {
-        const saved = store.data.notebook;
-        return saved
-          ? t('overlay.ready.continue', {
-              difficulty: difficultyLabel(saved.difficulty),
-              chapter: saved.chapter + 1,
-              page: saved.page + 1,
-            })
-          : null;
-      },
       extraLines: (w) => {
         if (w.phase === 'pageCleared') {
           return newlyMastered.length > 0
@@ -105,18 +96,7 @@ async function main(): Promise<void> {
         if (w.phase === 'gameOver') {
           return newBest ? [t('overlay.gameOver.newBest', { difficulty: difficultyLabel(w.difficulty) })] : [];
         }
-        if (w.phase !== 'ready') return [];
-        const d = w.selectedDifficulty;
-        const best = store.data.records.bestScore[d];
-        return best
-          ? [
-              t('overlay.ready.best', {
-                difficulty: difficultyLabel(d),
-                score: formatNumber(best),
-                chapter: store.data.records.furthestChapter[d] ?? 1,
-              }),
-            ]
-          : [];
+        return [];
       },
     }, () => ({
       textScale: TEXT_SCALE[settings.textSize],
@@ -136,7 +116,6 @@ async function main(): Promise<void> {
     });
 
   const game = createWorld({ content: contentFor(store.data.keys), difficulty: store.data.difficulty });
-  world = game;
   /** Large text uses every other line so targets don't overlap. */
   const applyLayout = () => {
     game.targetScale = TEXT_SCALE[settings.textSize];
@@ -151,6 +130,7 @@ async function main(): Promise<void> {
     game.selectedDifficulty = store.data.difficulty;
   };
 
+  /** Enter on an in-game card (next page, or retry after game over), or Start on the menu. */
   actions.start = () => {
     if (dialogOpen) return;
     // Refresh weak-key weights from the latest stats before a new notebook.
@@ -184,6 +164,7 @@ async function main(): Promise<void> {
         store.update((save) => {
           save.keys = [...keys];
         });
+        menu.refresh();
       },
       onCancel: () => {
         dialogOpen = false;
@@ -212,6 +193,7 @@ async function main(): Promise<void> {
       onErased: applySave,
       onClose: () => {
         dialogOpen = false;
+        menu.refresh();
       },
     });
   };
@@ -277,24 +259,100 @@ async function main(): Promise<void> {
     });
   };
 
-  actions.onLink = (id) => {
-    if (id === 'continue') continueSaved();
-    else if (id === 'keys') openKeys();
-    else if (id === 'settings') openSettingsDialog();
-    else if (id === 'wordLists') openVocab();
-    else openSaves();
+  const goToMenu = () => {
+    quitToMenu(game);
+    loop.reset();
+    void store.flush();
   };
+
+  // Game-over card links.
+  actions.onLink = (id) =>
+    after(() => {
+      if (id === 'retry') {
+        retryChapter(game);
+        loop.reset();
+      } else {
+        goToMenu();
+      }
+    });
+
+  const menu = new Menu(document.body, {
+    continueDetail: () => {
+      const saved = store.data.notebook;
+      return saved
+        ? t('menu.continueDetail', { difficulty: difficultyLabel(saved.difficulty), chapter: saved.chapter + 1, page: saved.page + 1 })
+        : null;
+    },
+    keysSummary: () => `${describeKeys(game.keys)} · ${t('menu.keyCount', { count: game.keys.length })}`,
+    bestLine: (d) => {
+      const best = store.data.records.bestScore[d];
+      return best
+        ? t('menu.best', { difficulty: difficultyLabel(d), score: formatNumber(best), chapter: store.data.records.furthestChapter[d] ?? 1 })
+        : null;
+    },
+    pauseSummary: () =>
+      t('overlay.stats', {
+        score: formatNumber(game.pageStats.score),
+        wpm: formatNumber(Math.round(wpm(game.pageStats))),
+        accuracy: formatNumber(Math.round(accuracy(game.pageStats) * 100)),
+      }),
+    selectedDifficulty: () => game.selectedDifficulty,
+    onSelectDifficulty: (d) => selectDifficulty(game, d),
+    onContinue: () => after(continueSaved),
+    onStart: () => after(actions.start),
+    onKeys: () => openKeys(),
+    onWordLists: () => openVocab(),
+    onSettings: () => openSettingsDialog(),
+    onSaveData: () => openSaves(),
+    onResume: () =>
+      after(() => {
+        if (game.phase === 'paused') togglePause(game);
+        loop.reset();
+      }),
+    onRestart: () =>
+      after(() => {
+        restartPage(game);
+        loop.reset();
+      }),
+    onQuit: () => after(goToMenu),
+  });
+
+  /** Run an action, then update the menu right away rather than on the next frame. */
+  function after(action: () => void): void {
+    action();
+    syncMenu();
+  }
+
+  /** Show the right menu for the current phase (the main menu when idle, the pause menu when paused). */
+  function syncMenu(): void {
+    if (game.phase === 'ready') {
+      if (!menu.visible || menu.screen === 'pause') menu.show('title');
+    } else if (game.phase === 'paused') {
+      if (menu.screen !== 'pause') menu.show('pause');
+    } else if (menu.visible) {
+      menu.hide();
+    }
+  }
+
+  /** Phase before the latest change, to tell starting a page from resuming one. */
+  let lastPhase: GamePhase = game.phase;
 
   /** Save progress when the game moves between screens (REQUIREMENTS §8). */
   const onPhase = (phase: GamePhase) => {
     switch (phase) {
       case 'playing':
-        // A fresh notebook: remember it and its difficulty right away.
-        if (game.page.chapter === 0 && game.page.index === 0 && game.stats.playMs === 0) {
-          newBest = false;
+        // A page is starting (not just resuming from pause): save the notebook
+        // here, so Continue and Quit to menu always come back to this page.
+        if (lastPhase !== 'paused') {
+          if (lastPhase === 'ready') newBest = false;
           store.update((save) => {
             save.difficulty = game.difficulty;
-            save.notebook = snapshotNotebook(game);
+            save.notebook = snapshotNotebook(
+              game,
+              { chapter: game.page.chapter, page: game.pageStart.pageIndex },
+              new Date(),
+              game.pageStart,
+            );
           });
         }
         break;
@@ -317,6 +375,7 @@ async function main(): Promise<void> {
       default:
         break;
     }
+    lastPhase = phase;
   };
 
   const EDIT_KEYS: Partial<Record<SpecialKey, EditKey>> = {
@@ -328,13 +387,8 @@ async function main(): Promise<void> {
     End: 'end',
   };
 
-  /** Arrows pick a difficulty on the menu; while playing, these keys edit Run-ons and Misprints. */
+  /** While playing, these keys edit Run-ons and Misprints, and Tab switches target. */
   const handleSpecial = (key: SpecialKey): boolean => {
-    if (game.phase === 'ready') {
-      const delta = key === 'ArrowUp' || key === 'ArrowLeft' ? -1 : key === 'ArrowDown' || key === 'ArrowRight' ? 1 : 0;
-      if (delta !== 0) moveSelection(game, delta);
-      return delta !== 0;
-    }
     if (game.phase !== 'playing') return false;
     if (key === 'Tab') {
       cycleLock(game);
@@ -346,30 +400,32 @@ async function main(): Promise<void> {
     return true;
   };
 
-  const shortcuts: Record<string, () => void> = { k: openKeys, b: openSaves, c: continueSaved, s: openSettingsDialog, w: openVocab };
-
   bindKeyboard(
     window,
     {
       onChar: (char) => {
-        const lower = char.toLowerCase();
-        const shortcut =
-          game.phase === 'ready' ? shortcuts[lower] : game.phase === 'paused' && lower === 's' ? openSettingsDialog : undefined;
-        if (shortcut) shortcut();
-        else typeChar(game, char);
+        // Shortcuts on the game-over card: R retries the chapter, M goes to the menu.
+        if (game.phase === 'gameOver') {
+          const lower = char.toLowerCase();
+          if (lower === 'r' || lower === 'm') actions.onLink(lower === 'r' ? 'retry' : 'mainMenu');
+          return;
+        }
+        typeChar(game, char);
       },
-      onConfirm: () => actions.start(),
+      onConfirm: () => after(actions.start),
       onSpecial: (key) => handleSpecial(key),
-      onPause: () => {
-        togglePause(game);
-        loop.reset();
-      },
+      onPause: () =>
+        after(() => {
+          togglePause(game);
+          loop.reset();
+        }),
     },
-    () => dialogOpen,
+    // Menus and dialogs handle their own keys.
+    () => dialogOpen || menu.visible,
   );
 
   // Pause when the player looks away (REQUIREMENTS §10), and make sure the save is written.
-  window.addEventListener('blur', () => autoPause(game));
+  window.addEventListener('blur', () => after(() => autoPause(game)));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       autoPause(game);
@@ -403,11 +459,13 @@ async function main(): Promise<void> {
       if (sound) sfx.play(sound);
     }
     renderer.sync(game, alpha, ticker.deltaMS);
+    syncMenu();
   });
+  syncMenu();
 
   if (import.meta.env.DEV) {
     // Handy for poking at state from the console during development.
-    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
+    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, menu, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
   }
 }
 

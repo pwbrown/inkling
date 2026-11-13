@@ -64,7 +64,17 @@ export type GameEvent =
   | { type: 'destroyed'; target: Target; points: number }
   | { type: 'marginHit'; target: Target; inkLost: number }
   | { type: 'error'; key: string; targetId: number | null }
-  | { type: 'phase'; phase: GamePhase };
+  | { type: 'phase'; phase: GamePhase }
+  /** The page was restarted or abandoned: clear effects and stains. */
+  | { type: 'reset' };
+
+/** Ink and notebook stats as they were when a page or chapter began. */
+export interface StartSnapshot {
+  /** Page (within the chapter) the snapshot was taken at. */
+  pageIndex: number;
+  ink: number;
+  stats: Stats;
+}
 
 export interface PageState {
   /** 0-based chapter (level) index. */
@@ -102,6 +112,10 @@ export interface World {
   stats: Stats;
   /** Stats for the current page only. */
   pageStats: Stats;
+  /** Taken when the current page began, for "Restart page". */
+  pageStart: StartSnapshot;
+  /** Taken when the current chapter began, for "Retry chapter". */
+  chapterStart: StartSnapshot;
   /** Drained by the renderer each frame. */
   events: GameEvent[];
   /** Characters to build targets from (the player's Type Case). */
@@ -181,6 +195,8 @@ export function createWorld(options: WorldOptions = {}): World {
     inkRefilled: 0,
     stats: createStats(),
     pageStats: createStats(),
+    pageStart: { pageIndex: 0, ink: GAME_CONFIG.maxInk, stats: createStats() },
+    chapterStart: { pageIndex: 0, ink: GAME_CONFIG.maxInk, stats: createStats() },
     events: [],
     keys: content.keys,
     content,
@@ -199,6 +215,16 @@ export function setContent(world: World, content: ContentSource): void {
   if (world.phase !== 'ready') return;
   world.content = content;
   world.keys = content.keys;
+}
+
+/**
+ * Remember how things stood as a page begins, so it can be restarted (and,
+ * on a chapter's first page, so the chapter can be retried).
+ */
+export function markPageStart(world: World): void {
+  const snapshot = { pageIndex: world.page.index, ink: world.ink, stats: structuredClone(world.stats) };
+  world.pageStart = snapshot;
+  if (world.page.index === 0) world.chapterStart = structuredClone(snapshot);
 }
 
 export function setPhase(world: World, phase: GamePhase): void {

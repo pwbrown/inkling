@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_CONFIG } from './config';
-import { autoPause, confirm, moveSelection, multiplier, selectDifficulty, togglePause, typeChar } from './input';
+import {
+  autoPause,
+  confirm,
+  moveSelection,
+  multiplier,
+  quitToMenu,
+  restartPage,
+  retryChapter,
+  selectDifficulty,
+  togglePause,
+  typeChar,
+} from './input';
 import { MARGIN_X, WORLD_WIDTH, createPage, createWorld, spawnTarget, type World } from './world';
 
 function playingWorld(): World {
@@ -207,22 +218,77 @@ describe('phases', () => {
     expect(world.inkRefilled).toBe(0);
   });
 
-  it('Enter after game over returns to the new-notebook screen, keeping the difficulty', () => {
+  it('Enter after game over retries the chapter, keeping the difficulty', () => {
     const world = createWorld();
     selectDifficulty(world, 'hard');
     confirm(world);
     world.phase = 'gameOver';
     world.ink = 0;
-    world.stats.score = 900;
-
-    confirm(world);
-    expect(world.phase).toBe('ready');
-    expect(world.selectedDifficulty).toBe('hard');
 
     confirm(world);
     expect(world.phase).toBe('playing');
     expect(world.difficulty).toBe('hard');
+    expect(world.page.index).toBe(0);
     expect(world.ink).toBe(GAME_CONFIG.maxInk);
+  });
+
+});
+
+describe('restart, retry and quit', () => {
+  /** A notebook on chapter 1, page 2, with some progress since the page began. */
+  function midChapter(): World {
+    const world = createWorld({ random: () => 0.5, keys: ['a', 'b'] });
+    confirm(world); // page 1 begins
+    world.stats.score = 100;
+    world.ink = 80;
+    world.phase = 'pageCleared';
+    confirm(world); // page 2 begins with score 100, ink 80
+    world.stats.score = 250;
+    world.ink = 40;
+    world.pageStats.correct = 9;
+    spawnTarget(world, { text: 'a', x: 500, prevX: 500, lane: 0 });
+    world.lockedId = world.targets[0]!.id;
+    return world;
+  }
+
+  it('restarts the page with the ink and score it began with', () => {
+    const world = midChapter();
+    world.phase = 'paused';
+    restartPage(world);
+    expect(world.phase).toBe('playing');
+    expect(world.page.index).toBe(1);
+    expect(world.page.spawned).toBe(0);
+    expect(world.stats.score).toBe(100);
+    expect(world.ink).toBe(80);
+    expect(world.pageStats.correct).toBe(0);
+    expect(world.targets).toEqual([]);
+    expect(world.lockedId).toBeNull();
+    expect(world.events).toContainEqual({ type: 'reset' });
+  });
+
+  it('retries the chapter from its first page', () => {
+    const world = midChapter();
+    world.phase = 'gameOver';
+    retryChapter(world);
+    expect(world.phase).toBe('playing');
+    expect(world.page.index).toBe(0);
     expect(world.stats.score).toBe(0);
+    expect(world.ink).toBe(GAME_CONFIG.maxInk);
+  });
+
+  it('quits to the menu, clearing the page', () => {
+    const world = midChapter();
+    world.phase = 'paused';
+    quitToMenu(world);
+    expect(world.phase).toBe('ready');
+    expect(world.targets).toEqual([]);
+    expect(world.selectedDifficulty).toBe(world.difficulty);
+  });
+
+  it('ignores restart and retry when there is nothing to restart', () => {
+    const world = createWorld();
+    restartPage(world);
+    retryChapter(world);
+    expect(world.phase).toBe('ready');
   });
 });

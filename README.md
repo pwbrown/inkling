@@ -20,14 +20,11 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | Backspace / Delete | Erase mistakes in a Run-on; fix a Misprint |
 | ← → / Home / End | Move the cursor in a Misprint |
 | Tab | Switch to the next target (nearest the margin first) |
-| ↑ ↓ or 1–4 | Choose a difficulty on the new-notebook screen (or click one) |
-| K | Open the **Type Case** from the new-notebook screen to choose which keys to practice |
-| C | Continue your saved notebook from the start of the page you reached |
-| W | Open **Word lists**: download words about a topic to practice with |
-| B | Open **Save data**: export or import a backup, or erase everything |
-| S | Open **Settings** (also from the pause screen): text size, colors, motion, sound |
-| Enter | Start a notebook, turn the page, or return to the new-notebook screen after running out of ink |
-| Esc | Pause or resume (the game also pauses when the window loses focus) |
+| Esc | Pause: **Resume**, **Restart page**, **Settings** or **Quit to menu** (the game also pauses when the window loses focus) |
+| Enter | Turn the page after a graded page; after running out of ink, retry the chapter |
+| R / M | After running out of ink: **Retry chapter** or go to the **Main menu** |
+
+The **main menu** has buttons for everything: **Continue** (C), **New notebook** (N, then pick a difficulty with 1–4 or the arrow keys), **Choose keys** (K), **Word lists** (W), **Settings** (S), **Save data** (B) and **How to play** (H). Use the arrow keys or Tab and Enter, or the mouse.
 
 A notebook is a series of **chapters**, each made of a few **pages**. Each page is either all **drips** (single characters) or all **Blotlings** (words). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. All of these numbers live in `src/core/config.ts`. 
 
@@ -100,7 +97,7 @@ The service worker is only registered in production builds. Use `npm run build &
 | `src/content/` | Word pool, fallback string generator, profanity guard, and per-locale content packs (`en/`). |
 | `scripts/` | Build-time tools: the word pack and the app icons. |
 | `src/storage/` | Save format and migrations, IndexedDB storage, and progress tracking. |
-| `src/ui/` | DOM screens: the Type Case, Word lists, Save data and Settings dialogs. |
+| `src/ui/` | DOM screens: the main and pause menus, How to play, and the Type Case, Word lists, Save data and Settings dialogs. |
 | `src/audio/` | Synthesized sound effects (Web Audio API). |
 | `src/input/` | DOM keyboard listener that turns key presses into game actions. |
 | `src/i18n/` | UI strings and the `t()` lookup (English only for now). |

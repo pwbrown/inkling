@@ -4,7 +4,7 @@
  */
 import type { Difficulty } from '../core/config';
 import type { Stats } from '../core/stats';
-import { createPage, isLastPageOfChapter, resetWorld, setPhase, type PageState, type World } from '../core/world';
+import { createPage, isLastPageOfChapter, markPageStart, resetWorld, setPhase, type PageState, type World } from '../core/world';
 import type { KeyStat, SaveData, SavedNotebook } from './schema';
 
 /** Add a page's (or notebook's) per-key hits and misses to the saved totals. */
@@ -38,13 +38,15 @@ export function snapshotNotebook(
   world: World,
   at: { chapter: number; page: number } = { chapter: world.page.chapter, page: world.page.index },
   now = new Date(),
+  /** Ink and stats to record; defaults to the current ones. */
+  from: { ink: number; stats: World['stats'] } = { ink: world.ink, stats: world.stats },
 ): SavedNotebook {
-  const s = world.stats;
+  const s = from.stats;
   return {
     difficulty: world.difficulty,
     chapter: at.chapter,
     page: at.page,
-    ink: world.ink,
+    ink: from.ink,
     score: s.score,
     correct: s.correct,
     errors: s.errors,
@@ -68,6 +70,9 @@ export function continueNotebook(world: World, saved: SavedNotebook): void {
     bestCombo: saved.bestCombo,
     playMs: saved.playMs,
   });
+  markPageStart(world);
+  // Mid-chapter, "Retry chapter" goes back to this resume point.
+  if (saved.page > 0) world.chapterStart = structuredClone(world.pageStart);
   setPhase(world, 'playing');
 }
 

@@ -15,8 +15,10 @@ import {
   createPage,
   isBufferKind,
   isLastPageOfChapter,
+  markPageStart,
   resetWorld,
   setPhase,
+  type StartSnapshot,
   type Target,
   type World,
 } from './world';
@@ -249,20 +251,62 @@ export function confirm(world: World): void {
   switch (world.phase) {
     case 'ready':
       resetWorld(world, world.selectedDifficulty);
+      markPageStart(world);
       setPhase(world, 'playing');
       break;
     case 'pageCleared':
       turnPage(world);
+      markPageStart(world);
       setPhase(world, 'playing');
       break;
     case 'gameOver':
-      // Back to the new-notebook screen so difficulty can be changed.
-      world.selectedDifficulty = world.difficulty;
-      setPhase(world, 'ready');
+      retryChapter(world);
       break;
     default:
       break;
   }
+}
+
+/** Put the page back to how it began: same page, ink and score as at its start. */
+function restoreTo(world: World, snapshot: StartSnapshot): void {
+  world.page = createPage(world.difficulty, world.page.chapter, snapshot.pageIndex, world.content);
+  world.targets = [];
+  world.lockedId = null;
+  world.ink = Math.max(1, snapshot.ink);
+  world.inkRefilled = 0;
+  world.stats = structuredClone(snapshot.stats);
+  world.pageStats = createStats();
+  world.events.push({ type: 'reset' });
+  markPageStart(world);
+  setPhase(world, 'playing');
+}
+
+/** Pause menu: start the current page over. */
+export function restartPage(world: World): void {
+  if (world.phase !== 'paused' && world.phase !== 'playing') return;
+  restoreTo(world, world.pageStart);
+}
+
+/**
+ * Game over: try the chapter again from its first page (or from where this
+ * session resumed it), with the ink and score you had then, rather than
+ * starting a whole new notebook.
+ */
+export function retryChapter(world: World): void {
+  if (world.phase !== 'gameOver' && world.phase !== 'paused') return;
+  restoreTo(world, world.chapterStart);
+}
+
+/**
+ * Leave the notebook for the main menu. Progress is saved at the start of
+ * each page, so Continue picks up from there.
+ */
+export function quitToMenu(world: World): void {
+  world.targets = [];
+  world.lockedId = null;
+  world.selectedDifficulty = world.difficulty;
+  world.events.push({ type: 'reset' });
+  setPhase(world, 'ready');
 }
 
 /** Esc: pause or resume. Only the playing phase can be paused. */

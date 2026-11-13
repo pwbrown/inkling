@@ -1,0 +1,200 @@
+/* Main menu, new-notebook step, How to play and pause menu. Shares tokens with dialog.css. */
+
+/* Below the other dialogs, which open on top of it. */
+.dialog.menu {
+  z-index: 5;
+  background: rgb(43 38 34 / 0.45);
+}
+
+.dialog.menu[hidden] {
+  display: none;
+}
+
+.menu-panel {
+  width: min(560px, 100%);
+  gap: 14px;
+}
+
+.menu[data-screen='howToPlay'] .menu-panel {
+  width: min(680px, 100%);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.menu-header {
+  text-align: center;
+}
+
+.menu-logo {
+  width: min(340px, 85%);
+  height: auto;
+  overflow: visible;
+}
+
+.logo-drop {
+  fill: var(--tc-ink);
+}
+
+.logo-eye,
+.logo-shine {
+  fill: var(--tc-paper);
+}
+
+.logo-smile {
+  fill: none;
+  stroke: var(--tc-paper);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.logo-word {
+  fill: var(--tc-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 66px;
+}
+
+.logo-underline {
+  fill: none;
+  stroke: var(--tc-margin);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.menu-tagline {
+  margin: 4px 0 0;
+  color: var(--tc-ink-light);
+}
+
+.menu-list {
+  display: grid;
+  gap: 8px;
+}
+
+.menu-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.menu .menu-btn {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 44px 12px 16px;
+  border: 2px solid var(--tc-ink);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--tc-ink);
+}
+
+.menu-row .menu-btn {
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.menu .menu-btn:hover,
+.menu .menu-btn:focus-visible {
+  background: rgb(255 224 102 / 0.35);
+}
+
+.menu .menu-primary {
+  background: var(--tc-ink);
+  color: var(--tc-paper);
+}
+
+.menu .menu-primary:hover,
+.menu .menu-primary:focus-visible {
+  background: var(--tc-ink-light);
+}
+
+.menu-label {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.menu-detail {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.menu-key {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font: 600 12px ui-monospace, Menlo, monospace;
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  opacity: 0.65;
+}
+
+.menu-row .menu-key {
+  display: none;
+}
+
+.menu-best {
+  margin: 0;
+  min-height: 1.2em;
+  text-align: center;
+  font-size: 14px;
+  color: var(--tc-ink-light);
+}
+
+.menu-difficulties {
+  display: grid;
+  gap: 8px;
+}
+
+/* Selected difficulty: highlighted, with a check mark so it isn't color alone. */
+.menu-difficulty[aria-checked='true'] {
+  background: var(--tc-highlight);
+}
+
+.menu-difficulty[aria-checked='true'] .menu-label::before {
+  content: '✓ ';
+}
+
+.menu-keys-line {
+  margin: 0;
+  color: var(--tc-ink-light);
+}
+
+.menu .menu-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--tc-ink);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.how-section h3 {
+  margin-bottom: 4px;
+}
+
+.how-section p,
+.how-list {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--tc-ink-light);
+}
+
+.how-list {
+  padding-left: 20px;
+}
+
+@media (max-width: 520px) {
+  .menu-row {
+    grid-template-columns: 1fr;
+  }
+}

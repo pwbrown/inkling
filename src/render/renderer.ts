@@ -398,6 +398,10 @@ export async function createRenderer(
         }
         lastPhase = event.phase;
         break;
+      case 'reset':
+        // A restarted or abandoned page starts clean.
+        effects.clearStains();
+        break;
       case 'locked':
       case 'progress':
         break;

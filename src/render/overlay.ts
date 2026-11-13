@@ -1,9 +1,9 @@
 /**
- * Centered message card: the new-notebook screen (with the difficulty
- * picker), paused, page/chapter cleared, and game over.
+ * Centered in-game card: the graded page / chapter complete, and game over.
+ * The main menu and pause menu are DOM screens (src/ui/menu.ts).
  */
 import { Container, Graphics, Text } from 'pixi.js';
-import { DIFFICULTIES, type Difficulty } from '../core/config';
+import type { Difficulty } from '../core/config';
 import { pageGrade, teacherNote, type Grade } from '../core/grade';
 import { accuracy, topMissedKeys, wpm, type Stats } from '../core/stats';
 import { WORLD_HEIGHT, WORLD_WIDTH, isLastPageOfChapter, type World } from '../core/world';
@@ -12,16 +12,7 @@ import { COLORS, DISPLAY_FONT, TEXT_FONT, keyLabel } from './theme';
 
 const CARD_WIDTH = 620;
 const PAD = 32;
-const OPTION_HEIGHT = 52;
-
-export interface OverlayOption {
-  id: Difficulty;
-  label: string;
-  description: string;
-  selected: boolean;
-}
-
-export type OverlayLinkId = 'continue' | 'keys' | 'wordLists' | 'saveData' | 'settings';
+export type OverlayLinkId = 'retry' | 'mainMenu';
 
 export interface OverlayLink {
   id: OverlayLinkId;
@@ -37,32 +28,24 @@ export interface OverlayContent {
   circled?: string[];
   /** Teacher's note in the margin. */
   note?: string;
-  options?: OverlayOption[];
-  /** Clickable links under the options (e.g. "Change keys"). */
+  /** Clickable links above the prompt (e.g. "Main menu"). */
   links?: OverlayLink[];
   prompt: string;
 }
 
 /** App state the overlay shows that isn't part of the game world (it comes from the save). */
 export interface OverlayContext {
-  /** Short name for a key set, e.g. "Home row" or "Custom". */
-  describeKeys(keys: readonly string[]): string;
-  /** "Continue …" label when a saved notebook can be resumed, else null. */
-  continueLabel(): string | null;
   /** Extra lines for a screen, e.g. best score or "New best score!". */
   extraLines(world: World): string[];
 }
 
 /** Click handlers and lookups the overlay needs from the app. */
 export interface OverlayActions extends OverlayContext {
-  onPick(difficulty: Difficulty): void;
   onConfirm(): void;
   onLink(id: OverlayLinkId): void;
 }
 
 const NO_CONTEXT: OverlayContext = {
-  describeKeys: () => t('preset.custom'),
-  continueLabel: () => null,
   extraLines: () => [],
 };
 
@@ -92,37 +75,6 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
   const extra = context.extraLines(world);
 
   switch (world.phase) {
-    case 'ready':
-      return {
-        title: t('overlay.ready.title'),
-        lines: [
-          t('overlay.ready.body'),
-          t('overlay.ready.keys', { preset: context.describeKeys(world.keys), count: world.keys.length }),
-          ...extra,
-          t('overlay.ready.choose'),
-        ],
-        options: DIFFICULTIES.map((id) => ({
-          id,
-          label: difficultyLabel(id),
-          description: t(`difficulty.${id}.description` as MessageKey),
-          selected: id === world.selectedDifficulty,
-        })),
-        links: [
-          ...(context.continueLabel() ? [{ id: 'continue' as const, label: context.continueLabel()! }] : []),
-          { id: 'keys', label: t('overlay.ready.changeKeys') },
-          { id: 'wordLists', label: t('overlay.ready.wordLists') },
-          { id: 'saveData', label: t('overlay.ready.saveData') },
-          { id: 'settings', label: t('overlay.settings') },
-        ],
-        prompt: t('overlay.ready.prompt'),
-      };
-    case 'paused':
-      return {
-        title: t('overlay.paused.title'),
-        lines: statLines(world.pageStats),
-        links: [{ id: 'settings', label: t('overlay.settings') }],
-        prompt: t('overlay.paused.prompt'),
-      };
     case 'pageCleared': {
       const stats = world.pageStats;
       const grade = pageGrade(stats, world.page.params.size);
@@ -149,8 +101,14 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
           ...statLines(world.stats),
           ...extra,
         ],
+        links: [
+          { id: 'retry', label: t('overlay.gameOver.retry') },
+          { id: 'mainMenu', label: t('overlay.gameOver.mainMenu') },
+        ],
         prompt: t('overlay.gameOver.prompt'),
       };
+    case 'ready':
+    case 'paused':
     case 'playing':
       return null;
   }
@@ -162,7 +120,6 @@ export class Overlay {
   private readonly title: Text;
   private readonly body: Text;
   private readonly prompt: Text;
-  private readonly optionsLayer = new Container();
   private readonly linksLayer = new Container();
   private readonly gradeText: Text;
   private readonly circledLayer = new Container();
@@ -212,7 +169,6 @@ export class Overlay {
       this.body,
       this.circledLayer,
       this.note,
-      this.optionsLayer,
       this.linksLayer,
       this.prompt,
     );
@@ -220,7 +176,7 @@ export class Overlay {
   }
 
   update(world: World): void {
-    if (world.phase === 'playing') {
+    if (world.phase === 'playing' || world.phase === 'ready' || world.phase === 'paused') {
       this.root.visible = false;
       this.shownKey = null;
       return;
@@ -236,10 +192,7 @@ export class Overlay {
     this.title.text = content.title;
     this.body.text = content.lines.join('\n');
     this.prompt.text = content.prompt;
-    for (const child of this.optionsLayer.removeChildren()) child.destroy({ children: true });
 
-    const options = content.options ?? [];
-    const optionsHeight = options.length > 0 ? options.length * OPTION_HEIGHT + 12 : 0;
     const linksHeight = this.layoutLinks(content.links ?? []);
     const circledHeight = this.layoutCircled(content.circled ?? []);
     this.note.text = content.note ?? '';
@@ -255,7 +208,6 @@ export class Overlay {
       16 +
       circledHeight +
       noteHeight +
-      optionsHeight +
       linksHeight +
       16 +
       this.prompt.height +
@@ -279,13 +231,9 @@ export class Overlay {
     this.circledLayer.position.set(cx, this.body.y + this.body.height + 12);
     this.note.position.set(cx, this.circledLayer.y + circledHeight);
 
-    const optionsTop = this.body.y + this.body.height + 16 + circledHeight + noteHeight;
-    options.forEach((option, i) => {
-      this.optionsLayer.addChild(this.createOption(option, i, left + PAD, optionsTop + i * OPTION_HEIGHT));
-    });
-
-    this.linksLayer.position.set(cx, optionsTop + optionsHeight);
-    this.prompt.position.set(cx, optionsTop + optionsHeight + linksHeight + (options.length > 0 ? 4 : 0));
+    const linksTop = this.body.y + this.body.height + 16 + circledHeight + noteHeight;
+    this.linksLayer.position.set(cx, linksTop);
+    this.prompt.position.set(cx, linksTop + linksHeight);
   }
 
   /** "Keys to watch:" with each key circled in red pen. Returns the height used. */
@@ -365,38 +313,4 @@ export class Overlay {
     return y + 8;
   }
 
-  private createOption(option: OverlayOption, index: number, x: number, y: number): Container {
-    const width = CARD_WIDTH - PAD * 2;
-    const row = new Container();
-    row.position.set(x, y);
-    row.eventMode = 'static';
-    row.cursor = 'pointer';
-    row.on('pointertap', () => this.actions.onPick(option.id));
-
-    const bg = new Graphics().roundRect(0, 0, width, OPTION_HEIGHT - 6, 10);
-    if (option.selected) bg.fill({ color: COLORS.highlighter, alpha: 0.8 }).stroke({ width: 2, color: COLORS.ink });
-    else bg.fill({ color: COLORS.paper, alpha: 0.01 }).stroke({ width: 1, color: COLORS.rule });
-
-    // Selection is shown by an underline-style marker too, not by color alone (DESIGN §7).
-    const marker = new Text({
-      text: option.selected ? '▸' : ' ',
-      style: { fontFamily: TEXT_FONT, fontSize: 20, fontWeight: '700', fill: COLORS.ink },
-    });
-    marker.position.set(10, 10);
-
-    const label = new Text({
-      text: `${index + 1}  ${option.label}`,
-      style: { fontFamily: TEXT_FONT, fontSize: 19, fontWeight: '700', fill: COLORS.ink },
-    });
-    label.position.set(30, 11);
-
-    const description = new Text({
-      text: option.description,
-      style: { fontFamily: TEXT_FONT, fontSize: 15, fill: COLORS.inkLight },
-    });
-    description.position.set(170, 14);
-
-    row.addChild(bg, marker, label, description);
-    return row;
-  }
 }
