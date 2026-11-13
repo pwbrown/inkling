@@ -1,7 +1,7 @@
 # Inkling
 
 > [!NOTE]
-> **This project is almost entirely AI-generated ("vibe coded").** Unlike my other repositories, which I wrote by hand, nearly all of Inkling's code and documentation was written by an AI coding assistant (Claude) from my direction, with me setting the goals, reviewing and steering. I built it this way to quickly create a typing-practice game for my kids, something that would otherwise have taken me months on my own. Please read the code with that in mind.
+> **This project is almost entirely AI-generated ("vibe coded").** Unlike my other repositories, which I wrote by hand, nearly all of Inkling's code and documentation was written by an AI coding assistant (Claude) from my direction, with me setting the goals, reviewing and steering. I built it this way to quickly create a typing-practice game for my kids, something that would otherwise have taken me months on my own. Please read the code with that in mind. The full conversations are in [docs/transcripts](docs/transcripts/README.md), so you can see how it was built.
 
 A browser-based, offline-first typing game inspired by *Typer Shark*. Ink-blot creatures crawl across a notebook page carrying words, characters, digits or symbols, and you type them before they reach the margin. What makes it different is that **you choose exactly which keys to practice**, and the game builds all of its content from only those keys, so it grows with you as you learn.
 
@@ -115,13 +115,16 @@ The service worker is only registered in production builds. Use `npm run build &
 
 `npm run icons` (or `python3 scripts/make-icons.py`) redraws the app icons.
 
+`npm run transcript` exports this project's Claude Code sessions to [docs/transcripts](docs/transcripts/README.md) as Markdown. It removes email addresses, one-time codes and the home folder path, but read the result before committing it.
+
 ### Project layout
 
 | Path | What lives there |
 |---|---|
 | `src/core/` | Pure game logic (loop, world, typing/targeting, stats, tuning config). No DOM or Pixi, so it's unit tested with Vitest. |
 | `src/content/` | Word pool, fallback string generator, profanity guard, and per-locale content packs (`en/`). |
-| `scripts/` | Build-time tools: the word pack and the app icons. |
+| `scripts/` | Build-time tools: the word pack, the app icons and the transcript export. |
+| `docs/transcripts/` | The Claude Code conversations that built the game. |
 | `src/storage/` | Save format and migrations, IndexedDB storage, and progress tracking. |
 | `src/ui/` | DOM screens: the main and pause menus, How to play, and the Type Case, Word lists, Save data and Settings dialogs. |
 | `src/audio/` | Synthesized sound effects (Web Audio API). |
