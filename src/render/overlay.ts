@@ -2,7 +2,7 @@
  * Centered in-game card: the graded page / chapter complete, and game over.
  * The main menu and pause menu are DOM screens (src/ui/menu.ts).
  */
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { Difficulty } from '../core/config';
 import { APPRENTICE_CHAPTERS, newKeysFor, starText, starsForGrade } from '../core/campaign';
 import { pageGrade, teacherNote, type Grade } from '../core/grade';
@@ -10,9 +10,14 @@ import { US_QWERTY, findKey } from '../content/layouts/us-qwerty';
 import { accuracy, topMissedKeys, wpm, type Stats } from '../core/stats';
 import { WORLD_HEIGHT, WORLD_WIDTH, isLastPageOfChapter, type World } from '../core/world';
 import { formatNumber, t, type MessageKey } from '../i18n';
+import { handsArt } from './handsArt';
 import { COLORS, DISPLAY_FONT, TEXT_FONT, keyLabel } from './theme';
 
 const CARD_WIDTH = 620;
+/** Drawn width of the hands-on-keyboard picture on a chapter's first card. */
+const HANDS_WIDTH = 500;
+/** How much ink is in the wash the hands are painted with. */
+const HAND_WASH = 0.13;
 const PAD = 32;
 export type OverlayLinkId = 'retry' | 'mainMenu';
 
@@ -32,6 +37,8 @@ export interface OverlayContent {
   circledLabel?: string;
   /** Teacher's note in the margin. */
   note?: string;
+  /** Keys to show on the hands-on-keyboard picture (an Apprentice chapter's new keys). */
+  hands?: string[];
   /** Clickable links above the prompt (e.g. "Main menu"). */
   links?: OverlayLink[];
   prompt: string;
@@ -133,6 +140,7 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
         ],
         circled: keys,
         circledLabel: t('overlay.intro.newKeys'),
+        hands: keys,
         prompt: t('overlay.intro.prompt'),
       };
     }
@@ -159,6 +167,11 @@ export class Overlay {
   private readonly gradeText: Text;
   private readonly circledLayer = new Container();
   private readonly note: Text;
+  /** The hands-on-keyboard picture, drawn from SVG once it has loaded. */
+  private readonly hands = new Sprite();
+  private handsTexture: Texture | null = null;
+  /** Which picture is wanted, so a late-loading old one is dropped. */
+  private handsKey = '';
   /** Rebuild only when what's shown changes. */
   private shownKey: string | null = null;
 
@@ -203,6 +216,7 @@ export class Overlay {
       this.gradeText,
       this.body,
       this.circledLayer,
+      this.hands,
       this.note,
       this.linksLayer,
       this.prompt,
@@ -233,6 +247,7 @@ export class Overlay {
     this.note.text = content.note ?? '';
     this.note.visible = Boolean(content.note);
     const noteHeight = content.note ? this.note.height + 12 : 0;
+    const handsHeight = this.layoutHands(content.hands ?? []);
     this.gradeText.text = content.grade ?? '';
     this.gradeText.visible = Boolean(content.grade);
     const height =
@@ -242,6 +257,7 @@ export class Overlay {
       this.body.height +
       16 +
       circledHeight +
+      handsHeight +
       noteHeight +
       linksHeight +
       16 +
@@ -264,11 +280,69 @@ export class Overlay {
 
     this.gradeText.position.set(left + CARD_WIDTH - 62, top + 52);
     this.circledLayer.position.set(cx, this.body.y + this.body.height + 12);
-    this.note.position.set(cx, this.circledLayer.y + circledHeight);
+    this.hands.position.set(cx, this.circledLayer.y + circledHeight);
+    this.note.position.set(cx, this.hands.y + handsHeight);
 
-    const linksTop = this.body.y + this.body.height + 16 + circledHeight + noteHeight;
+    const linksTop = this.body.y + this.body.height + 16 + circledHeight + handsHeight + noteHeight;
     this.linksLayer.position.set(cx, linksTop);
     this.prompt.position.set(cx, linksTop + linksHeight);
+  }
+
+  /**
+   * The hands-on-keyboard picture for `keys`. Its size is known straight
+   * away; the image itself appears once the SVG has decoded. Returns the
+   * height used.
+   */
+  private layoutHands(keys: string[]): number {
+    if (keys.length === 0) {
+      this.hands.visible = false;
+      this.handsKey = '';
+      return 0;
+    }
+    const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
+    /** `a` with `amount` of `b` mixed in, channel by channel. */
+    const mix = (a: number, b: number, amount: number) =>
+      [16, 8, 0].reduce((out, shift) => {
+        const ca = (a >> shift) & 0xff;
+        const cb = (b >> shift) & 0xff;
+        return out | (Math.round(ca + (cb - ca) * amount) << shift);
+      }, 0);
+    const art = handsArt(US_QWERTY, keys, {
+      ink: hex(COLORS.ink),
+      paper: hex(COLORS.paper),
+      hand: hex(mix(COLORS.paper, COLORS.ink, HAND_WASH)),
+      highlight: hex(COLORS.highlighter),
+      margin: hex(COLORS.margin),
+      rim: hex(COLORS.inkFaded),
+    });
+    const width = HANDS_WIDTH;
+    const height = Math.round((art.height / art.width) * width);
+    this.hands.anchor.set(0.5, 0);
+    this.hands.visible = true;
+    if (this.handsKey === art.svg) {
+      this.hands.setSize(width, height);
+      return height + 10;
+    }
+    this.handsKey = art.svg;
+    this.hands.texture = Texture.EMPTY;
+    this.hands.setSize(width, height);
+    // Decode at twice the drawn size so it stays sharp on high-density screens.
+    const img = new Image(width * 2, height * 2);
+    const scaled = art.svg.replace(`width="${art.width}" height="${art.height}"`, `width="${width * 2}" height="${height * 2}"`);
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(scaled)}`;
+    img
+      .decode()
+      .then(() => {
+        if (this.handsKey !== art.svg) return;
+        this.handsTexture?.destroy(true);
+        this.handsTexture = Texture.from(img);
+        this.hands.texture = this.handsTexture;
+        this.hands.setSize(width, height);
+      })
+      .catch(() => {
+        // The picture is a helper; the card still says which finger to use.
+      });
+    return height + 10;
   }
 
   /** "Keys to watch:" with each key circled in red pen. Returns the height used. */

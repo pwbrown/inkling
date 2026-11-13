@@ -18,6 +18,8 @@ import {
 } from '../core/keySelection';
 import { keyAccuracy, masteryLevel, masteryProgress, suggestNextKeys, type KeyCounts } from '../core/mastery';
 import { formatNumber, t, type MessageKey } from '../i18n';
+import { handsArt } from '../render/handsArt';
+import { artElement } from './art';
 import { h } from './dom';
 
 export interface TypeCaseOptions {
@@ -260,6 +262,17 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
       ...(next.length === 0
         ? []
         : [
+            artElement(
+              handsArt(layout, next, {
+                ink: 'var(--tc-ink)',
+                paper: 'var(--tc-paper)',
+                hand: 'color-mix(in srgb, var(--tc-ink) 13%, var(--tc-paper))',
+                highlight: 'var(--tc-highlight)',
+                margin: 'var(--tc-margin)',
+                rim: 'var(--tc-ink-light)',
+              }).svg,
+              'tc-hands',
+            ),
             h('p', {}, [t('typeCase.suggest', { keys: next.map(capLabel).join(' + ') })]),
             h('button', { type: 'button', className: 'tc-secondary', onClick: () => set(new Set([...selection, ...next])) }, [
               t('typeCase.suggestAdd'),

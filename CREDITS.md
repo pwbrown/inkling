@@ -34,3 +34,10 @@ Third-party content bundled with Inkling, with its source and license (REQUIREME
 - **What:** the GitHub logo (the "Invertocat" mark) beside the source-code link on the About screen, drawn inline in `src/ui/menu.ts`.
 - **Source:** [GitHub's logos](https://github.com/logos), from the [Octicons](https://github.com/primer/octicons) `mark-github` icon (MIT).
 - **Use:** only to link to Inkling's repository on GitHub, as GitHub's logo guidelines allow. GitHub and the Invertocat logo are trademarks of GitHub, Inc.
+
+## Hands picture
+
+- **What:** the hands resting on the keyboard in the chapter cards and the Type Case, stored as path data in `src/render/handDrawing.ts`.
+- **Source:** ["Hands 1"](https://freesvg.org/hands-1) by Stipo on FreeSVG.org.
+- **License:** [Public Domain (CC0 1.0)](https://creativecommons.org/publicdomain/zero/1.0/). No attribution is required; this entry is a courtesy.
+- **Changes:** only the left hand is kept (the right hand is it mirrored), Inkscape metadata removed, and it's recolored to the game's palette. The fingertip and finger-base points used to place it and to shade single fingers were measured from the drawing.

@@ -26,7 +26,7 @@ const svg = (viewBox: string, body: string, className: string) =>
 export function badgeSvg(badge: Badge): string {
   const fill = HUES[badge];
   return svg(
-    '20 2 48 70',
+    '20 2 48 80',
     `<path d="M44 6 L26 48 A21 21 0 1 0 62 48 Z" fill="${fill}"/>
      <circle cx="38" cy="54" r="4.2" fill="var(--tc-paper)"/><circle cx="52" cy="54" r="4.2" fill="var(--tc-paper)"/>
      <circle cx="34" cy="44" r="3" fill="var(--tc-paper)" opacity="0.5"/>

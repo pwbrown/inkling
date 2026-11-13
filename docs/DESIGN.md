@@ -37,7 +37,8 @@
 
 ## 4. The Type Case (Key Selection + Rune-style Learning)
 
-This is where the Spellbook mechanic comes in. The key-selection screen is a **letterpress type case**: a wooden drawer with a slot for each character. Each key is a metal **sort**.
+This is where the Spellbook mechanic comes in. The key-selection screen is a **letterpress type case**: a wooden drawer with a slot for each character. Each key is a metal **sort**. The keyboard itself is drawn as an **old typewriter**: black enamel body with a gold pinstripe, round glass-topped keys in chrome rims that press down when picked.
+- **Hands guide:** when the Apprentice meets new keys (a chapter's first card, or a suggestion in the Type Case), a picture shows two hands resting on the home row, painted in a pale ink wash. The hands never move: the finger for each new key is shaded in highlighter, the key is shaded and circled in red pen, and a dashed red-pen arrow runs from that fingertip to the key when it is off the home row.
 
 - **Picking keys:** you click sorts to add them to your case, or click a drawer section to toggle a whole region (letters, digits, symbols, home row and so on). It also has presets and custom presets.
 - **Mastery:** each sort fills with ink as you get better at it, based on that key's local accuracy and speed stats.

@@ -2502,3 +2502,7 @@ If you'd like a friendlier name for kids, "My saves" would fit just as well.
   ```
 
 </details>
+
+### 🤖 Claude
+
+The rename is committed (`8541eee`) with the updated transcript, which I checked for private details. It's merged into `main` and pushed, `main` matches GitHub, and the branch is deleted. The push starts the GitHub Pages deploy; I haven't checked whether it finished.

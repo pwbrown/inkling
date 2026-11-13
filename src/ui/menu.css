@@ -226,6 +226,9 @@
   gap: 8px;
   max-height: 46vh;
   overflow: auto;
+  /* Room inside the scroll box so borders and focus rings aren't clipped. */
+  padding: 6px;
+  margin: -6px;
 }
 
 .menu .menu-chapter {
@@ -343,7 +346,7 @@
   display: inline-block;
   flex: none;
   width: 30px;
-  height: 44px;
+  height: 50px;
 }
 
 .menu-player-name {
@@ -371,6 +374,9 @@
   gap: 8px;
   max-height: 46vh;
   overflow: auto;
+  /* Room inside the scroll box so borders and focus rings aren't clipped. */
+  padding: 6px;
+  margin: -6px;
 }
 
 .menu-player-row {

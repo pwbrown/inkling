@@ -154,7 +154,7 @@ export const en = {
   'overlay.gameOver.retry': 'Retry chapter (R)',
   'overlay.gameOver.mainMenu': 'Main menu (M)',
 
-  'menu.tagline': 'A typing game where you choose the keys.',
+  'menu.tagline': 'A typing game that grows with every key you learn.',
   'menu.continue': 'Continue',
   'menu.continueDetail': '{difficulty} · chapter {chapter}, page {page}',
   'menu.apprentice': 'Apprentice',
