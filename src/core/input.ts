@@ -15,7 +15,9 @@ import {
   createPage,
   isBufferKind,
   isLastPageOfChapter,
+  isRevealed,
   markPageStart,
+  nextLife,
   resetWorld,
   setPhase,
   type StartSnapshot,
@@ -71,13 +73,24 @@ function registerHit(world: World, key: string): void {
   });
 }
 
-/** Remove a finished target and award the completion bonus. */
+/**
+ * A target's text was completed: award the completion bonus, then either
+ * remove it or, for crimson/violet creatures with lives left, give it its
+ * next payload and keep the lock so the player types straight on.
+ */
 function destroyTarget(world: World, target: Target, scoreBefore: number): void {
+  bothStats(world, (s) => {
+    s.score += GAME_CONFIG.points.perTarget * multiplier(s.combo);
+  });
+  if (target.lives > 1) {
+    nextLife(world, target);
+    world.events.push({ type: 'hit', target, points: world.stats.score - scoreBefore });
+    return;
+  }
   world.targets = world.targets.filter((t) => t !== target);
   world.lockedId = null;
   bothStats(world, (s) => {
     s.destroyed++;
-    s.score += GAME_CONFIG.points.perTarget * multiplier(s.combo);
   });
   // Points from the finishing keystroke plus the completion bonus.
   world.events.push({ type: 'destroyed', target, points: world.stats.score - scoreBefore });
@@ -91,7 +104,8 @@ function lock(world: World, target: Target): void {
 
 /** Can this keystroke start on a target that isn't locked yet? */
 function startsWith(target: Target, key: string): boolean {
-  if (target.kind === 'misprint') return false;
+  // Ghost text can't be typed before it shows.
+  if (target.kind === 'misprint' || !isRevealed(target)) return false;
   if (target.kind === 'runon') return target.buffer === '' && target.text[0] === key;
   return target.text[target.typed] === key;
 }
@@ -217,7 +231,9 @@ export function editKey(world: World, key: EditKey): void {
  */
 export function cycleLock(world: World): void {
   if (world.phase !== 'playing') return;
-  const order = visibleTargets(world).sort((a, b) => a.x - b.x);
+  const order = visibleTargets(world)
+    .filter((t) => isRevealed(t))
+    .sort((a, b) => a.x - b.x);
   if (order.length === 0) return;
   const i = order.findIndex((t) => t.id === world.lockedId);
   lock(world, order[(i + 1) % order.length]!);

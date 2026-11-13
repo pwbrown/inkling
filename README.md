@@ -38,8 +38,9 @@ The game builds everything from your keys: drips use them directly, and word pag
 
 - **Drips:** a single character.
 - **Blotlings:** a word.
-- **Run-ons** (from chapter 3): a phrase. Mistakes stay, struck through in red, until you erase them with Backspace. They need the space key, so without it those pages become word pages.
-- **Misprints** (from chapter 4): a crooked rubber stamp with a misspelled word and the correct spelling pencilled above. Fix it with the arrow keys, Backspace, Delete and typing. Edits that bring it closer to right score, and edits that make it worse count as mistakes.
+- **Run-ons** (from chapter 4): a phrase. Mistakes stay, struck through in red, until you erase them with Backspace. They need the space key, so without it those pages become word pages.
+- **Misprints** (from chapter 5): a crooked rubber stamp with a misspelled word and the correct spelling pencilled above. Fix it with the arrow keys, Backspace, Delete and typing. Edits that bring it closer to right score, and edits that make it worse count as mistakes.
+- **Tougher ink:** from chapter 2, some drips and Blotlings come in **crimson**, which need two completions in a row, or **violet**, which need three. Dots above them show how many are left. From chapter 3, **ghosts** in invisible ink hide their text until they're halfway across the page.
 
 ### Word lists
 

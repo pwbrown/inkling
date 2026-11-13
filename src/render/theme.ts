@@ -15,6 +15,10 @@ type Palette = {
   pencil: number;
   /** Text drawn on top of ink (target labels). */
   label: number;
+  /** Crimson ink: creatures that need two completions. */
+  inkCrimson: number;
+  /** Violet ink: creatures that need three completions. */
+  inkViolet: number;
 };
 
 /**
@@ -33,6 +37,8 @@ export const PALETTES: Record<ThemeId, Palette> = {
     highlighter: 0xffe066,
     pencil: 0x5b5b5b,
     label: 0xf7f1e3,
+    inkCrimson: 0xa3203a,
+    inkViolet: 0x5b2a86,
   },
   // Maximum contrast: pure black on white, with a strong blue margin.
   contrast: {
@@ -46,6 +52,8 @@ export const PALETTES: Record<ThemeId, Palette> = {
     highlighter: 0xffd400,
     pencil: 0x333333,
     label: 0xffffff,
+    inkCrimson: 0xb00020,
+    inkViolet: 0x5a00a0,
   },
   // Dark paper, pale ink (DESIGN §7, "night mode").
   night: {
@@ -59,6 +67,8 @@ export const PALETTES: Record<ThemeId, Palette> = {
     highlighter: 0x8a6d00,
     pencil: 0xa8a8a8,
     label: 0x1d2130,
+    inkCrimson: 0xff9aa8,
+    inkViolet: 0xcfb2ff,
   },
 };
 

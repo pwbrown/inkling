@@ -220,6 +220,7 @@ export class Menu {
         'how.creaturesTitle',
         h('ul', { className: 'how-list' }, (['how.drip', 'how.blotling', 'how.runon', 'how.misprint'] as const).map((k) => h('li', {}, [t(k)]))),
       ),
+      section('how.variantsTitle', p('how.variants')),
       section('how.keysTitle', p('how.keys')),
       section('how.controlsTitle', p('how.controls')),
       h('div', { className: 'tc-actions' }, [

@@ -184,6 +184,8 @@ export const en = {
   'how.blotling': 'Blotlings carry a word. Your first letter locks on; finish the word to blot it.',
   'how.runon': 'Run-ons carry a short phrase. Mistakes stay in red until you Backspace them away.',
   'how.misprint': 'Misprints are stamped with a typo. Fix the word with the arrow keys, Backspace and Delete.',
+  'how.variantsTitle': 'Tougher ink',
+  'how.variants': 'Later chapters bring tougher creatures. Crimson ones need two in a row (the dots show how many are left), violet ones need three, and invisible-ink ghosts hide their text until they’re halfway across the page.',
   'how.controlsTitle': 'Controls',
   'how.controls': 'Type to hit targets · Tab switches target · Esc pauses · Backspace, Delete, ← → fix mistakes',
   'how.keysTitle': 'Your keys',

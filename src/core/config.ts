@@ -45,13 +45,15 @@ export interface DifficultyProfile {
   complexity: number;
   /** Multiplies ink lost per margin hit. */
   inkLoss: number;
+  /** Multiplies the chance of tougher variants (crimson, violet, ghost). */
+  variants: number;
 }
 
 export const DIFFICULTY_PROFILES: Record<Difficulty, DifficultyProfile> = {
-  relaxed: { speed: 0.75, spawnInterval: 1.3, maxOnScreen: -1, complexity: -0.1, inkLoss: 0.5 },
-  normal: { speed: 1, spawnInterval: 1, maxOnScreen: 0, complexity: 0, inkLoss: 1 },
-  hard: { speed: 1.25, spawnInterval: 0.8, maxOnScreen: 1, complexity: 0.15, inkLoss: 1.25 },
-  expert: { speed: 1.5, spawnInterval: 0.65, maxOnScreen: 2, complexity: 0.3, inkLoss: 1.5 },
+  relaxed: { speed: 0.75, spawnInterval: 1.3, maxOnScreen: -1, complexity: -0.1, inkLoss: 0.5, variants: 0.5 },
+  normal: { speed: 1, spawnInterval: 1, maxOnScreen: 0, complexity: 0, inkLoss: 1, variants: 1 },
+  hard: { speed: 1.25, spawnInterval: 0.8, maxOnScreen: 1, complexity: 0.15, inkLoss: 1.25, variants: 1.3 },
+  expert: { speed: 1.5, spawnInterval: 0.65, maxOnScreen: 2, complexity: 0.3, inkLoss: 1.5, variants: 1.6 },
 };
 
 interface KindSettings {
@@ -170,6 +172,22 @@ export const GAME_CONFIG = {
     { grade: 'F', minAccuracy: 0 },
   ],
 
+  /**
+   * Tougher variants (Typer Shark style, in ink colors): crimson creatures
+   * need 2 completions in a row, violet ones 3, and ghosts (invisible ink)
+   * hide their text until `revealAt` of the way across the page.
+   * Chances are per spawn: `start` from chapter `fromChapter` (0-based),
+   * plus `perChapter` after that, capped at `max`, then scaled by difficulty.
+   */
+  variants: {
+    kinds: ['drip', 'blotling'] as TargetKind[],
+    crimson: { fromChapter: 1, start: 0.1, perChapter: 0.04, max: 0.3 },
+    violet: { fromChapter: 2, start: 0.05, perChapter: 0.03, max: 0.18 },
+    ghost: { fromChapter: 2, start: 0.08, perChapter: 0.03, max: 0.25 },
+    /** Ghost text appears once the creature is this far from the left edge (fraction of page width). */
+    revealAt: 0.55,
+  },
+
   /** Each target's speed varies randomly by up to ±this fraction. */
   speedJitter: 0.15,
   /** Empty space to keep behind the last target in a lane before spawning another. */
@@ -191,6 +209,27 @@ export interface PageParams {
   /** Word difficulty, 0 (easiest) to 1 (hardest). */
   complexity: number;
   inkLoss: number;
+  /** Chance per spawn of each tougher variant. */
+  variants: VariantChances;
+}
+
+export interface VariantChances {
+  /** Needs 2 completions in a row. */
+  crimson: number;
+  /** Needs 3 completions in a row. */
+  violet: number;
+  /** Text hidden until halfway (independent of the other two). */
+  ghost: number;
+}
+
+/** Variant chances for a target type, chapter and difficulty. */
+export function variantChances(kind: TargetKind, chapter: number, difficulty: Difficulty): VariantChances {
+  const v = GAME_CONFIG.variants;
+  if (!v.kinds.includes(kind)) return { crimson: 0, violet: 0, ghost: 0 };
+  const scale = DIFFICULTY_PROFILES[difficulty].variants;
+  const chance = (c: { fromChapter: number; start: number; perChapter: number; max: number }) =>
+    chapter < c.fromChapter ? 0 : Math.min(c.max, c.start + c.perChapter * (chapter - c.fromChapter)) * scale;
+  return { crimson: chance(v.crimson), violet: chance(v.violet), ghost: chance(v.ghost) };
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -232,5 +271,6 @@ export function pageParams(
       1,
     ),
     inkLoss: Math.round(base.inkLoss * profile.inkLoss),
+    variants: variantChances(kind, chapter, difficulty),
   };
 }

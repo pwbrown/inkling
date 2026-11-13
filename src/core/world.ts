@@ -45,6 +45,13 @@ export interface Target {
   buffer?: string;
   /** Buffer-mode targets only: cursor position in the buffer. */
   cursor?: number;
+  /**
+   * Completions still needed: 1 normally, 2 for crimson, 3 for violet. Each
+   * completion but the last brings a fresh payload on the same creature.
+   */
+  lives: number;
+  /** Invisible ink: the text stays hidden until the creature is halfway across. */
+  ghost: boolean;
   /** Current position (left edge of the target body). */
   x: number;
   y: number;
@@ -62,6 +69,8 @@ export type GameEvent =
   | { type: 'locked'; targetId: number }
   | { type: 'progress'; targetId: number }
   | { type: 'destroyed'; target: Target; points: number }
+  /** A crimson or violet creature lost a life and got a new payload. */
+  | { type: 'hit'; target: Target; points: number }
   | { type: 'marginHit'; target: Target; inkLost: number }
   | { type: 'error'; key: string; targetId: number | null }
   | { type: 'phase'; phase: GamePhase }
@@ -264,6 +273,14 @@ function freeLanes(world: World): number[] {
   return lanes;
 }
 
+/** Ghost text shows once the creature has crossed this x. */
+export const GHOST_REVEAL_X = WORLD_WIDTH * GAME_CONFIG.variants.revealAt;
+
+/** Whether the player can read (and so type) a target's text yet. */
+export function isRevealed(target: Pick<Target, 'ghost' | 'x'>): boolean {
+  return !target.ghost || target.x < GHOST_REVEAL_X;
+}
+
 /** Up to this many re-rolls to avoid two targets starting with the same character. */
 const DISTINCT_FIRST_CHAR_TRIES = 6;
 
@@ -310,6 +327,11 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
   const { kind, speed } = world.page.params;
   const jitter = GAME_CONFIG.speedJitter;
   const lane = overrides.lane ?? pick(lanes, world.random);
+  // Tougher variants (config.variants): roll lives, then ghost.
+  const { crimson, violet, ghost } = world.page.params.variants;
+  const roll = world.random();
+  const lives = roll < violet ? 3 : roll < violet + crimson ? 2 : 1;
+  const isGhost = world.random() < ghost;
   // Never faster than the target ahead in the same lane, so they can't overlap.
   const leaderSpeed = Math.min(...world.targets.filter((t) => t.lane === lane).map((t) => t.speed));
   const target: Target = {
@@ -322,6 +344,8 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
     y: laneY(lane, world.laneStep),
     lane,
     speed: Math.min(leaderSpeed, speed * (1 + (world.random() * 2 - 1) * jitter)),
+    lives,
+    ghost: isGhost,
     ...overrides,
   };
   world.targets.push(target);
@@ -340,6 +364,15 @@ function updateSpawner(world: World, stepMs: number): void {
     page.spawned++;
     page.spawnTimerMs = spawnIntervalMs;
   }
+}
+
+/**
+ * A crimson or violet creature was completed but has lives left: give it a
+ * fresh payload of the same kind, keeping its place on the page.
+ */
+export function nextLife(world: World, target: Target): void {
+  target.lives = Math.max(1, target.lives - 1);
+  Object.assign(target, payloadFor(world, target.kind), { typed: 0 });
 }
 
 /** Advance the simulation by one fixed step. Does nothing unless playing. */

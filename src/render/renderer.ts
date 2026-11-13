@@ -2,11 +2,10 @@
  * PixiJS renderer for the play field (REQUIREMENTS §7). Reads game state and
  * events and draws them; it never changes game state.
  *
- * The art is simple placeholder vector shapes in the Inkwell style
- * (DESIGN §7), to be swapped for hand-drawn art later.
+ * The creatures are drawn procedurally in src/render/creatures/ in the
+ * Inkwell style (DESIGN §5, §7).
  */
-import { Application, CanvasTextMetrics, Container, Graphics, Text, TextStyle } from 'pixi.js';
-import { editDistance } from '../core/editing';
+import { Application, Container, Graphics } from 'pixi.js';
 import {
   FIRST_LINE_Y,
   LINE_SPACING,
@@ -22,28 +21,11 @@ import {
 import { Effects } from './effects';
 import { Hud } from './hud';
 import { Overlay, type OverlayActions } from './overlay';
-import { COLORS, MONO_FONT, TEXT_FONT, glyph, prefersReducedMotion } from './theme';
+import { createCreature, type CreatureView } from './creatures';
+import { COLORS, prefersReducedMotion } from './theme';
 
 const NIB_LENGTH = 56;
 const NIB_HOME = { x: MARGIN_X - 90, y: WORLD_HEIGHT / 2 };
-const DRIP_RADIUS = 22;
-const BLOT_HEIGHT = 46;
-const BLOT_PAD_X = 18;
-
-interface TargetView {
-  root: Container;
-  highlight: Graphics;
-  typedLabel: Text;
-  restLabel: Text;
-  typed: number;
-  /** Left padding before the label (scaled). */
-  padX: number;
-  /** Body size, for centering effects. */
-  width: number;
-  height: number;
-  /** Buffer-mode targets redraw themselves when their buffer changes. */
-  update?: (target: Target) => void;
-}
 
 export interface Renderer {
   app: Application;
@@ -86,211 +68,6 @@ function drawNib(): Graphics {
     .fill(COLORS.paper);
 }
 
-function labelStyle(fill: number, fontSize: number) {
-  return { fontFamily: TEXT_FONT, fontSize, fontWeight: '600' as const, fill };
-}
-
-function createTargetView(target: Target, scale: number): TargetView {
-  if (target.kind === 'runon') return createRunonView(target, scale);
-  if (target.kind === 'misprint') return createMisprintView(target, scale);
-  const root = new Container();
-  const highlight = new Graphics();
-  const body = new Graphics();
-  const isDrip = target.kind === 'drip';
-  const fontSize = (isDrip ? 24 : 26) * scale;
-  const padX = BLOT_PAD_X * scale;
-  const typedLabel = new Text({ text: '', style: labelStyle(COLORS.inkFaded, fontSize) });
-  const restLabel = new Text({ text: glyph(target.text), style: labelStyle(COLORS.label, fontSize) });
-  typedLabel.anchor.set(0, 0.5);
-  restLabel.anchor.set(0, 0.5);
-
-  let width: number;
-  let height: number;
-
-  if (isDrip) {
-    // A teardrop with its tail trailing to the right as it moves left.
-    const r = DRIP_RADIUS * scale;
-    width = r * 2 + 14;
-    height = r * 2;
-    body
-      .circle(r, 0, r)
-      .poly([r + r * 0.6, -r * 0.8, width, 0, r + r * 0.6, r * 0.8])
-      .fill(COLORS.ink);
-    restLabel.anchor.set(0.5, 0.5);
-    restLabel.position.set(r, 1);
-    highlight.circle(r, 0, r + 8).fill({ color: COLORS.highlighter, alpha: 0.8 });
-  } else {
-    // A lumpy ink blot sized to fit its word: a Blotling (DESIGN §5).
-    width = restLabel.width + padX * 2;
-    height = BLOT_HEIGHT * scale;
-    body
-      .roundRect(0, -height / 2, width, height, height / 2)
-      .fill(COLORS.ink)
-      .circle(width * 0.25, height / 2 + 2, 5)
-      .fill(COLORS.inkLight)
-      .circle(width * 0.7, height / 2 + 4, 4)
-      .fill(COLORS.inkLight)
-      .circle(width - 6, -height / 2 + 4, 6)
-      .fill(COLORS.ink);
-    typedLabel.position.set(padX, 0);
-    restLabel.position.set(padX, 0);
-    highlight
-      .roundRect(-8, -height / 2 - 8, width + 16, height + 16, (height + 16) / 2)
-      .fill({ color: COLORS.highlighter, alpha: 0.8 });
-  }
-
-  highlight.visible = false;
-  root.addChild(highlight, body, typedLabel, restLabel);
-  return { root, highlight, typedLabel, restLabel, typed: 0, padX, width, height };
-}
-
-const measure = (text: string, style: TextStyle) => CanvasTextMetrics.measureText(text, style).width;
-
-/**
- * A Run-on (DESIGN §5): a segmented ink creature carrying a phrase. Typed
- * text greys out; mistakes appear in red, struck through, until erased with
- * Backspace; a caret marks where the next character goes.
- */
-function createRunonView(target: Target, scale: number): TargetView {
-  const root = new Container();
-  const highlight = new Graphics();
-  const body = new Graphics();
-  const marks = new Graphics();
-  const fontSize = 24 * scale;
-  const padX = BLOT_PAD_X * scale;
-  const height = BLOT_HEIGHT * scale;
-  const styles = {
-    ok: new TextStyle(labelStyle(COLORS.inkFaded, fontSize)),
-    bad: new TextStyle(labelStyle(COLORS.margin, fontSize)),
-    rest: new TextStyle(labelStyle(COLORS.label, fontSize)),
-  };
-  const ok = new Text({ text: '', style: styles.ok });
-  const bad = new Text({ text: '', style: styles.bad });
-  const rest = new Text({ text: '', style: styles.rest });
-  for (const t of [ok, bad, rest]) t.anchor.set(0, 0.5);
-  root.addChild(highlight, body, ok, bad, rest, marks);
-
-  const view: TargetView = { root, highlight, typedLabel: ok, restLabel: rest, typed: -1, padX, width: 0, height };
-  let shown = '';
-  view.update = (t) => {
-    const buffer = t.buffer ?? '';
-    if (buffer === shown && view.width > 0) return;
-    shown = buffer;
-    const chars = [...t.text];
-    const okText = chars.slice(0, t.typed).join('');
-    const badText = [...buffer].slice(t.typed).join('');
-    const restText = chars.slice(t.typed).join('');
-    ok.text = okText;
-    bad.text = badText;
-    rest.text = restText;
-    ok.x = padX;
-    bad.x = ok.x + measure(okText, styles.ok);
-    rest.x = bad.x + measure(badText, styles.bad) + (badText ? 6 * scale : 0);
-    const width = rest.x + measure(restText, styles.rest) + padX;
-    view.width = width;
-
-    // Body: one long blot with a bump and a pair of legs per word.
-    body.clear().roundRect(0, -height / 2, width, height, height / 2).fill(COLORS.ink);
-    const words = Math.max(1, t.text.split(' ').length);
-    for (let i = 0; i < words; i++) {
-      const cx = ((i + 0.5) / words) * width;
-      body
-        .circle(cx, -height / 2 + 2, 6 * scale)
-        .fill(COLORS.ink)
-        .circle(cx - 8 * scale, height / 2 + 3, 3.5 * scale)
-        .fill(COLORS.inkLight)
-        .circle(cx + 8 * scale, height / 2 + 3, 3.5 * scale)
-        .fill(COLORS.inkLight);
-    }
-    highlight
-      .clear()
-      .roundRect(-8, -height / 2 - 8, width + 16, height + 16, (height + 16) / 2)
-      .fill({ color: COLORS.highlighter, alpha: 0.8 });
-
-    // Strike through mistakes (shape, not just color) and draw the caret.
-    marks.clear();
-    if (badText) {
-      marks.moveTo(bad.x, 1).lineTo(bad.x + measure(badText, styles.bad), 1).stroke({ width: 2.5 * scale, color: COLORS.margin });
-    }
-    const caretX = rest.x - (badText ? 3 * scale : 0);
-    marks.moveTo(caretX, -fontSize * 0.55).lineTo(caretX, fontSize * 0.55).stroke({ width: 2, color: COLORS.highlighter });
-  };
-  view.update(target);
-  highlight.visible = false;
-  return view;
-}
-
-/**
- * A Misprint (DESIGN §5): a crooked rubber stamp with an editable word and a
- * text caret. The correct spelling is pencilled above it. The stamp
- * straightens as the word gets closer to right.
- */
-function createMisprintView(target: Target, scale: number): TargetView {
-  const root = new Container();
-  const stamp = new Container();
-  const highlight = new Graphics();
-  const body = new Graphics();
-  const caret = new Graphics();
-  const fontSize = 26 * scale;
-  const padX = BLOT_PAD_X * scale;
-  const height = BLOT_HEIGHT * scale;
-  const style = new TextStyle({ ...labelStyle(COLORS.ink, fontSize), fontFamily: MONO_FONT });
-  const label = new Text({ text: '', style });
-  label.anchor.set(0, 0.5);
-  const hint = new Text({ text: target.text, style: labelStyle(COLORS.pencil, 15 * scale) });
-  hint.anchor.set(0, 1);
-  stamp.addChild(highlight, body, label, caret);
-  root.addChild(stamp, hint);
-
-  const view: TargetView = { root, highlight, typedLabel: label, restLabel: label, typed: -1, padX, width: 0, height };
-  let shown = '';
-  view.update = (t) => {
-    const buffer = t.buffer ?? '';
-    const key = `${buffer}|${t.cursor}`;
-    if (key === shown && view.width > 0) return;
-    shown = key;
-    label.text = buffer;
-    label.x = padX;
-    const width = Math.max(measure(buffer, style), measure(t.text, style)) + padX * 2;
-    view.width = width;
-    stamp.pivot.set(width / 2, 0);
-    stamp.x = width / 2;
-    stamp.rotation = -0.07 * Math.min(1, editDistance(buffer, t.text) / 2);
-    hint.position.set(padX, -height / 2 - 4);
-
-    body
-      .clear()
-      .roundRect(0, -height / 2, width, height, 6)
-      .fill(COLORS.paper)
-      .stroke({ width: 3, color: COLORS.margin })
-      .roundRect(4, -height / 2 + 4, width - 8, height - 8, 4)
-      .stroke({ width: 1, color: COLORS.margin });
-    highlight
-      .clear()
-      .roundRect(-8, -height / 2 - 8, width + 16, height + 16, 12)
-      .fill({ color: COLORS.highlighter, alpha: 0.8 });
-
-    const caretX = padX + measure([...buffer].slice(0, t.cursor ?? 0).join(''), style);
-    caret.clear().moveTo(caretX, -fontSize * 0.6).lineTo(caretX, fontSize * 0.6).stroke({ width: 2.5, color: COLORS.margin });
-  };
-  view.update(target);
-  highlight.visible = false;
-  return view;
-}
-
-/** Grey out the typed part of a word and keep the rest in place. */
-function updateLabels(view: TargetView, target: Target): void {
-  if (view.update) {
-    view.update(target);
-    return;
-  }
-  if (view.typed === target.typed || target.kind === 'drip') return;
-  view.typed = target.typed;
-  view.typedLabel.text = target.text.slice(0, target.typed);
-  view.restLabel.text = target.text.slice(target.typed);
-  view.restLabel.x = view.padX + (target.typed > 0 ? view.typedLabel.width : 0);
-}
-
 /** Exponential smoothing that behaves the same at any frame rate. */
 function approach(current: number, goal: number, rate: number, dtMs: number): number {
   return goal + (current - goal) * Math.exp(-rate * (dtMs / 1000));
@@ -320,7 +97,8 @@ export async function createRenderer(
   // Everything is drawn in logical world units, then scaled to fit the window.
   const stage = new Container();
   app.stage.addChild(stage);
-  const views = new Map<number, TargetView>();
+  const views = new Map<number, CreatureView>();
+  let timeMs = 0;
 
   // The scene is rebuilt from scratch when display settings change.
   let reducedMotion = false;
@@ -367,7 +145,7 @@ export async function createRenderer(
   let wobbleMs = 0;
   let lastPhase: GamePhase | null = null;
 
-  const center = (target: Target, view: TargetView | undefined) => ({
+  const center = (target: Target, view: CreatureView | undefined) => ({
     x: target.x + (view ? view.width / 2 : 0),
     y: target.y - LINE_SPACING / 2,
   });
@@ -377,6 +155,13 @@ export async function createRenderer(
       case 'destroyed': {
         const at = center(event.target, views.get(event.target.id));
         effects.splatter(at.x, at.y);
+        effects.popup(at.x, at.y - 30, `+${event.points}`);
+        break;
+      }
+      case 'hit': {
+        // A crimson or violet creature lost a life: a small splash, and it carries on.
+        const at = center(event.target, views.get(event.target.id));
+        effects.splatter(at.x, at.y, 5);
         effects.popup(at.x, at.y - 30, `+${event.points}`);
         break;
       }
@@ -414,23 +199,30 @@ export async function createRenderer(
       for (const event of world.events) handleEvent(world, event);
       world.events.length = 0;
 
-      // Targets.
+      // Creatures. Animation time only runs while playing, so they freeze when paused.
+      if (world.phase === 'playing') timeMs += frameMs;
       const live = new Set<number>();
       let locked: { x: number; y: number } | null = null;
       for (const target of world.targets) {
         live.add(target.id);
         let view = views.get(target.id);
         if (!view) {
-          view = createTargetView(target, textScale);
+          view = createCreature(target, textScale);
           views.set(target.id, view);
           targetLayer.addChild(view.root);
         }
-        updateLabels(view, target);
         const x = renderX(target, alpha);
         const y = target.y - LINE_SPACING / 2;
         view.root.position.set(x, y);
         const isLocked = target.id === world.lockedId;
-        view.highlight.visible = isLocked;
+        view.update(target, {
+          timeMs,
+          dtMs: frameMs,
+          locked: isLocked,
+          lookX: nib.x - x,
+          lookY: nib.y - y,
+          reducedMotion,
+        });
         if (isLocked) locked = { x, y };
       }
       for (const [id, view] of views) {

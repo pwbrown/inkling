@@ -448,6 +448,7 @@ async function main(): Promise<void> {
     locked: 'key',
     progress: 'key',
     destroyed: 'pop',
+    hit: 'pop',
     error: 'error',
     marginHit: 'leak',
   };

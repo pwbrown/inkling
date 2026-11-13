@@ -252,13 +252,8 @@ export class Overlay {
       });
       glyphText.anchor.set(0.5);
       const rx = Math.max(18, glyphText.width / 2 + 12);
-      // Hand-drawn feel: a slightly tilted, overlapping double stroke.
-      const ring = new Graphics()
-        .ellipse(0, 0, rx, 18)
-        .stroke({ width: 2.5, color: COLORS.margin })
-        .ellipse(1.5, -1, rx + 2, 17)
-        .stroke({ width: 1, color: COLORS.margin, alpha: 0.6 });
-      ring.rotation = -0.08;
+      // A clean red circle, like a teacher's pen mark.
+      const ring = new Graphics().ellipse(0, 0, rx, 18).stroke({ width: 2.5, color: COLORS.margin });
       item.addChild(ring, glyphText);
       items.push(item);
     }
