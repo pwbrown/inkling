@@ -34,6 +34,7 @@ export function createDrip(target: Target, scale: number): CreatureView {
     highlight,
     width,
     height,
+    letterX: () => r,
     update(t: Target, ctx: FrameContext) {
       const { mood: m, blink, hurtMs } = mood.update(t, ctx);
       if (t.text !== shown) {

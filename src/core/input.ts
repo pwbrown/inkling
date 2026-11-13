@@ -101,7 +101,7 @@ export function useBlotter(world: World): boolean {
       s.score += points;
       s.destroyed++;
     });
-    world.events.push({ type: 'destroyed', target, points });
+    world.events.push({ type: 'destroyed', target, points, blotted: true });
   }
   world.targets = world.targets.filter((t) => !victims.includes(t));
   if (!world.targets.some((t) => t.id === world.lockedId)) world.lockedId = null;
@@ -119,6 +119,9 @@ function destroyTarget(world: World, target: Target, scoreBefore: number): void 
   });
   if (target.lives > 1) {
     nextLife(world, target);
+    // Let go between words, so the player can switch to another creature
+    // (typing this one's next first letter picks it up again).
+    world.lockedId = null;
     world.events.push({ type: 'hit', target, points: world.stats.score - scoreBefore });
     return;
   }
@@ -167,7 +170,7 @@ function editBuffer(world: World, target: Target, action: EditAction): void {
   target.typed = correctPrefix(next.buffer, target.text);
 
   if (!isTextEdit(action) || next.buffer === before) {
-    world.events.push({ type: 'progress', targetId: target.id });
+    world.events.push({ type: 'progress', targetId: target.id, shot: false });
     return;
   }
 
@@ -195,7 +198,7 @@ function editBuffer(world: World, target: Target, action: EditAction): void {
   }
 
   if (next.buffer === target.text) destroyTarget(world, target, scoreBefore);
-  else world.events.push({ type: 'progress', targetId: target.id });
+  else world.events.push({ type: 'progress', targetId: target.id, shot: correct && char !== null });
 }
 
 /** The target an edit key (Backspace, arrows…) applies to: the locked one, or the most urgent Misprint. */
@@ -244,7 +247,7 @@ export function typeChar(world: World, key: string): void {
   registerHit(world, key);
 
   if (target.typed < target.text.length) {
-    world.events.push({ type: 'progress', targetId: target.id });
+    world.events.push({ type: 'progress', targetId: target.id, shot: true });
     return;
   }
   destroyTarget(world, target, scoreBefore);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createContentSource } from '../content/contentSource';
+import { APPRENTICE_CHAPTERS, apprenticeKeys } from '../core/campaign';
 import { createStats } from '../core/stats';
 import { createPage, createWorld } from '../core/world';
 import {
@@ -97,9 +98,9 @@ describe('recordApprenticePage', () => {
 
   it('marks the notebook complete after the last chapter', () => {
     const save = defaultSave();
-    recordApprenticePage(save, 9, 4, 3, true);
+    recordApprenticePage(save, APPRENTICE_CHAPTERS - 1, 4, 3, true);
     expect(save.apprentice.completed).toBe(true);
-    expect(save.apprentice.unlocked).toBe(10);
+    expect(save.apprentice.unlocked).toBe(APPRENTICE_CHAPTERS);
   });
 });
 
@@ -115,6 +116,6 @@ describe('continuing an Apprentice notebook', () => {
     continueNotebook(resumed, saved);
     expect(resumed.mode).toBe('apprentice');
     expect(resumed.page.chapter).toBe(4);
-    expect(resumed.keys).toContain('w');
+    expect(resumed.keys).toEqual(apprenticeKeys(4));
   });
 });

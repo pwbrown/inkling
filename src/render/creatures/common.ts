@@ -26,6 +26,20 @@ export interface CreatureView {
   width: number;
   height: number;
   update(target: Target, ctx: FrameContext): void;
+  /**
+   * Horizontal center of the letter at `index` in the text currently shown,
+   * relative to the creature's origin (-1 = the last letter). Ink shots aim here.
+   */
+  letterX(index: number): number;
+}
+
+/** Center of character `index` (-1 = last) in `text` drawn from x = `left`. */
+export function letterCenter(text: string, index: number, left: number, style: TextStyle): number {
+  const chars = [...text];
+  if (chars.length === 0) return left;
+  const i = index < 0 || index >= chars.length ? chars.length - 1 : index;
+  const before = chars.slice(0, i).join('');
+  return left + measure(before, style) + measure(chars[i]!, style) / 2;
 }
 
 export type Mood = 'calm' | 'worried' | 'scared' | 'happy' | 'hurt' | 'angry';

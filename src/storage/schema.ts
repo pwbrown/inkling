@@ -9,7 +9,7 @@ import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
 import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from '../core/config';
 import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -258,6 +258,14 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
   }),
   // v4 added ink (XP) and cosmetics.
   3: (save) => ({ ...save, version: 4, profile: { ink: 0, cosmetics: { ...DEFAULT_COSMETICS } } }),
+  // v5 rebuilt the Apprentice course (one key per chapter), so its old
+  // chapter progress and stars no longer line up: start it fresh.
+  4: (save) => ({
+    ...save,
+    version: 5,
+    apprentice: { unlocked: 1, stars: {}, completed: false },
+    notebook: isObject(save.notebook) && save.notebook.mode === 'apprentice' ? null : save.notebook,
+  }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

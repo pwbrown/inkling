@@ -23,7 +23,9 @@ import { Hud } from './hud';
 import { Overlay, type OverlayActions } from './overlay';
 import { DEFAULT_COSMETICS, type Cosmetics } from '../core/rewards';
 import { t } from '../i18n';
+import { intercept, type Point } from './aim';
 import { createCreature, type CreatureView } from './creatures';
+import { InkShots, SHOT_SPEED } from './shots';
 import { COLORS, prefersReducedMotion } from './theme';
 
 const NIB_LENGTH = 56;
@@ -162,6 +164,9 @@ export async function createRenderer(
   let reducedMotion = false;
   let textScale = 1;
   let effects!: Effects;
+  let shots!: InkShots;
+  /** Creatures already finished in the game, still on screen until the final drop of ink lands. */
+  let dying: { view: CreatureView; x: number; y: number; speed: number }[] = [];
   let guide!: Graphics;
   let targetLayer!: Container;
   let nib!: Graphics;
@@ -174,16 +179,30 @@ export async function createRenderer(
     const cosmetics = options.cosmetics ?? DEFAULT_COSMETICS;
     for (const child of stage.removeChildren()) child.destroy({ children: true });
     views.clear();
+    dying = [];
     app.renderer.background.color = COLORS.desk;
 
     effects = new Effects(reducedMotion, splatterColor(cosmetics.splatter));
+    shots = new InkShots(reducedMotion, splatterColor(cosmetics.splatter));
     guide = new Graphics();
     targetLayer = new Container();
+    // The locked creature is drawn on top of any it overlaps.
+    targetLayer.sortableChildren = true;
     nib = drawNib(cosmetics.nib);
     nib.position.set(NIB_HOME.x, NIB_HOME.y);
     hud = new Hud();
     overlay = new Overlay(actions);
-    stage.addChild(drawPage(cosmetics.paper), effects.stainLayer, guide, targetLayer, nib, effects.particleLayer, hud.root, overlay.root);
+    stage.addChild(
+      drawPage(cosmetics.paper),
+      effects.stainLayer,
+      guide,
+      targetLayer,
+      nib,
+      shots.layer,
+      effects.particleLayer,
+      hud.root,
+      overlay.root,
+    );
 
     // Clip anything outside the page (targets spawn off the right edge).
     const mask = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(0xffffff);
@@ -203,6 +222,8 @@ export async function createRenderer(
 
   let shakeMs = 0;
   let wobbleMs = 0;
+  /** The Nib kicks back a little each time it fires. */
+  let kickMs = 0;
   let lastPhase: GamePhase | null = null;
 
   const center = (target: Target, view: CreatureView | undefined) => ({
@@ -210,19 +231,94 @@ export async function createRenderer(
     y: target.y - LINE_SPACING / 2,
   });
 
+  /** Where the Nib's tip is now. */
+  const nibTip = (): Point => ({
+    x: nib.x + Math.cos(nib.rotation) * NIB_LENGTH,
+    y: nib.y + Math.sin(nib.rotation) * NIB_LENGTH,
+  });
+
+  /**
+   * Flick a drop of ink from the Nib at a creature's letter, leading it so
+   * the ink meets the letter where it will be (see aim.ts). `missBy` sends it
+   * that far above or below instead.
+   */
+  const shoot = (
+    from: { x: number; y: number; speed: number },
+    view: CreatureView,
+    letter: number,
+    onLand: (at: Point) => void,
+    missBy = 0,
+  ): void => {
+    const point = { x: from.x + view.letterX(letter), y: from.y - LINE_SPACING / 2 + missBy };
+    const aim = intercept(nibTip(), point, -from.speed, 0, SHOT_SPEED);
+    kickMs = reducedMotion ? 0 : 90;
+    shots.fire(nibTip(), aim, aim.t, onLand);
+  };
+
+  /** A wrong key still fires, but the ink misses and splats on the page. */
+  const missShot = (world: World, targetId: number | null): void => {
+    const visible = world.targets.filter((t) => t.x < WORLD_WIDTH);
+    const target =
+      world.targets.find((t) => t.id === targetId) ??
+      visible.reduce<Target | undefined>((best, t) => (!best || t.x < best.x ? t : best), undefined);
+    const view = target && views.get(target.id);
+    const splat = (at: Point) => {
+      effects.smudge(at.x, at.y);
+      effects.splatter(at.x, at.y, 3);
+    };
+    if (target && view) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      shoot(target, view, target.typed, splat, side * (30 + Math.random() * 16));
+      return;
+    }
+    // Nothing to aim at: the ink flies out across the page.
+    const to = { x: nib.x + 300 + Math.random() * 400, y: nib.y + (Math.random() - 0.5) * 160 };
+    const tip = nibTip();
+    kickMs = reducedMotion ? 0 : 90;
+    shots.fire(tip, to, Math.hypot(to.x - tip.x, to.y - tip.y) / SHOT_SPEED, splat);
+  };
+
   const handleEvent = (world: World, event: GameEvent) => {
     switch (event.type) {
+      case 'progress': {
+        // Each correct key flicks ink at the letter just typed.
+        if (!event.shot) break;
+        const target = world.targets.find((t) => t.id === event.targetId);
+        const view = target && views.get(target.id);
+        if (target && view) shoot(target, view, target.typed - 1, (at) => effects.splatter(at.x, at.y, 2));
+        break;
+      }
       case 'destroyed': {
-        const at = center(event.target, views.get(event.target.id));
-        effects.splatter(at.x, at.y);
-        effects.popup(at.x, at.y - 30, `+${event.points}`);
+        const view = views.get(event.target.id);
+        const finish = (at: { x: number; y: number }) => {
+          effects.splatter(at.x, at.y);
+          effects.popup(at.x, at.y - 30, `+${event.points}`);
+        };
+        if (event.blotted || !view || reducedMotion) {
+          finish(center(event.target, view));
+          break;
+        }
+        // Keep the creature crawling until the final drop of ink reaches it.
+        views.delete(event.target.id);
+        const ghost = { view, x: event.target.x, y: event.target.y, speed: event.target.speed };
+        dying.push(ghost);
+        shoot(ghost, view, -1, () => {
+          finish({ x: ghost.x + view.width / 2, y: ghost.y - LINE_SPACING / 2 });
+          view.root.destroy({ children: true });
+          dying = dying.filter((d) => d !== ghost);
+        });
         break;
       }
       case 'hit': {
-        // A crimson or violet creature lost a life: a small splash, and it carries on.
-        const at = center(event.target, views.get(event.target.id));
-        effects.splatter(at.x, at.y, 5);
-        effects.popup(at.x, at.y - 30, `+${event.points}`);
+        // A crimson or violet creature lost a life: the ink lands on its last letter, then it carries on.
+        const view = views.get(event.target.id);
+        const splash = () => {
+          const at = center(event.target, views.get(event.target.id));
+          effects.splatter(at.x, at.y, 5);
+          effects.popup(at.x, at.y - 30, `+${event.points}`);
+        };
+        if (view && !reducedMotion) shoot(event.target, view, -1, splash);
+        else splash();
         break;
       }
       case 'boss':
@@ -245,9 +341,14 @@ export async function createRenderer(
         if (!reducedMotion) shakeMs = 300;
         break;
       case 'error': {
-        const target = world.targets.find((t) => t.id === event.targetId);
-        const at = target ? center(target, views.get(target.id)) : { x: nib.x + 30, y: nib.y };
-        effects.smudge(at.x, at.y);
+        // Typed characters fire a miss; other mistakes (in a Misprint) just smudge.
+        if ([...event.key].length === 1) {
+          missShot(world, event.targetId);
+        } else {
+          const target = world.targets.find((t) => t.id === event.targetId);
+          const at = target ? center(target, views.get(target.id)) : { x: nib.x + 30, y: nib.y };
+          effects.smudge(at.x, at.y);
+        }
         if (!reducedMotion) wobbleMs = 180;
         break;
       }
@@ -261,9 +362,10 @@ export async function createRenderer(
       case 'reset':
         // A restarted or abandoned page starts clean.
         effects.clearStains();
+        for (const d of dying) d.view.root.destroy({ children: true });
+        dying = [];
         break;
       case 'locked':
-      case 'progress':
         break;
     }
   };
@@ -290,6 +392,7 @@ export async function createRenderer(
         const y = target.y - LINE_SPACING / 2;
         view.root.position.set(x, y);
         const isLocked = target.id === world.lockedId;
+        view.root.zIndex = isLocked ? 1 : 0;
         view.update(target, {
           timeMs,
           dtMs: frameMs,
@@ -315,7 +418,11 @@ export async function createRenderer(
 
       shakeMs = Math.max(0, shakeMs - frameMs);
       wobbleMs = Math.max(0, wobbleMs - frameMs);
-      nib.x = NIB_HOME.x + (shakeMs > 0 ? Math.sin(shakeMs / 18) * 6 * (shakeMs / 300) : 0);
+      kickMs = Math.max(0, kickMs - frameMs);
+      nib.x =
+        NIB_HOME.x +
+        (shakeMs > 0 ? Math.sin(shakeMs / 18) * 6 * (shakeMs / 300) : 0) -
+        (kickMs > 0 ? Math.cos(nib.rotation) * 5 * (kickMs / 90) : 0);
       if (wobbleMs > 0) nib.rotation += Math.sin(wobbleMs / 15) * 0.12 * (wobbleMs / 180);
 
       // Thin pencil guide line from the nib tip to the locked target.
@@ -326,6 +433,14 @@ export async function createRenderer(
         guide.moveTo(tipX, tipY).lineTo(locked.x, locked.y).stroke({ width: 1.5, color: COLORS.pencil, alpha: 0.35 });
       }
 
+      // Finished creatures keep crawling until their last drop of ink lands.
+      if (world.phase === 'playing') {
+        for (const d of dying) {
+          d.x -= (d.speed * frameMs) / 1000;
+          d.view.root.position.set(d.x, d.y - LINE_SPACING / 2);
+        }
+      }
+      shots.update(frameMs);
       effects.update(frameMs);
       hud.update(world);
       overlay.update(world);

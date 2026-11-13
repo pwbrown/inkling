@@ -7,7 +7,7 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { Target } from '../../core/world';
 import { COLORS } from '../theme';
-import { MoodTracker, labelStyle, measure, drawFace, wave, type CreatureView, type FrameContext } from './common';
+import { MoodTracker, drawFace, labelStyle, letterCenter, measure, wave, type CreatureView, type FrameContext } from './common';
 
 export function createRunon(target: Target, scale: number): CreatureView {
   const height = 46 * scale;
@@ -36,18 +36,21 @@ export function createRunon(target: Target, scale: number): CreatureView {
   const mood = new MoodTracker();
   let width = 0;
   let shown: string | null = null;
+  let shownText = target.text;
 
   const view: CreatureView = {
     root,
     highlight,
     width: 0,
     height,
+    letterX: (index) => letterCenter(shownText, index, padX, styles.rest),
     update(t: Target, ctx: FrameContext) {
       const { mood: m, blink } = mood.update(t, ctx);
       const buffer = t.buffer ?? '';
 
       if (buffer !== shown) {
         shown = buffer;
+        shownText = t.text;
         const chars = [...t.text];
         const okText = chars.slice(0, t.typed).join('');
         const badText = [...buffer].slice(t.typed).join('');

@@ -64,7 +64,7 @@ describe('Blotter', () => {
 describe('the Spill', () => {
   function apprenticeWorld(): World {
     const world = createWorld({ random: () => 0.5, makeContent: (keys) => createContentSource({ keys }) });
-    startApprentice(world, 1);
+    startApprentice(world, GAME_CONFIG.boss.fromApprenticeChapter);
     confirm(world);
     return world;
   }
@@ -72,8 +72,11 @@ describe('the Spill', () => {
   it('appears first on the last page of an Apprentice chapter only', () => {
     const world = apprenticeWorld();
     expect(world.page.hasBoss).toBe(false);
-    world.page = createPage(world.difficulty, 1, world.page.pageCount - 1, world.content, 'apprentice');
+    const ch = GAME_CONFIG.boss.fromApprenticeChapter;
+    world.page = createPage(world.difficulty, ch, world.page.pageCount - 1, world.content, 'apprentice');
     expect(world.page.hasBoss).toBe(true);
+    // Not for beginners.
+    expect(createPage('normal', 0, 2, undefined, 'apprentice').hasBoss).toBe(false);
     stepWorld(world, 16);
     const boss = world.targets.find((t) => t.boss);
     expect(boss?.lives).toBe(GAME_CONFIG.boss.lives);
@@ -108,7 +111,7 @@ describe('the Spill', () => {
 
   it('must be dealt with before the page clears', () => {
     const world = apprenticeWorld();
-    world.page = createPage(world.difficulty, 1, world.page.pageCount - 1, world.content, 'apprentice');
+    world.page = createPage(world.difficulty, GAME_CONFIG.boss.fromApprenticeChapter, world.page.pageCount - 1, world.content, 'apprentice');
     world.page.spawned = world.page.params.size;
     stepWorld(world, 16);
     expect(world.phase).toBe('playing');

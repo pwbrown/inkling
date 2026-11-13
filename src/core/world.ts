@@ -3,7 +3,15 @@
  * can be unit tested directly (REQUIREMENTS §7).
  */
 import { createContentSource, type ContentSource } from '../content/contentSource';
-import { apprenticeKeys, apprenticePlan, newKeysFor, type GameMode } from './campaign';
+import {
+  apprenticeKeys,
+  apprenticePlan,
+  easeForBeginners,
+  effectiveChapter,
+  hasSpill,
+  newKeysFor,
+  type GameMode,
+} from './campaign';
 import {
   DEFAULT_DIFFICULTY,
   DEFAULT_KEYS,
@@ -74,8 +82,10 @@ export type GamePhase = 'ready' | 'intro' | 'playing' | 'paused' | 'pageCleared'
 /** Things that happened this frame, for the renderer to animate. */
 export type GameEvent =
   | { type: 'locked'; targetId: number }
-  | { type: 'progress'; targetId: number }
-  | { type: 'destroyed'; target: Target; points: number }
+  /** The locked target changed. `shot`: a correct character landed on it. */
+  | { type: 'progress'; targetId: number; shot: boolean }
+  /** A target was finished. `blotted`: by the Blotter rather than by typing. */
+  | { type: 'destroyed'; target: Target; points: number; blotted?: boolean }
   /** A crimson or violet creature lost a life and got a new payload. */
   | { type: 'hit'; target: Target; points: number }
   /** The Spill (boss) appeared. */
@@ -192,14 +202,20 @@ export function createPage(
   content?: Pick<ContentSource, 'supports'>,
   mode: GameMode = 'practice',
 ): PageState {
-  const plan = mode === 'apprentice' ? apprenticePlan(chapter) : chapterPlan(chapter);
+  const apprentice = mode === 'apprentice';
+  const plan = apprentice ? apprenticePlan(chapter) : chapterPlan(chapter);
+  const canUse = content ? (kind: TargetKind) => content.supports(kind) : undefined;
+  // The Apprentice climbs a gentler curve, with extra easing for beginners.
+  const params = apprentice
+    ? easeForBeginners(pageParams(difficulty, effectiveChapter(chapter), index, canUse, plan), chapter)
+    : pageParams(difficulty, chapter, index, canUse, plan);
   return {
     chapter,
     index,
     pageCount: plan.length,
-    hasBoss: mode === 'apprentice' && index === plan.length - 1,
+    hasBoss: apprentice && index === plan.length - 1 && hasSpill(chapter),
     bossSpawned: false,
-    params: pageParams(difficulty, chapter, index, content ? (kind) => content.supports(kind) : undefined, plan),
+    params,
     spawned: 0,
     // Spawn the first target right away.
     spawnTimerMs: 0,
@@ -420,14 +436,26 @@ function updateSpawner(world: World, stepMs: number): void {
  */
 export function nextLife(world: World, target: Target): void {
   target.lives = Math.max(1, target.lives - 1);
+  const previous = target.text;
+  // Never the same word (or character) twice in a row on one creature.
+  const fresh = (make: () => string) => {
+    let text = make();
+    for (let i = 0; i < NEXT_LIFE_TRIES && text === previous; i++) text = make();
+    return text;
+  };
   if (target.boss) {
     // The Spill keeps throwing longer words.
     const complexity = Math.min(1, world.page.params.complexity + GAME_CONFIG.boss.complexityBonus);
-    Object.assign(target, { text: world.content.nextWord(complexity, world.random), typed: 0 });
+    Object.assign(target, { text: fresh(() => world.content.nextWord(complexity, world.random)), typed: 0 });
     return;
   }
-  Object.assign(target, payloadFor(world, target.kind), { typed: 0 });
+  let payload = payloadFor(world, target.kind);
+  for (let i = 0; i < NEXT_LIFE_TRIES && payload.text === previous; i++) payload = payloadFor(world, target.kind);
+  Object.assign(target, payload, { typed: 0 });
 }
+
+/** Re-rolls allowed to avoid repeating a creature's previous word. */
+const NEXT_LIFE_TRIES = 12;
 
 /** Bring on the Spill: a big, slow, three-life Blotling in the middle of the page. */
 export function spawnBoss(world: World): Target {

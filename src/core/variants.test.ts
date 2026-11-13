@@ -55,7 +55,7 @@ describe('spawning variants', () => {
 });
 
 describe('lives', () => {
-  it('a crimson Blotling needs two words in a row and keeps the lock', () => {
+  it('a crimson Blotling needs two words, releasing the lock in between', () => {
     const world = playingWorld();
     const t = spawnTarget(world, { kind: 'blotling', text: 'ink', lives: 2, x: 500, prevX: 500, lane: 0 })!;
     type(world, 'ink');
@@ -64,7 +64,8 @@ describe('lives', () => {
     expect(t.lives).toBe(1);
     expect(t.typed).toBe(0);
     expect(t.x).toBe(500);
-    expect(world.lockedId).toBe(t.id);
+    expect(world.lockedId).toBeNull();
+    expect(t.text).not.toBe('ink');
     expect(world.stats.destroyed).toBe(0);
     expect(world.events.some((e) => e.type === 'hit')).toBe(true);
 
@@ -85,6 +86,33 @@ describe('lives', () => {
     type(three, v.text);
     expect(three.stats.destroyed).toBe(1);
     expect(three.stats.score).toBeGreaterThan(one.stats.score * 2.5);
+  });
+});
+
+describe('switching between words', () => {
+  it('lets the player hit another creature between a crimson one\'s words', () => {
+    const world = playingWorld();
+    const crimson = spawnTarget(world, { kind: 'blotling', text: 'ink', lives: 2, x: 600, prevX: 600, lane: 0 })!;
+    type(world, 'ink');
+    const other = spawnTarget(world, { kind: 'drip', text: 'q', x: 300, prevX: 300, lane: 3 })!;
+    typeChar(world, 'q');
+    expect(world.targets).not.toContain(other);
+    expect(world.stats.errors).toBe(0);
+    type(world, crimson.text);
+    expect(world.targets).not.toContain(crimson);
+  });
+
+  it('never gives the same word twice in a row', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      let i = seed;
+      const world = createWorld({ random: () => ((i++ * 0.37) % 1), keys: ['a', 'b'] });
+      world.phase = 'playing';
+      const t = spawnTarget(world, { kind: 'drip', text: 'a', lives: 3, x: 500, prevX: 500, lane: 0 })!;
+      typeChar(world, 'a');
+      expect(t.text).toBe('b');
+      typeChar(world, 'b');
+      expect(t.text).toBe('a');
+    }
   });
 });
 

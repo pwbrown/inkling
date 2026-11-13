@@ -200,7 +200,31 @@ export const GAME_CONFIG = {
    * slow Blotling with three lives and longer words, which splits into small
    * Blotlings when finally blotted.
    */
-  boss: { lives: 3, speedFactor: 0.6, complexityBonus: 0.3, inkLossFactor: 2, splits: 3, splitSpeedFactor: 1.4 },
+  boss: {
+    lives: 3,
+    speedFactor: 0.6,
+    complexityBonus: 0.3,
+    inkLossFactor: 2,
+    splits: 3,
+    splitSpeedFactor: 1.4,
+    /** First Apprentice chapter (0-based) whose last page has the Spill. */
+    fromApprenticeChapter: 6,
+  },
+
+  /**
+   * Apprentice pacing. `pace` scales chapters into the difficulty curve
+   * (0.25 = four Apprentice chapters per step). The first `easeChapters`
+   * chapters are gentler still, easing off gradually.
+   */
+  apprentice: {
+    pace: 0.25,
+    easeChapters: 8,
+    /** At chapter 1: 35% slower, 50% longer between spawns, 3 fewer on screen, 30% shorter pages. */
+    easeSpeed: 0.35,
+    easeInterval: 0.5,
+    easeOnScreen: 3,
+    easeSize: 0.3,
+  },
 
   /** Each target's speed varies randomly by up to ±this fraction. */
   speedJitter: 0.15,

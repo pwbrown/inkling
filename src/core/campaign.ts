@@ -5,7 +5,7 @@
  * notebook. Practice mode keeps the free key choice and endless chapters.
  */
 import type { Grade } from './grade';
-import type { TargetKind } from './config';
+import { GAME_CONFIG, type PageParams, type TargetKind } from './config';
 
 export type GameMode = 'apprentice' | 'practice';
 
@@ -15,21 +15,13 @@ export interface Lesson {
 }
 
 /**
- * The lessons, in the order typing courses usually teach them: home keys,
- * then reaching out one row at a time, common letters first. Space arrives
- * with chapter 3 so Run-ons (phrases) become possible.
+ * The lessons. A beginner starts with just F and J (the keys with bumps),
+ * then learns one key per chapter: the rest of the home row, space, then the
+ * letters in roughly the order typing courses teach them.
  */
 export const LESSONS: readonly Lesson[] = [
-  { newKeys: [...'fjdksla;'] },
-  { newKeys: ['g', 'h'] },
-  { newKeys: ['r', 'u', ' '] },
-  { newKeys: ['e', 'i'] },
-  { newKeys: ['w', 'o'] },
-  { newKeys: ['t', 'y'] },
-  { newKeys: ['q', 'p'] },
-  { newKeys: ['v', 'm'] },
-  { newKeys: ['c', 'n'] },
-  { newKeys: ['b', 'x', 'z'] },
+  { newKeys: ['f', 'j'] },
+  ...[...'dksla;gh', ' ', ...'eirutyownmcvbxpqz'].map((key) => ({ newKeys: [key] })),
 ];
 
 export const APPRENTICE_CHAPTERS = LESSONS.length;
@@ -44,16 +36,53 @@ export function newKeysFor(chapter: number): string[] {
   return [...(LESSONS[Math.min(chapter, LESSONS.length - 1)]?.newKeys ?? [])];
 }
 
+/** First chapter (0-based) where space is known, so phrases are possible. */
+const SPACE_CHAPTER = LESSONS.findIndex((l) => l.newKeys.includes(' '));
+
 /**
- * Pages in an Apprentice chapter. Each opens with drips, where the new keys
- * come up often, before using them in words; Run-ons arrive once space is
- * learned and Misprints a little after.
+ * Pages in an Apprentice chapter. Every chapter opens with drips, where the
+ * new key comes up often. The first few chapters are all drips; short
+ * "words" join once there are enough keys; Run-ons arrive once space is
+ * learned, and Misprints later still.
  */
 export function apprenticePlan(chapter: number): TargetKind[] {
-  if (chapter === 0) return ['drip', 'drip', 'blotling'];
-  if (chapter < 3) return ['drip', 'blotling', 'drip', 'blotling'];
-  if (chapter < 5) return ['drip', 'blotling', 'runon', 'blotling'];
+  const keys = apprenticeKeys(chapter).length;
+  if (keys <= 5) return ['drip', 'drip', 'drip'];
+  if (keys <= 8) return ['drip', 'drip', 'blotling'];
+  if (chapter < SPACE_CHAPTER + 1) return ['drip', 'blotling', 'drip', 'blotling'];
+  if (chapter < SPACE_CHAPTER + 6) return ['drip', 'blotling', 'runon', 'blotling'];
   return ['drip', 'blotling', 'misprint', 'runon', 'blotling'];
+}
+
+/**
+ * Apprentice chapters are many and small, so difficulty climbs much more
+ * slowly than in Practice: speed, spawn rate, word length and tougher
+ * variants follow this "effective" chapter rather than the real one.
+ */
+export function effectiveChapter(chapter: number): number {
+  return Math.floor(chapter * GAME_CONFIG.apprentice.pace);
+}
+
+/**
+ * Extra-gentle settings for a beginner's first chapters: slower, sparser,
+ * shorter pages, easing off over the first `easeChapters` chapters.
+ */
+export function easeForBeginners(params: PageParams, chapter: number): PageParams {
+  const a = GAME_CONFIG.apprentice;
+  const ease = Math.max(0, 1 - chapter / a.easeChapters);
+  if (ease === 0) return params;
+  return {
+    ...params,
+    speed: params.speed * (1 - a.easeSpeed * ease),
+    spawnIntervalMs: params.spawnIntervalMs * (1 + a.easeInterval * ease),
+    maxOnScreen: Math.max(1, params.maxOnScreen - Math.round(a.easeOnScreen * ease)),
+    size: Math.max(6, Math.round(params.size * (1 - a.easeSize * ease))),
+  };
+}
+
+/** Whether a chapter's last page brings the Spill (not for beginners). */
+export function hasSpill(chapter: number): boolean {
+  return chapter >= GAME_CONFIG.boss.fromApprenticeChapter;
 }
 
 /** How much more often a chapter's new keys appear than the others. */

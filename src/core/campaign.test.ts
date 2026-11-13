@@ -6,6 +6,7 @@ import {
   apprenticeKeys,
   apprenticePlan,
   chapterStars,
+  hasSpill,
   newKeysFor,
   starKey,
   starText,
@@ -16,11 +17,17 @@ import { confirm, finishedNotebook, retryChapter, startApprentice, startPractice
 import { createPage, createWorld, type World } from './world';
 
 describe('lessons', () => {
-  it('teach every letter exactly once, starting on the home row', () => {
+  it('teach every letter exactly once, starting with F and J, then one key at a time', () => {
     const all = LESSONS.flatMap((l) => l.newKeys);
     expect(new Set(all).size).toBe(all.length);
     for (const letter of 'abcdefghijklmnopqrstuvwxyz') expect(all).toContain(letter);
-    expect(newKeysFor(0)).toEqual([...'fjdksla;']);
+    expect(newKeysFor(0)).toEqual(['f', 'j']);
+    for (let c = 1; c < APPRENTICE_CHAPTERS; c++) expect(newKeysFor(c)).toHaveLength(1);
+  });
+
+  it('start with drips only while there are few keys', () => {
+    expect(apprenticePlan(0)).toEqual(['drip', 'drip', 'drip']);
+    expect(apprenticePlan(APPRENTICE_CHAPTERS - 1)).toContain('blotling');
   });
 
   it('build up keys chapter by chapter', () => {
@@ -118,5 +125,31 @@ describe('Apprentice flow', () => {
     world.page = createPage(world.difficulty, 50, world.page.pageCount - 1, world.content);
     world.phase = 'pageCleared';
     expect(finishedNotebook(world)).toBe(false);
+  });
+});
+
+describe('Apprentice pacing', () => {
+  it('starts far gentler than Practice and eases in', () => {
+    const first = createPage('normal', 0, 0, undefined, 'apprentice').params;
+    const practice = createPage('normal', 0, 0, undefined, 'practice').params;
+    expect(first.speed).toBeLessThan(practice.speed);
+    expect(first.spawnIntervalMs).toBeGreaterThan(practice.spawnIntervalMs);
+    expect(first.maxOnScreen).toBeLessThan(practice.maxOnScreen);
+    expect(first.size).toBeLessThan(practice.size);
+
+    const later = createPage('normal', 8, 0, undefined, 'apprentice').params;
+    expect(later.speed).toBeGreaterThan(first.speed);
+  });
+
+  it('keeps tougher variants away from beginners', () => {
+    for (let c = 0; c < 4; c++) {
+      const v = createPage('normal', c, 0, undefined, 'apprentice').params.variants;
+      expect(v).toEqual({ crimson: 0, violet: 0, ghost: 0 });
+    }
+  });
+
+  it('only brings the Spill once the basics are learned', () => {
+    expect(hasSpill(0)).toBe(false);
+    expect(hasSpill(APPRENTICE_CHAPTERS - 1)).toBe(true);
   });
 });

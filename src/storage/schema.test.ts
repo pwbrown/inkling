@@ -36,8 +36,8 @@ describe('save schema', () => {
   });
 
   it('keeps valid Apprentice progress and drops bad entries', () => {
-    const save = migrate({ version: 3, apprentice: { unlocked: 99, stars: { '0-1': 3, '2-0': 7, bad: 2 }, completed: true } });
-    expect(save.apprentice).toEqual({ unlocked: 10, stars: { '0-1': 3 }, completed: true });
+    const save = migrate({ version: 5, apprentice: { unlocked: 99, stars: { '0-1': 3, '2-0': 7, bad: 2 }, completed: true } });
+    expect(save.apprentice).toEqual({ unlocked: 27, stars: { '0-1': 3 }, completed: true });
   });
 
   it('upgrades version 3 saves with no ink and default cosmetics', () => {
@@ -48,6 +48,21 @@ describe('save schema', () => {
   it('keeps known cosmetics and replaces unknown ones', () => {
     const save = migrate({ version: 4, profile: { ink: 420, cosmetics: { nib: 'quill', splatter: 'rainbow', paper: 'graph' } } });
     expect(save.profile).toEqual({ ink: 420, cosmetics: { nib: 'quill', splatter: 'ink', paper: 'graph' } });
+  });
+
+  it('upgrades version 4 saves with a fresh Apprentice course, keeping Practice', () => {
+    const appr = migrate({
+      version: 4,
+      apprentice: { unlocked: 5, stars: { '0-0': 3 }, completed: false },
+      notebook: { mode: 'apprentice', difficulty: 'normal', chapter: 3, page: 1, ink: 50 },
+      profile: { ink: 300, cosmetics: { nib: 'quill' } },
+    });
+    expect(appr.apprentice).toEqual({ unlocked: 1, stars: {}, completed: false });
+    expect(appr.notebook).toBeNull();
+    expect(appr.profile.ink).toBe(300);
+
+    const prac = migrate({ version: 4, notebook: { mode: 'practice', difficulty: 'hard', chapter: 2, page: 0, ink: 70 } });
+    expect(prac.notebook?.chapter).toBe(2);
   });
 
   it('keeps valid word lists and drops bad ones', () => {

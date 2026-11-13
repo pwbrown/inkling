@@ -34,12 +34,15 @@ export function createMisprint(target: Target, scale: number): CreatureView {
   const phase = Math.random() * Math.PI * 2;
   let width = 0;
   let shown = '';
+  let caretX = padX;
 
   const view: CreatureView = {
     root,
     highlight,
     width: 0,
     height,
+    // Edits happen at the caret.
+    letterX: () => caretX,
     update(t: Target, ctx: FrameContext) {
       const { mood: m, blink } = mood.update(t, ctx);
       const buffer = t.buffer ?? '';
@@ -77,7 +80,7 @@ export function createMisprint(target: Target, scale: number): CreatureView {
           .roundRect(-8, -height / 2 - knobH * 1.7, width + 16, height + knobH * 1.7 + 8, 12)
           .fill({ color: COLORS.highlighter, alpha: 0.8 });
 
-        const caretX = padX + measure([...buffer].slice(0, t.cursor ?? 0).join(''), style);
+        caretX = padX + measure([...buffer].slice(0, t.cursor ?? 0).join(''), style);
         caret.clear().moveTo(caretX, -fontSize * 0.6).lineTo(caretX, fontSize * 0.6).stroke({ width: 2.5, color: COLORS.margin });
       }
 

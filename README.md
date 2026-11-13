@@ -36,11 +36,12 @@ The game builds everything from your keys: drips use them directly, and word pag
 
 ### Apprentice and Practice
 
-- **Apprentice** is a 10-chapter typing course.
-  - Chapter 1 teaches the home keys (`f j d k s l a ;`). Each later chapter adds one to three keys in the order typing courses use (`g h`, then `r u` and space, then `e i`, `w o`, `t y`, `q p`, `v m`, `c n`, `b x z`).
-  - Every chapter opens with a card showing its new keys and which finger types each one. The new keys come up three times as often as the others.
-  - Each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter.
-  - Finishing chapter 10 completes the notebook.
+- **Apprentice** is a typing course for beginners, 27 chapters long.
+  - Chapter 1 teaches just `f` and `j`, the keys with bumps. Each later chapter adds **one** key: the rest of the home row (`d k s l a ; g h`), then space, then `e i r u t y o w n m c v b x p q z`.
+  - **Pacing:** difficulty climbs a quarter as fast as in Practice. The first 8 chapters are extra gentle, with slower, sparser creatures and shorter pages, easing off as you go.
+  - **What appears when:** the first chapters are drips only, then short words, then phrases once space is learned. Tougher variants arrive from chapter 5, and the Spill from chapter 7.
+  - **Introductions:** every chapter opens with a card showing its new key and which finger types it. The new key comes up three times as often as the others.
+  - **Stars and progress:** each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter. Finishing the last chapter completes the notebook.
 - **Practice** uses exactly the keys you choose in the Type Case, with endless chapters.
 
 ### Ink, ranks and your desk
@@ -52,7 +53,11 @@ The game builds everything from your keys: drips use them directly, and word pag
 ### Powers and bosses
 
 - **The Blotter:** every 25 correct keys in a row charges it, up to 2 charges, shown as drops by the ink bar. Press **Enter** while playing to blot every creature on the page for half points.
-- **The Spill:** the last page of each Apprentice chapter starts with the Spill, a big, slow boss that needs three words in a row. It costs double ink if it reaches the margin and splits into three small Blotlings when blotted. The Blotter can't touch it.
+- **The Spill:** from chapter 7, the last page of each Apprentice chapter starts with the Spill, a big, slow boss that needs three words in a row. It costs double ink if it reaches the margin and splits into three small Blotlings when blotted. The Blotter can't touch it.
+
+### Ink shots
+
+Every correct key flicks a drop of ink from your pen at the letter you typed. The pen aims ahead of the moving creature so the drop meets the letter, and a creature you finish stays on the page until the last drop lands. A wrong key still fires, but the drop misses and splats on the page. The locked creature is always drawn in front of any it overlaps.
 
 ### Target types
 
@@ -60,7 +65,7 @@ The game builds everything from your keys: drips use them directly, and word pag
 - **Blotlings:** a word.
 - **Run-ons** (from chapter 4): a phrase. Mistakes stay, struck through in red, until you erase them with Backspace. They need the space key, so without it those pages become word pages.
 - **Misprints** (from chapter 5): a crooked rubber stamp with a misspelled word and the correct spelling pencilled above. Fix it with the arrow keys, Backspace, Delete and typing. Edits that bring it closer to right score, and edits that make it worse count as mistakes.
-- **Tougher ink:** from chapter 2, some drips and Blotlings come in **crimson**, which need two completions in a row, or **violet**, which need three. Dots above them show how many are left. From chapter 3, **ghosts** in invisible ink hide their text until they're halfway across the page.
+- **Tougher ink:** some drips and Blotlings come in **crimson**, which need two words (or characters), or **violet**, which need three. Dots above them show how many are left. You can switch to other creatures between words, and they never repeat a word back to back. **Ghosts** in invisible ink hide their text until they're halfway across the page. In Practice they start in chapters 2 and 3; in Apprentice they start later.
 
 ### Word lists
 

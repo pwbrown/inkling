@@ -12,6 +12,7 @@ import {
   drawFace,
   drawPips,
   labelStyle,
+  letterCenter,
   measure,
   wave,
   type CreatureView,
@@ -48,6 +49,7 @@ export function createBlotling(target: Target, scale: number): CreatureView {
     highlight,
     width: 0,
     height,
+    letterX: (index) => letterCenter(shownText, index, padX, restStyle),
     update(t: Target, ctx: FrameContext) {
       const { mood: m, blink, hurtMs } = mood.update(t, ctx);
 
