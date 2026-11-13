@@ -69,8 +69,14 @@ export function setTheme(theme: ThemeId): void {
   Object.assign(COLORS, PALETTES[theme]);
 }
 
-/** Legible text for anything the player has to read or type (DESIGN §7). */
-export const TEXT_FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+/**
+ * Legible text for anything the player has to read or type (DESIGN §7).
+ * Atkinson Hyperlegible keeps look-alikes (l I 1, 0 O) distinct; see src/fonts.ts.
+ */
+export const TEXT_FONT = '"Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+/** Fixed-width text, so the Misprint caret lines up between letters. */
+export const MONO_FONT = '"Atkinson Hyperlegible Mono", ui-monospace, Menlo, Consolas, monospace';
 
 /** Decorative headings. A bundled handwriting font replaces this later. */
 export const DISPLAY_FONT = 'Georgia, "Times New Roman", serif';

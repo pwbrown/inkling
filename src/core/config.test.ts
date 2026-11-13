@@ -78,15 +78,19 @@ describe('pageParams', () => {
   });
 
   it('swaps in a Blotling page when the keys cannot make the planned type', () => {
-    const runonPage = chapterPlan(2).indexOf('runon');
-    expect(pageParams('normal', 2, runonPage).kind).toBe('runon');
-    expect(pageParams('normal', 2, runonPage, (k) => k !== 'runon').kind).toBe('blotling');
+    const runonPage = chapterPlan(3).indexOf('runon');
+    expect(pageParams('normal', 3, runonPage).kind).toBe('runon');
+    expect(pageParams('normal', 3, runonPage, (k) => k !== 'runon').kind).toBe('blotling');
   });
 
-  it('introduces Run-ons and Misprints in later chapters only', () => {
-    expect(chapterPlan(0)).not.toContain('runon');
-    expect(chapterPlan(1)).not.toContain('misprint');
-    expect(chapterPlan(3)).toEqual(expect.arrayContaining(['runon', 'misprint']));
+  it('introduces Run-ons in chapter 4 and Misprints in chapter 5', () => {
+    for (const chapter of [0, 1, 2]) {
+      expect(chapterPlan(chapter)).not.toContain('runon');
+      expect(chapterPlan(chapter)).not.toContain('misprint');
+    }
+    expect(chapterPlan(3)).toContain('runon');
+    expect(chapterPlan(3)).not.toContain('misprint');
+    expect(chapterPlan(4)).toEqual(expect.arrayContaining(['runon', 'misprint']));
   });
 
   it('keeps Relaxed playable: at least one target on screen and complexity ≥ 0', () => {

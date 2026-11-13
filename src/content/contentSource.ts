@@ -189,10 +189,15 @@ export function createContentSource({
       return kind !== 'runon' || keySet.has(' ');
     },
     nextPhrase(difficulty, random) {
-      const { min, max } = GAME_CONFIG.phraseWords;
-      const count = min + Math.round(Math.min(1, Math.max(0, difficulty)) * (max - min));
-      // Easier words than a Blotling page: the challenge is the length.
-      const phrase = Array.from({ length: count }, () => baseWord(difficulty * 0.6, random, false)).join(' ');
+      const { min, max, longAt, maxWordLength } = GAME_CONFIG.phraseWords;
+      const count = difficulty >= longAt ? max : min;
+      // Short, easy words: the challenge is keeping a run going, not hard words.
+      const shortWord = () => {
+        let word = baseWord(difficulty * 0.4, random, false);
+        for (let i = 0; i < 8 && [...word].length > maxWordLength; i++) word = baseWord(difficulty * 0.4, random, false);
+        return word;
+      };
+      const phrase = Array.from({ length: count }, shortWord).join(' ');
       // Like a sentence: sometimes start with a capital, if both cases are selected.
       const first = phrase[0]!;
       const capitalized =

@@ -24,6 +24,7 @@ import { accuracy, wpm } from './core/stats';
 import { createWorld, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, setLocale, t } from './i18n';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
+import { loadFonts } from './fonts';
 import { registerOffline } from './pwa';
 import { difficultyLabel, type OverlayLinkId } from './render/overlay';
 import { Menu } from './ui/menu';
@@ -82,8 +83,12 @@ async function main(): Promise<void> {
   // The overlay's handlers only run once the game exists, after the word pack loads.
   const actions: { onLink: (id: OverlayLinkId) => void; start: () => void } = { onLink: () => {}, start: () => {} };
 
+  // Fonts first: canvas text is rasterised once, in whatever font is ready.
+  const packLoading = loadEnglishPack();
+  await loadFonts();
+
   const [pack, renderer] = await Promise.all([
-    loadEnglishPack(),
+    packLoading,
     createRenderer(host, {
       onConfirm: () => actions.start(),
       onLink: (id) => actions.onLink(id),

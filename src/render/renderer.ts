@@ -22,7 +22,7 @@ import {
 import { Effects } from './effects';
 import { Hud } from './hud';
 import { Overlay, type OverlayActions } from './overlay';
-import { COLORS, TEXT_FONT, glyph, prefersReducedMotion } from './theme';
+import { COLORS, MONO_FONT, TEXT_FONT, glyph, prefersReducedMotion } from './theme';
 
 const NIB_LENGTH = 56;
 const NIB_HOME = { x: MARGIN_X - 90, y: WORLD_HEIGHT / 2 };
@@ -234,7 +234,7 @@ function createMisprintView(target: Target, scale: number): TargetView {
   const fontSize = 26 * scale;
   const padX = BLOT_PAD_X * scale;
   const height = BLOT_HEIGHT * scale;
-  const style = new TextStyle({ ...labelStyle(COLORS.ink, fontSize), fontFamily: 'ui-monospace, Menlo, Consolas, monospace' });
+  const style = new TextStyle({ ...labelStyle(COLORS.ink, fontSize), fontFamily: MONO_FONT });
   const label = new Text({ text: '', style });
   label.anchor.set(0, 0.5);
   const hint = new Text({ text: target.text, style: labelStyle(COLORS.pencil, 15 * scale) });

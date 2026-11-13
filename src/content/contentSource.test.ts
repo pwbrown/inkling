@@ -101,13 +101,20 @@ describe('phrases and misprints', () => {
     expect(createContentSource({ keys: [...'asdf'] }).supports('misprint')).toBe(true);
   });
 
-  it('builds phrases of several words, longer when harder', () => {
+  it('builds short phrases: two words, three only when hard', () => {
     const content = createContentSource({ keys: [...'asdfghjkl '], words });
-    const easy = content.nextPhrase(0, random);
+    expect(content.nextPhrase(0, random).split(' ')).toHaveLength(2);
+    expect(content.nextPhrase(0.69, random).split(' ')).toHaveLength(2);
     const hard = content.nextPhrase(1, random);
-    expect(easy.split(' ').length).toBe(2);
-    expect(hard.split(' ').length).toBe(5);
+    expect(hard.split(' ')).toHaveLength(3);
     expect(hard).toMatch(/^[asdfghjkl ]+$/);
+  });
+
+  it('keeps phrase words short', () => {
+    const content = createContentSource({ keys: [...'asdfghjkl '], words });
+    for (let i = 0; i < 30; i++) {
+      for (const word of content.nextPhrase(1, random).split(' ')) expect([...word].length).toBeLessThanOrEqual(6);
+    }
   });
 
   it('misspells a real word using only selected keys', () => {

@@ -37,7 +37,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,json,png,svg,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,json,png,svg,webmanifest,woff2}'],
         // No runtime caching of other origins: the game never calls them.
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,

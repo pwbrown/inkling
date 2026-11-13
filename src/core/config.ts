@@ -96,7 +96,7 @@ export const GAME_CONFIG = {
   base: {
     drip: { size: 20, spawnIntervalMs: 1300, maxOnScreen: 6, speed: 85, inkLoss: 10 },
     blotling: { size: 12, spawnIntervalMs: 2600, maxOnScreen: 4, speed: 55, inkLoss: 20 },
-    runon: { size: 5, spawnIntervalMs: 6500, maxOnScreen: 2, speed: 32, inkLoss: 30 },
+    runon: { size: 4, spawnIntervalMs: 7500, maxOnScreen: 2, speed: 28, inkLoss: 25 },
     misprint: { size: 8, spawnIntervalMs: 4200, maxOnScreen: 3, speed: 36, inkLoss: 20 },
   } satisfies Record<TargetKind, KindSettings>,
 
@@ -104,7 +104,7 @@ export const GAME_CONFIG = {
   limits: {
     drip: { maxSize: 36, minSpawnIntervalMs: 420, maxOnScreen: 10, maxSpeed: 240 },
     blotling: { maxSize: 22, minSpawnIntervalMs: 1000, maxOnScreen: 7, maxSpeed: 150 },
-    runon: { maxSize: 10, minSpawnIntervalMs: 3500, maxOnScreen: 4, maxSpeed: 70 },
+    runon: { maxSize: 7, minSpawnIntervalMs: 4500, maxOnScreen: 3, maxSpeed: 55 },
     misprint: { maxSize: 14, minSpawnIntervalMs: 2200, maxOnScreen: 5, maxSpeed: 80 },
   } satisfies Record<TargetKind, KindLimits>,
 
@@ -130,12 +130,20 @@ export const GAME_CONFIG = {
   chapters: [
     ['drip', 'drip', 'blotling'],
     ['drip', 'blotling', 'drip', 'blotling'],
-    ['blotling', 'drip', 'runon', 'blotling'],
+    ['blotling', 'drip', 'blotling', 'drip', 'blotling'],
+    ['drip', 'blotling', 'runon', 'blotling'],
     ['drip', 'blotling', 'misprint', 'runon', 'blotling'],
   ] as TargetKind[][],
 
   /** Run-on phrases: how many words, growing with complexity. */
-  phraseWords: { min: 2, max: 5 },
+  phraseWords: {
+    min: 2,
+    max: 3,
+    /** Word complexity at which phrases get their third word. */
+    longAt: 0.7,
+    /** Longest word allowed in a phrase. */
+    maxWordLength: 6,
+  },
   /** Shortest word worth misprinting. */
   misprintMinLength: 4,
 
