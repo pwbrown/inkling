@@ -65,6 +65,12 @@ describe('save schema', () => {
     expect(prac.notebook?.chapter).toBe(2);
   });
 
+  it('upgrades version 5 saves to the family-friendly word filter, and keeps a valid choice', () => {
+    expect(migrate({ version: 5, keys: ['a'] }).contentLevel).toBe('family');
+    expect(migrate({ version: 6, contentLevel: 'olderKids' }).contentLevel).toBe('olderKids');
+    expect(migrate({ version: 6, contentLevel: 'anything' }).contentLevel).toBe('family');
+  });
+
   it('keeps valid word lists and drops bad ones', () => {
     const save = migrate({
       version: 2,

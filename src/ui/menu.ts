@@ -8,6 +8,7 @@ import './menu.css';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
 import { t, type MessageKey } from '../i18n';
+import { CONTENT_LEVELS, type ContentLevel } from '../content/contentFilter';
 import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage/profiles';
 import { artElement, badgeSvg, cosmeticSvg } from './art';
 import { h } from './dom';
@@ -25,6 +26,17 @@ export interface PlayerEntry {
   /** e.g. "Scribe · Level 5 · Apprentice chapter 4". */
   detail: string;
   active: boolean;
+  /** The player's word filter. */
+  contentLevel: ContentLevel;
+}
+
+/** A times-table question a grown-up answers before the word filter is loosened. */
+interface GrownUpCheck {
+  level: ContentLevel;
+  a: number;
+  b: number;
+  answer: string;
+  wrong: boolean;
 }
 
 export interface ChapterEntry {
@@ -80,7 +92,7 @@ export interface MenuHooks {
   canAddPlayer(): boolean;
   onChoosePlayer(id: string): void;
   /** Add (`id` null) or edit a player. Resolves false if the name is unusable. */
-  onSavePlayer(id: string | null, name: string, badge: Badge): Promise<boolean>;
+  onSavePlayer(id: string | null, name: string, badge: Badge, contentLevel: ContentLevel): Promise<boolean>;
   onDeletePlayer(id: string): void;
 }
 
@@ -103,7 +115,17 @@ export class Menu {
   private readonly panel: HTMLDivElement;
   private current: MenuScreen | null = null;
   /** The player being added (id null) or edited on the playerEdit screen. */
-  private editing: { id: string | null; name: string; badge: Badge; confirmDelete: boolean; error: string | null } | null = null;
+  private editing: {
+    id: string | null;
+    name: string;
+    badge: Badge;
+    contentLevel: ContentLevel;
+    /** The filter when the form opened: loosening past it needs a grown-up. */
+    savedLevel: ContentLevel;
+    check: GrownUpCheck | null;
+    confirmDelete: boolean;
+    error: string | null;
+  } | null = null;
 
   constructor(
     host: HTMLElement,
@@ -513,9 +535,10 @@ export class Menu {
 
   private editPlayer(player: PlayerEntry | null): void {
     const used = new Set(this.hooks.players().map((p) => p.badge));
+    const base = { check: null, confirmDelete: false, error: null };
     this.editing = player
-      ? { id: player.id, name: player.name, badge: player.badge, confirmDelete: false, error: null }
-      : { id: null, name: '', badge: BADGES.find((b) => !used.has(b)) ?? 'ink', confirmDelete: false, error: null };
+      ? { ...base, id: player.id, name: player.name, badge: player.badge, contentLevel: player.contentLevel, savedLevel: player.contentLevel }
+      : { ...base, id: null, name: '', badge: BADGES.find((b) => !used.has(b)) ?? 'ink', contentLevel: 'family', savedLevel: 'family' };
     this.show('playerEdit');
   }
 
@@ -537,7 +560,7 @@ export class Menu {
       },
     });
     const save = async () => {
-      const ok = await this.hooks.onSavePlayer(e.id, e.name, e.badge);
+      const ok = await this.hooks.onSavePlayer(e.id, e.name, e.badge, e.contentLevel);
       if (ok) {
         this.editing = null;
         this.show('players');
@@ -589,6 +612,7 @@ export class Menu {
               ),
             ),
           ]),
+          this.wordFilter(e),
           canDelete && e.confirmDelete
             ? h('div', { className: 'menu-confirm', role: 'alert' }, [
                 h('p', {}, [t('players.deleteConfirm', { name: player?.name ?? e.name })]),
@@ -622,6 +646,101 @@ export class Menu {
         ],
       ),
     ];
+  }
+
+  /**
+   * The player's word filter. Choosing a stricter level is instant; a looser
+   * one than the player had asks a times-table question first, so it's a
+   * grown-up's choice.
+   */
+  private wordFilter(e: NonNullable<Menu['editing']>): HTMLElement {
+    const rank = (level: ContentLevel) => CONTENT_LEVELS.indexOf(level);
+    const pick = (level: ContentLevel) => {
+      if (rank(level) <= rank(e.savedLevel)) {
+        e.contentLevel = level;
+        e.check = null;
+      } else {
+        // Two digits by one (e.g. 17 × 8): easy for a grown-up, hard for a young child to guess.
+        const between = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
+        e.check = { level, a: between(12, 19), b: between(3, 9), answer: '', wrong: false };
+      }
+      this.render(false);
+      if (e.check) this.panel.querySelector<HTMLInputElement>('#grown-up-answer')?.focus();
+    };
+    const check = e.check;
+    const confirmCheck = () => {
+      if (!check) return;
+      if (Number(check.answer.trim()) === check.a * check.b) {
+        e.contentLevel = check.level;
+        e.check = null;
+        this.render(false);
+        this.panel.querySelector<HTMLElement>(`[data-id="filter-${e.contentLevel}"]`)?.focus();
+      } else {
+        check.wrong = true;
+        check.answer = '';
+        this.render(false);
+        this.panel.querySelector<HTMLInputElement>('#grown-up-answer')?.focus();
+      }
+    };
+    return h('fieldset', { className: 'st-group' }, [
+      h('legend', {}, [t('filter.title')]),
+      h('p', { className: 'st-help' }, [t('filter.intro')]),
+      h(
+        'div',
+        { className: 'menu-filters', role: 'radiogroup', 'aria-label': t('filter.title') },
+        CONTENT_LEVELS.map((level) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              role: 'radio',
+              className: 'menu-btn menu-filter',
+              'aria-checked': String(level === e.contentLevel),
+              'data-id': `filter-${level}`,
+              onClick: () => pick(level),
+            },
+            [
+              h('span', { className: 'menu-label' }, [t(`filter.${level}` as MessageKey)]),
+              h('span', { className: 'menu-detail' }, [t(`filter.${level}.detail` as MessageKey)]),
+            ],
+          ),
+        ),
+      ),
+      check
+        ? h('div', { className: 'menu-grown-up', role: 'group', 'aria-labelledby': 'grown-up-question' }, [
+            h('label', { id: 'grown-up-question', for: 'grown-up-answer' }, [
+              t('filter.check', { a: check.a, b: check.b }),
+            ]),
+            h('div', { className: 'menu-grown-up-row' }, [
+              h('input', {
+                id: 'grown-up-answer',
+                className: 'menu-input',
+                type: 'text',
+                inputmode: 'numeric',
+                autocomplete: 'off',
+                value: check.answer,
+                'data-id': 'grown-up-answer',
+                onInput: (event) => {
+                  check.answer = (event.target as HTMLInputElement).value;
+                },
+                onKeydown: (event) => {
+                  // Enter answers the question rather than saving the form.
+                  if ((event as KeyboardEvent).key === 'Enter') {
+                    event.preventDefault();
+                    confirmCheck();
+                  }
+                },
+              }),
+              h('button', { type: 'button', className: 'tc-primary', 'data-id': 'grown-up-ok', onClick: confirmCheck }, [t('filter.checkOk')]),
+              h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'grown-up-cancel', onClick: () => {
+                e.check = null;
+                this.render(false);
+              } }, [t('players.cancel')]),
+            ]),
+            check.wrong ? h('p', { className: 'tc-warning', role: 'alert' }, [t('filter.checkWrong')]) : null,
+          ])
+        : null,
+    ]);
   }
 
   /** What Inkling is, why it exists, and where its code lives. */

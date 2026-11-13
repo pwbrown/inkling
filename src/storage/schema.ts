@@ -8,8 +8,9 @@
 import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
 import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from '../core/config';
 import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
+import { DEFAULT_CONTENT_LEVEL, isContentLevel, type ContentLevel } from '../content/contentFilter';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -91,6 +92,8 @@ export interface SaveData {
   apprentice: ApprenticeProgress;
   /** Added in version 4. */
   profile: Progression;
+  /** How much the word list leaves out for this player (added in version 6). */
+  contentLevel: ContentLevel;
 }
 
 /** File format for export/import. */
@@ -123,6 +126,7 @@ export function defaultSave(): SaveData {
     vocab: [],
     apprentice: { unlocked: 1, stars: {}, completed: false },
     profile: { ink: 0, cosmetics: { ...DEFAULT_COSMETICS } },
+    contentLevel: DEFAULT_CONTENT_LEVEL,
   };
 }
 
@@ -242,6 +246,7 @@ function sanitize(v: Json): SaveData {
     vocab: sanitizeVocab(v.vocab),
     apprentice: sanitizeApprentice(v.apprentice),
     profile: sanitizeProfile(v.profile),
+    contentLevel: isContentLevel(v.contentLevel) ? v.contentLevel : DEFAULT_CONTENT_LEVEL,
   };
 }
 
@@ -266,6 +271,8 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
     apprentice: { unlocked: 1, stars: {}, completed: false },
     notebook: isObject(save.notebook) && save.notebook.mode === 'apprentice' ? null : save.notebook,
   }),
+  // v6 added the word filter, starting at the strictest level.
+  5: (save) => ({ ...save, version: 6, contentLevel: DEFAULT_CONTENT_LEVEL }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

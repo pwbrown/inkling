@@ -1,6 +1,6 @@
 # Apprentice mode improvements
 
-Claude Code session started 2026-11-13. 9 prompts.
+Claude Code session started 2026-11-13. 10 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1847,6 +1847,389 @@ It would need a setting in Settings, a word pack that records each word's group,
 
   ```bash
   npm run transcript 2>&1 | grep Wrote; git diff docs/transcripts | grep "^+" | grep -i -E "[removed]|[removed]|gmail|/private/tmp|claude-501|/Users/[a-z]" | head -5; git status --short | head -30
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Transcript is clean: the only matches are my own scan commands, with paths already redacted. Committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit fixes and start content filter branch
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Playtest fixes: ghost side, steady Desk, slower unlocks, kinder words
+
+  - Drop the red-pen tick on beaten creatures; x x eyes and a squash remain
+  - Ghosts reveal a quarter to half of the way in from the right edge
+  - Desk options are fixed-size with a corner check, and redraws keep the
+    scroll position, so choosing a pen no longer shifts the screen
+  - Slower progression: twice the ink per level (now in GAME_CONFIG.rewards),
+    unlocks spread from level 2 to 16, bigger notebook bonus; items already
+    in use stay usable
+  - Kid-friendliness review of the word 
+  … (447 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Committed as `708b40c`. I've started `feat/content-filter` from it and am now looking at how the word pack and blocklist are loaded, to design the filter levels.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Read pack loader and find blocklist users
+
+  ```bash
+  cat src/content/en/index.ts; grep -rn "blocklist" src --include=*.ts -l 2>/dev/null || grep -rln "blocklist" src | grep -v test
+  ```
+- **Shell:** Find pack users, tier parsing and save schema version
+
+  ```bash
+  grep -rn "pack\.\(words\|blocklist\)\|blocklist:" src | grep -v "test.ts"; grep -n "entriesFromTiers" -A12 src/content/wordPool.ts | head -20; sed -n 1,30p src/storage/schema.ts; grep -n "SAVE_VERSION\|MIGRATIONS\|5:" src/storage/schema.ts | head
+  ```
+- **Read** `scripts/build-words.ts`
+- **Wrote** `src/content/contentFilter.ts`
+
+</details>
+
+### 🤖 Claude
+
+Next, the build script: it sorts every word into the strictest level that allows it.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Sort words into filter levels in the build script
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/build-words.ts'
+  s=open(p).read()
+  start=s.index("/**\n * Slurs, crude words and sensitive topics that LDNOOBW misses")
+  end=s.index("function readJson")
+  s=s[:start]+s[end:]
+  s=s.replace("""import { Blocklist } from '../src/content/blocklist.ts';""","""import { Blocklist } from '../src/content/blocklist.ts';
+  import { ALWAYS_BLOCKED, CONTENT_LEVELS, GROUP_TERMS, levelTerms } from '../src/content/contentFilter.ts';""")
+  old_tail=s[s.index("const rawTerms ="):]
+  new_tail="""const rawTerms = readJson<string[]>('naughty-words/en.json');
+  /** Blocked at every filter level. */
+  c
+  … (3339 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Words per level: family 55,817, older kids +86, grown-ups +439. Now the runtime loader:
+
+<details><summary>2 tool calls</summary>
+
+- **Wrote** `src/content/en/index.ts`
+- **Shell:** Typecheck to find pack API callers
+
+  ```bash
+  npx tsc --noEmit -p . 2>&1 | head -20
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Rewriting the pack test to cover every level:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Rewrite pack tests for filter levels
+
+  ```bash
+  sed -i '' "s/import { ALWAYS_BLOCKED, CONTENT_LEVELS, GROUP_TERMS, levelTerms } from/import { ALWAYS_BLOCKED, CONTENT_LEVELS, levelTerms } from/" scripts/build-words.ts && cat > src/content/en/pack.test.ts <<'EOF'
+  import { describe, expect, it } from 'vitest';
+  import { DEFAULT_KEYS } from '../../core/config';
+  import { CONTENT_LEVELS } from '../contentFilter';
+  import { MIN_WORD_POOL, createContentSource } from '../contentSource';
+  import { loadEnglishPack } from './index';
+  import words from './words.json';
+
+  describe('bundled English pack', async () => {
+    const pack = await loadEnglishPack();
+    
+  … (2649 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The pack works for all three levels. Next, each player's save stores their filter level (save format v6, with a migration).
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Read SaveData, defaults, sanitizer and migrations
+
+  ```bash
+  sed -n 78,130p src/storage/schema.ts; sed -n 225,275p src/storage/schema.ts
+  ```
+- **Shell:** Store each player's word filter in the save (v6)
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/storage/schema.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:60]; s=s.replace(a,b,1)
+  sub("export const SAVE_VERSION = 5;","export const SAVE_VERSION = 6;")
+  sub("import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';","import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';\nimport { DEFAULT_CONTENT_LEVEL, isContentLevel, type ContentLevel } from '../content/contentFilter';")
+  sub("""  /** Added in version 4. */
+    profile: Progression;
+  }""","""  /** Added in version 4. */
+    profile: Progression;
+    /** H
+  … (982 more characters)
+  ```
+- **Shell:** Look at schema test cases
+
+  ```bash
+  grep -n "it(\|version: 5\|version: 4" src/storage/schema.test.ts | head -20
+  ```
+- **Shell:** Test the v6 migration
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/storage/schema.test.ts'
+  s=open(p).read()
+  a="  it('keeps valid word lists and drops bad ones', () => {"
+  assert a in s
+  s=s.replace(a,"""  it('upgrades version 5 saves to the family-friendly word filter, and keeps a valid choice', () => {
+      expect(migrate({ version: 5, keys: ['a'] }).contentLevel).toBe('family');
+      expect(migrate({ version: 6, contentLevel: 'olderKids' }).contentLevel).toBe('olderKids');
+      expect(migrate({ version: 6, contentLevel: 'anything' }).contentLevel).toBe('family');
+    });
+
+  """+a,1)
+  open(p,'w').write(s)
+  EOF
+  npx vitest run src/storage/schema.
+  … (32 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now `main.ts` uses the current player's level wherever it reads words or the blocklist:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Read pack usage sites in main
+
+  ```bash
+  sed -n 150,162p src/main.ts; sed -n 225,232p src/main.ts; sed -n 296,310p src/main.ts
+  ```
+- **Shell:** Use the player's filter level for words and blocklist
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:60]; s=s.replace(a,b,1)
+  sub("""    for (const key of focus) weights[key] = (weights[key] ?? 1) * NEW_KEY_WEIGHT;
+      return createContentSource({
+        keys,
+        words: pack.words,
+        blocklist: pack.blocklist,
+        trustedWords: true,
+        keyWeights: weights,
+        topicWords: store.data.vocab.filter((list) => list.enabled).flatMap((list) => list.words),
+      });""","""    for (const key of focus) weights[key] = (weights[key] ?? 1) * NEW_KEY_WEIGHT;
+      // The player's word filter (conte
+  … (958 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Words follow the player's level now. Next, the filter control on the Edit player screen, with the grown-up check.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add word filter choice with grown-up check to player editor
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:70]; s=s.replace(a,b,1)
+  sub("""import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage/profiles';""","""import { CONTENT_LEVELS, type ContentLevel } from '../content/contentFilter';
+  import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage/profiles';""")
+  sub("""  detail: string;
+    active: boolean;
+  }""","""  detail: string;
+    active: boolean;
+    /** The player's word filter. */
+    contentLevel: ContentLevel;
+  }
+
+  /** A times-table question a grown-up answers before the word filter is
+  … (6536 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now `main.ts` saves the level for whichever player is being edited:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Persist word filter per player in main
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:70]; s=s.replace(a,b,1)
+  sub("""  const playerDetails = new Map<string, string>();""","""  const playerDetails = new Map<string, string>();
+    /** Other players' word filters, read from their saves. */
+    const playerLevels = new Map<string, ContentLevel>();""")
+  sub("""        const raw = await backend.load(saveKeyFor(p.id));
+          playerDetails.set(p.id, describePlayer(raw === undefined ? defaultSave() : migrate(raw)));""","""        const raw = await backend.load(saveKeyFor(p.id));
+          cons
+  … (2502 more characters)
+  ```
+- **Shell:** Style the word filter and grown-up check
+
+  ```bash
+  cat >> src/ui/menu.css <<'EOF'
+
+  /* Word filter (player editor). */
+  .menu-filters {
+    display: grid;
+    gap: 6px;
+  }
+
+  .menu .menu-filter {
+    padding: 8px 14px;
+  }
+
+  .menu .menu-filter[aria-checked='true'] {
+    background: var(--tc-highlight);
+  }
+
+  .menu .menu-filter[aria-checked='true']::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    font-weight: 700;
+  }
+
+  .menu-grown-up {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 2px dashed var(--tc-margin);
+    border-radius: 10px;
+  }
+
+  .menu-grown-up label {
+    font-weight: 7
+  … (139 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Testing the flow in the browser: loosen with a wrong answer, then the right one, and check the saved level and that new words appear.
+
+<details><summary>3 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); 'ok'"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); await sleep(1500); inkling.menu.show('players'); await sleep(50); document.querySelector('[data-id=\"edit-main\"]').click(); await sleep(50); document.querySelector('[data-id=\"filter-olderKids\"]').click(); awai
+… (972 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); const typeable = (w) => inkling.world.content; inkling.menu.show('players'); await sleep(50); const sam=[...document.querySelectorAll('[data-id^=\"edit-p\"]')][0]; sam.click(); await sleep(50); document.querySele
+… (1080 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Grown-up check, tightening without a check, and saving another player's level all work. Last check: the active player's words actually change.
+
+<details><summary>3 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const keys=[...'abcdefghijklmnopqrstuvwxyz']; const fam=inkling.pack.wordsFor('family').length, older=inkling.pack.wordsFor('olderKids').length; ({fam, older, worldWords: inkling.world.content.wordCount, worldKeys: inkling.world.keys.length})"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); inkling.menu.show('players'); await sleep(50); document.querySelector('[data-id=\"edit-main\"]').click(); await sleep(50); document.querySelector('[data-id=\"filter-grownUps\"]').click(); await sleep(50); documen
+… (55 more characters)`
+- **computer** `{"action":"screenshot","scale":0.6}`
+
+</details>
+
+### 🤖 Claude
+
+Works. 10 × 7 is too easy for an older kid to guess, though, so I'm making the question two-digit by one-digit (like 17 × 8).
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Harder grown-up question, docs, run checks and build
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  sub('src/ui/menu.ts', """        const n = () => 6 + Math.floor(Math.random() * 7);
+          e.check = { level, a: n(), b: n(), answer: '', wrong: false };""", """        // Two digits by one (e.g. 17 × 8): easy for a grown-up, hard for a young child to guess.
+          const between = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
+          e.check = { level, a: between(12, 19), b: between(3, 9), answer: '', wrong: false };""")
+  sub('CREDITS.md', "and an
+  … (1320 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The feedback fixes are committed as `708b40c` on `fix/m14-feedback`, along with the updated transcript. The word filter is built on `feat/content-filter`, branched from that commit. `npm run check` (246 tests) and the build pass, and the filter is not committed yet.
+
+**How it works**
+- **Per player:** each player has their own filter, under **Switch player → Edit → Word filter**, so siblings of different ages can share a browser. It's saved with the player's progress (save format v6; older saves start on Family friendly).
+- **Three levels:**
+  - **Family friendly** (default): everything from the review is left out. That's 55,817 words.
+  - **Older kids:** adds toilet humour, mild insults like "stupid", and identity words like "gay" (86 words).
+  - **Grown-ups:** also adds bodies and reproduction, drinking and drugs, violence, and grown-up themes like "seduce" and "brothel" (439 words).
+  - **Always blocked:** swear words and slurs, at every level.
+- **Grown-up check:** making the filter looser asks a times-table sum (two digits by one, like 17 × 8). A wrong answer changes nothing. Making it stricter happens straight away.
+- **Downloaded word lists** are checked again against the current filter. Making a filter stricter also hides topic words fetched under a looser one.
+
+**Where to change it:** the word groups and which level allows each one are in [contentFilter.ts](src/content/contentFilter.ts). Both the word-pack build and the game read that file, so you change a group or move it to another level in one place, then run `npm run words:build`.
+
+**Tested in the browser:** a wrong answer is refused, the right answer loosens the filter, making it stricter needs no check, and changing another player's filter saves to their own save.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  npm run transcript 2>&1 | grep Wrote; git diff docs/transcripts | grep "^+" | grep -i -E "[removed]|[removed]|gmail|/Users/[a-z]" | grep -v "grep -i" | head -5; git status --short
   ```
 
 </details>

@@ -31,6 +31,7 @@ import { formatNumber, setLocale, t, type MessageKey } from './i18n';
 import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel } from './core/rewards';
 import { defaultSave, migrate, type SaveData } from './storage/schema';
 import { PlayerStore, cleanName, saveKeyFor, type Player } from './storage/profiles';
+import { DEFAULT_CONTENT_LEVEL, type ContentLevel } from './content/contentFilter';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { loadFonts } from './fonts';
 import { registerOffline } from './pwa';
@@ -151,13 +152,19 @@ async function main(): Promise<void> {
   const contentFor = (keys: readonly string[], focus: readonly string[] = []) => {
     const weights = keyWeights(store.data.keyStats, keys);
     for (const key of focus) weights[key] = (weights[key] ?? 1) * NEW_KEY_WEIGHT;
+    // The player's word filter (content/contentFilter.ts) decides which words appear.
+    const blocklist = pack.blocklistFor(store.data.contentLevel);
     return createContentSource({
       keys,
-      words: pack.words,
-      blocklist: pack.blocklist,
+      words: pack.wordsFor(store.data.contentLevel),
+      blocklist,
       trustedWords: true,
       keyWeights: weights,
-      topicWords: store.data.vocab.filter((list) => list.enabled).flatMap((list) => list.words),
+      // Downloaded words are checked again, in case the filter is stricter than when they were fetched.
+      topicWords: store.data.vocab
+        .filter((list) => list.enabled)
+        .flatMap((list) => list.words)
+        .filter((word) => !blocklist.blocksWord(word)),
     });
   };
 
@@ -226,7 +233,7 @@ async function main(): Promise<void> {
       customPresets: customPresets(),
       initial: store.data.keys,
       keyStats: store.data.keyStats,
-      countWords: (keys) => countTypeableWords(pack.words, keys),
+      countWords: (keys) => countTypeableWords(pack.wordsFor(store.data.contentLevel), keys),
       minWords: MIN_WORD_POOL,
       onDone: (keys) => {
         dialogOpen = false;
@@ -298,7 +305,7 @@ async function main(): Promise<void> {
     const refresh = () => setContent(game, contentFor(store.data.keys));
     openWordLists(document.body, {
       lists: store.data.vocab,
-      blocklist: pack.blocklist,
+      blocklist: pack.blocklistFor(store.data.contentLevel),
       countFitting: (words) =>
         countTypeableWords(
           words.map((word) => ({ word, tier: 0 })),
@@ -354,6 +361,8 @@ async function main(): Promise<void> {
 
   /** "Level 5 · Apprentice chapter 4"-style summaries of each player, read from their saves. */
   const playerDetails = new Map<string, string>();
+  /** Other players' word filters, read from their saves. */
+  const playerLevels = new Map<string, ContentLevel>();
   const describePlayer = (save: Readonly<SaveData>) => {
     const level = levelForInk(save.profile.ink);
     return t('players.detail', {
@@ -367,7 +376,9 @@ async function main(): Promise<void> {
       if (p.id === players.active.id) continue;
       try {
         const raw = await backend.load(saveKeyFor(p.id));
-        playerDetails.set(p.id, describePlayer(raw === undefined ? defaultSave() : migrate(raw)));
+        const save = raw === undefined ? defaultSave() : migrate(raw);
+        playerDetails.set(p.id, describePlayer(save));
+        playerLevels.set(p.id, save.contentLevel);
       } catch {
         playerDetails.delete(p.id);
       }
@@ -389,15 +400,41 @@ async function main(): Promise<void> {
     menu.show('title');
   };
 
-  const savePlayer = async (id: string | null, name: string, badge: Player['badge']) => {
+  const savePlayer = async (id: string | null, name: string, badge: Player['badge'], contentLevel: ContentLevel) => {
     if (!cleanName(name)) return false;
-    if (id === null) {
-      if (!(await players.add(name, badge))) return false;
+    let target = id;
+    if (target === null) {
+      const added = await players.add(name, badge);
+      if (!added) return false;
+      target = added.id;
     } else {
-      await players.edit(id, name, badge);
+      await players.edit(target, name, badge);
     }
+    await setContentLevel(target, contentLevel);
     void refreshPlayerDetails();
     return true;
+  };
+
+  /** Change a player's word filter, in their own save. */
+  const setContentLevel = async (id: string, level: ContentLevel) => {
+    if (id === players.active.id) {
+      if (store.data.contentLevel === level) return;
+      store.update((save) => {
+        save.contentLevel = level;
+      });
+      // New words (or fewer) from the next page on.
+      setContent(game, contentFor(store.data.keys));
+      return;
+    }
+    playerLevels.set(id, level);
+    const key = saveKeyFor(id);
+    try {
+      const raw = await backend.load(key);
+      const save = raw === undefined ? defaultSave() : migrate(raw);
+      if (save.contentLevel !== level) await backend.save({ ...save, contentLevel: level }, key);
+    } catch {
+      // Leave an unreadable save alone.
+    }
   };
 
   const deletePlayer = async (id: string) => {
@@ -506,6 +543,7 @@ async function main(): Promise<void> {
         ...p,
         active: p.id === players.active.id,
         detail: p.id === players.active.id ? describePlayer(store.data) : (playerDetails.get(p.id) ?? ''),
+        contentLevel: p.id === players.active.id ? store.data.contentLevel : (playerLevels.get(p.id) ?? DEFAULT_CONTENT_LEVEL),
       })),
     activePlayer: () => players.active,
     canAddPlayer: () => players.canAdd,
