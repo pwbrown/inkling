@@ -20,16 +20,17 @@ import {
   typeChar,
   type EditKey,
 } from './core/input';
-import { builtInPresets, matchingPreset, type Preset } from './core/keySelection';
+import { apprenticePreset, builtInPresets, matchingPreset, type Preset } from './core/keySelection';
 import { FixedStepLoop } from './core/loop';
 import { improvedKeys } from './core/mastery';
 import { accuracy, wpm } from './core/stats';
-import { APPRENTICE_CHAPTERS, LESSONS, NEW_KEY_WEIGHT, chapterStars, starsForGrade, totalStars } from './core/campaign';
+import { APPRENTICE_CHAPTERS, LESSONS, NEW_KEY_WEIGHT, apprenticeKeys, chapterStars, starsForGrade, totalStars } from './core/campaign';
 import { pageGrade } from './core/grade';
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, setLocale, t, type MessageKey } from './i18n';
 import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel } from './core/rewards';
-import type { SaveData } from './storage/schema';
+import { defaultSave, migrate, type SaveData } from './storage/schema';
+import { PlayerStore, cleanName, saveKeyFor, type Player } from './storage/profiles';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { loadFonts } from './fonts';
 import { registerOffline } from './pwa';
@@ -52,6 +53,7 @@ import { openBackend, SaveStore } from './storage/store';
 import { openSaveData } from './ui/saveData';
 import { openSettings } from './ui/settingsDialog';
 import { openTypeCase, presetName } from './ui/typeCase';
+import { openUnlockDialog, type UnlockedItem } from './ui/unlockDialog';
 import { openWordLists } from './ui/wordLists';
 
 async function main(): Promise<void> {
@@ -63,7 +65,10 @@ async function main(): Promise<void> {
 
   const layout = US_QWERTY;
   const presets = builtInPresets(layout);
-  const store = await SaveStore.open(await openBackend());
+  const backend = await openBackend();
+  // Each player on this browser has their own save (storage/profiles.ts).
+  const players = await PlayerStore.open(backend, t('players.defaultName'));
+  const store = await SaveStore.open(backend, 250, saveKeyFor(players.active.id));
 
   // Comfort settings (REQUIREMENTS §10), applied before anything is drawn.
   let settings: Settings = loadSettings();
@@ -83,10 +88,15 @@ async function main(): Promise<void> {
   /** Keys that became mastered on the page just finished, for the graded page. */
   let newlyMastered: string[] = [];
   /** Ink earned on the page just finished, and any level-up, for the graded page. */
-  let reward: { ink: number; levelUp: number | null; unlocked: string[] } = { ink: 0, levelUp: null, unlocked: [] };
+  let reward: { ink: number; levelUp: number | null; unlocked: string[]; items: UnlockedItem[] } = { ink: 0, levelUp: null, unlocked: [], items: [] };
+
+  /** The chapter the player has reached in Apprentice (1-based). */
+  const apprenticeChapter = () => Math.max(1, Math.min(store.data.apprentice.unlocked, APPRENTICE_CHAPTERS));
+  /** Always matches the player's Apprentice progress. */
+  const myApprenticePreset = () => apprenticePreset(apprenticeChapter(), t('preset.apprentice', { chapter: apprenticeChapter() }));
 
   const describeKeys = (keys: readonly string[]) => {
-    const preset = matchingPreset([...presets, ...customPresets()], keys);
+    const preset = matchingPreset([myApprenticePreset(), ...presets, ...customPresets()], keys);
     return preset ? presetName(preset) : t('preset.custom');
   };
 
@@ -122,6 +132,7 @@ async function main(): Promise<void> {
           if (reward.levelUp) {
             lines.push(t('overlay.levelUp', { level: reward.levelUp, rank: t(`rank.${rankForLevel(reward.levelUp)}` as MessageKey) }));
           }
+          if (reward.unlocked.length > 0) lines.push(t('overlay.unlocked', { items: reward.unlocked.join(', ') }));
           return lines;
         }
         return [];
@@ -211,7 +222,7 @@ async function main(): Promise<void> {
     dialogOpen = true;
     openTypeCase(document.body, {
       layout,
-      builtInPresets: presets,
+      builtInPresets: [myApprenticePreset(), ...presets],
       customPresets: customPresets(),
       initial: store.data.keys,
       keyStats: store.data.keyStats,
@@ -318,6 +329,93 @@ async function main(): Promise<void> {
     });
   };
 
+  /** Use a key set for Practice and remember it. */
+  const useKeys = (keys: readonly string[]) => {
+    setContent(game, contentFor(keys));
+    store.update((save) => {
+      save.keys = [...keys];
+    });
+  };
+
+  /** Pause menu in an Apprentice chapter: leave it and practice its keys at the same difficulty. */
+  const practiceChapterKeys = () => {
+    if (game.phase !== 'paused' || game.mode !== 'apprentice') return;
+    const keys = apprenticeKeys(game.page.chapter);
+    const difficulty = game.difficulty;
+    quitToMenu(game);
+    useKeys(keys);
+    store.update((save) => {
+      save.difficulty = difficulty;
+    });
+    game.selectedDifficulty = difficulty;
+    startPractice(game, difficulty);
+    loop.reset();
+  };
+
+  /** "Level 5 · Apprentice chapter 4"-style summaries of each player, read from their saves. */
+  const playerDetails = new Map<string, string>();
+  const describePlayer = (save: Readonly<SaveData>) => {
+    const level = levelForInk(save.profile.ink);
+    return t('players.detail', {
+      rank: t(`rank.${rankForLevel(level)}` as MessageKey),
+      level,
+      chapter: Math.max(1, Math.min(save.apprentice.unlocked, APPRENTICE_CHAPTERS)),
+    });
+  };
+  const refreshPlayerDetails = async () => {
+    for (const p of players.list.players) {
+      if (p.id === players.active.id) continue;
+      try {
+        const raw = await backend.load(saveKeyFor(p.id));
+        playerDetails.set(p.id, describePlayer(raw === undefined ? defaultSave() : migrate(raw)));
+      } catch {
+        playerDetails.delete(p.id);
+      }
+    }
+    menu.refresh();
+  };
+
+  /** Switch to another player: their save, keys, difficulty and desk. */
+  const switchPlayer = async (id: string) => {
+    if (dialogOpen || game.phase !== 'ready') return;
+    if (id !== players.active.id) {
+      await store.switchTo(saveKeyFor(id));
+      await players.setActive(id);
+      reward = { ink: 0, levelUp: null, unlocked: [], items: [] };
+      applySave();
+      renderer.rebuild();
+      void refreshPlayerDetails();
+    }
+    menu.show('title');
+  };
+
+  const savePlayer = async (id: string | null, name: string, badge: Player['badge']) => {
+    if (!cleanName(name)) return false;
+    if (id === null) {
+      if (!(await players.add(name, badge))) return false;
+    } else {
+      await players.edit(id, name, badge);
+    }
+    void refreshPlayerDetails();
+    return true;
+  };
+
+  const deletePlayer = async (id: string) => {
+    if (dialogOpen || game.phase !== 'ready') return;
+    if (id === players.active.id) {
+      // Move to someone else first, so the deleted save isn't written again.
+      const next = players.list.players.find((p) => p.id !== id);
+      if (!next) return;
+      await store.switchTo(saveKeyFor(next.id));
+      await players.setActive(next.id);
+      applySave();
+      renderer.rebuild();
+    }
+    await players.remove(id);
+    playerDetails.delete(id);
+    menu.refresh();
+  };
+
   const goToMenu = () => {
     quitToMenu(game);
     loop.reset();
@@ -367,12 +465,7 @@ async function main(): Promise<void> {
     },
     level: () => levelForInk(store.data.profile.ink),
     cosmetics: () => store.data.profile.cosmetics,
-    onEquip: (slot, item) => {
-      store.update((save) => {
-        (save.profile.cosmetics as unknown as Record<string, string>)[slot] = item;
-      });
-      renderer.rebuild();
-    },
+    onEquip: (slot, item) => equip(slot, item),
     bestLine: (d) => {
       const best = store.data.records.bestScore[d];
       return best
@@ -404,7 +497,25 @@ async function main(): Promise<void> {
         loop.reset();
       }),
     onQuit: () => after(goToMenu),
+    canPracticeChapterKeys: () => game.phase === 'paused' && game.mode === 'apprentice',
+    onPracticeChapterKeys: () => after(practiceChapterKeys),
+    apprenticeKeysChapter: apprenticeChapter,
+    onUseApprenticeKeys: () => useKeys(myApprenticePreset().chars),
+    players: () =>
+      players.list.players.map((p) => ({
+        ...p,
+        active: p.id === players.active.id,
+        detail: p.id === players.active.id ? describePlayer(store.data) : (playerDetails.get(p.id) ?? ''),
+      })),
+    activePlayer: () => players.active,
+    canAddPlayer: () => players.canAdd,
+    onChoosePlayer: (id) => void switchPlayer(id),
+    onSavePlayer: savePlayer,
+    onDeletePlayer: (id) => void deletePlayer(id),
   });
+  // With more than one player, ask who's writing first.
+  if (players.list.players.length > 1) menu.show('players');
+  void refreshPlayerDetails();
 
   /** Run an action, then update the menu right away rather than on the next frame. */
   function after(action: () => void): void {
@@ -428,11 +539,36 @@ async function main(): Promise<void> {
     const before = levelForInk(save.profile.ink);
     save.profile.ink += ink;
     const after = levelForInk(save.profile.ink);
+    const items = newUnlocks(before, after);
     return {
       ink,
       levelUp: after > before ? after : null,
-      unlocked: newUnlocks(before, after).map(({ slot, item }) => t(`${slot}.${item}` as MessageKey)),
+      unlocked: items.map(({ slot, item }) => t(`${slot}.${item}` as MessageKey)),
+      items,
     };
+  };
+
+  /** Show what was just unlocked, with pictures and a button to use each one now. */
+  const showUnlocks = () => {
+    if (reward.items.length === 0 || dialogOpen) return;
+    const levelUp = reward.levelUp;
+    dialogOpen = true;
+    openUnlockDialog(document.body, {
+      levelUp: levelUp ? { level: levelUp, rank: t(`rank.${rankForLevel(levelUp)}` as MessageKey) } : null,
+      items: reward.items,
+      isEquipped: ({ slot, item }) => store.data.profile.cosmetics[slot] === item,
+      onEquip: ({ slot, item }) => equip(slot, item),
+      onClose: () => {
+        dialogOpen = false;
+      },
+    });
+  };
+
+  const equip = (slot: UnlockedItem['slot'], item: string) => {
+    store.update((save) => {
+      (save.profile.cosmetics as unknown as Record<string, string>)[slot] = item;
+    });
+    renderer.rebuild();
   };
 
   /** Phase before the latest change, to tell starting a page from resuming one. */
@@ -473,12 +609,14 @@ async function main(): Promise<void> {
           recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);
           save.notebook = snapshotNotebook(game, nextPagePosition(game.page));
         });
+        showUnlocks();
         break;
       case 'notebookComplete':
         store.update((save) => {
           save.notebook = null;
           reward = earnInk(save, NOTEBOOK_BONUS);
         });
+        showUnlocks();
         break;
       case 'gameOver':
         store.update((save) => {

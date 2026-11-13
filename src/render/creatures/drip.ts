@@ -5,7 +5,21 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { Target } from '../../core/world';
 import { COLORS, glyph } from '../theme';
-import { MoodTracker, applyGhost, bodyColor, drawFace, drawPips, labelStyle, wave, type CreatureView, type FrameContext } from './common';
+import {
+  MoodTracker,
+  applyGhost,
+  bodyColor,
+  drawCrown,
+  drawFace,
+  drawHem,
+  drawHorns,
+  drawPips,
+  labelStyle,
+  variantOf,
+  wave,
+  type CreatureView,
+  type FrameContext,
+} from './common';
 
 export function createDrip(target: Target, scale: number): CreatureView {
   const r = 27 * scale;
@@ -48,25 +62,42 @@ export function createDrip(target: Target, scale: number): CreatureView {
       bob.position.set(r + (hurtMs > 0 ? Math.sin(hurtMs / 20) * 3 : 0), 3 * wave(ctx, 0.006, phase));
       bob.scale.set(1 + squash, 1 - squash);
 
-      if (drawnLives !== t.lives) {
+      const color = bodyColor(t.lives);
+      const variant = variantOf(t.lives);
+      if (drawnLives !== t.lives || variant === 'violet') {
         drawnLives = t.lives;
-        const color = bodyColor(t.lives);
-        body
-          .clear()
-          .circle(r, 0, r)
-          // Tail trailing to the right as it moves left.
-          .poly([r + r * 0.55, -r * 0.83, width, -r * 0.05, r + r * 0.7, r * 0.7])
-          .fill(color)
-          .circle(r - r * 0.58, -r * 0.35, r * 0.13)
-          .fill({ color: COLORS.label, alpha: 0.3 });
+        body.clear();
+        if (variant === 'crimson') {
+          // A spiky ball.
+          const points: number[] = [];
+          const spikes = 14;
+          for (let i = 0; i < spikes * 2; i++) {
+            const a = (i / (spikes * 2)) * Math.PI * 2;
+            const rr = i % 2 === 0 ? r * 1.14 : r * 0.94;
+            points.push(r + Math.cos(a) * rr, Math.sin(a) * rr);
+          }
+          body.poly(points).fill(color);
+        } else {
+          body.circle(r, 0, r).fill(color);
+        }
+        // Tail trailing to the right as it moves left.
+        body.poly([r + r * 0.55, -r * 0.83, width, -r * 0.05, r + r * 0.7, r * 0.7]).fill(color);
+        if (variant === 'violet') drawHem(body, r * 0.25, r * 1.75, r * 0.72, r * 0.26, color, wave(ctx, 0.006, phase));
+        body.circle(r - r * 0.58, -r * 0.35, r * 0.13).fill({ color: COLORS.label, alpha: 0.3 });
         pips.clear();
-        drawPips(pips, r - 6 * scale * (t.lives - 1), -r - 16 * scale, t.lives, scale);
+        drawPips(pips, r - 6 * scale * (t.lives - 1), -r - (variant === 'violet' ? 30 : 16) * scale, t.lives, scale);
       }
 
       face.clear();
       // Eyes peek over the top, leaving the character clear.
-      drawFace(face, r - r * 0.1, -r * 0.92, r * 0.2, m, blink, ctx.lookX, ctx.lookY, bodyColor(t.lives));
+      const eyeR = r * 0.2;
+      const eyeX = r - r * 0.1;
+      const eyeY = -r * 0.92;
+      if (variant === 'crimson') drawHorns(face, eyeX, eyeY + eyeR * 0.6, eyeR * 2.4, eyeR * 2.2, color);
+      if (variant === 'violet') drawCrown(face, eyeX, eyeY - eyeR * 0.2, eyeR * 4, color);
+      drawFace(face, eyeX, eyeY, eyeR, m, blink, ctx.lookX, ctx.lookY, color, null, variant === 'violet' ? 3 : 2);
       highlight.visible = ctx.locked;
+      label.alpha = ctx.defeated ? 0.55 : 1;
       applyGhost(t, root, [label], ctx.timeMs, ctx.reducedMotion);
     },
   };

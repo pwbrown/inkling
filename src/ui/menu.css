@@ -80,7 +80,7 @@
 
 .menu-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
@@ -230,7 +230,17 @@
 
 .menu .menu-chapter {
   width: 100%;
+  height: 100%;
+  min-height: 66px;
+  align-content: center;
   padding-right: 76px;
+}
+
+/* One line each, so every card is the same height. */
+.menu-chapter .menu-detail {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .menu-stars {
@@ -288,4 +298,166 @@
 .menu .desk-option:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Pictures (art.ts). */
+.art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Who's playing: a chip on the title screen. */
+.menu .menu-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: center;
+  padding: 6px 14px 6px 8px;
+  border: 1.5px dashed var(--tc-ink-light);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tc-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.menu .menu-player:hover,
+.menu .menu-player:focus-visible {
+  background: rgb(255 224 102 / 0.35);
+}
+
+.menu-player-badge {
+  display: inline-block;
+  flex: none;
+  width: 30px;
+  height: 44px;
+}
+
+.menu-player-name {
+  font-weight: 700;
+}
+
+.menu-player-switch {
+  font-size: 14px;
+  color: var(--tc-ink-light);
+  text-decoration: underline;
+}
+
+.menu-player-switch kbd {
+  font: 600 11px ui-monospace, Menlo, monospace;
+  padding: 1px 5px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.menu-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 46vh;
+  overflow: auto;
+}
+
+.menu-player-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.menu .menu-player-pick {
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  align-items: center;
+}
+
+.menu .menu-player-pick[aria-current='true'] {
+  background: var(--tc-highlight);
+}
+
+.menu-player-pick[aria-current='true'] .menu-label::after {
+  content: ' ✓';
+}
+
+.menu-player-pick .menu-player-badge {
+  grid-row: span 2;
+}
+
+.menu-player-form {
+  display: grid;
+  gap: 10px;
+}
+
+.menu-field {
+  font-weight: 700;
+}
+
+.menu-input {
+  font: inherit;
+  font-size: 20px;
+  padding: 8px 12px;
+  border: 2px solid var(--tc-ink);
+  border-radius: 10px;
+  background: var(--tc-paper);
+  color: var(--tc-ink);
+}
+
+.menu-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.menu .menu-badge {
+  padding: 6px 10px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.menu .menu-badge[aria-checked='true'] {
+  border-color: var(--tc-ink);
+  background: var(--tc-highlight);
+}
+
+.menu-confirm p {
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+
+/* About: links styled like menu buttons. */
+.menu a.menu-link-card {
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  align-items: center;
+  text-decoration: none;
+  padding-right: 16px;
+}
+
+.menu-link-card > .menu-label,
+.menu-link-card > .menu-detail {
+  grid-column: 2;
+}
+
+.menu-link-icon {
+  grid-row: span 2;
+  width: 32px;
+  height: 32px;
+}
+
+/* Desk pictures. */
+.desk-art {
+  display: block;
+  width: 84px;
+  height: 42px;
+  margin: 0 auto 2px;
+}
+
+.menu .desk-option:disabled .desk-art {
+  filter: grayscale(1);
+  opacity: 0.6;
 }

@@ -1,0 +1,1266 @@
+# Apprentice mode improvements
+
+Claude Code session started 2026-11-13. 2 prompts.
+
+Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
+
+---
+
+## 🧑 Prompt
+
+> I want to start the next round of improvements:
+>
+> * The chapter list in the apprentice menu has some height inconsistencies where some boxes only have 1 sub line and others have 2. This should be uniform
+> * It would be nice to slightly increase letter spacing for blotlings to ensure they are easy to read
+> * This game may be used by multiple people in the same browser. It would be cool to introduce a profile system to allow multiple players to keep track of their gameplay from the same browser.
+> * During apprentice mode it would be nice if the player could exit the campaign to enter practice mode. When this happens, practice mode should automatically match the campaign difficulty and use a key selection that matches the progress of that campaign chapter.
+> * It would be nice if there was a permanent key selection that was always associated with the highest apprentice chapter that the user is currently on. So they can just select practice mode and then select their current skill level.
+> * There is a delay between when the last character of a target is hit and when the animate ink blob hits it. This can be a little distracting it makes it hard in the moment to know if you've actually finished the target especially while muted. It would be nice to include some sort of animation or final state to indicate that the target is defeated before the animated blob hits it.
+> * Let's move the ghost reveal to any random value between the first quarter of the screen and the first half.
+> * Some difficulty scaling improvements:
+>    * The crimson and violet difficulties should use smaller word sizes to help compensate for their increased difficulty. I cannot even make it passed chapter 3 of expert... that's a bit too hard.
+>    * One of the original requirements was that each wave would be a single type, but I want to deviate from that a little. Let's make the 2 primary waves the ink blots (single character) and the blotlings (full word), and later on for added difficulty we can add the buffered phrases and corrections sporadically to increase difficulty, but not to completely overwhelm.
+>    * Let's delay the tripple word target (violet) until a little further in the game)
+> * Some design changes
+>    * Let's use slightly different shapes between the black, crimson, and violet targets. The color is useful but it would be more fun if they had slightly unique shapes between them. Or more menacing personalities.
+>    * When a player unlocks a new character, let's display that shape on the screen so they know what they unlocked. right now the game relies too much on text to indicate status or rewards, but this is a game for kids so it should be a bit more visual.
+>    * On that note when a player unlocks a new character or visual improvement they should be given the option to equip it immediately
+> * There should be an about this game section in the main menu where they can learn about what the game is and why it was made, and also include a link to the GitHub repo using the GitHub logo so they can view the open source code:
+>    * It would also be cool if there was a form or at least a link to the form that would take them to GitHub where they can suggest features, improvements, or bug fixes.
+
+<details><summary>3 tool calls</summary>
+
+- **Agent** `{"description":"Explore UI, storage, unlocks","subagent_type":"Explore","prompt":"In /Users/[removed]/projects/inkling (TypeScript + Vite + PixiJS typing game), explore thoroughly and report with file paths and line numbers:\n1. The Apprentice campaign menu / chapter list UI in src/ui/ — how chapt
+… (946 more characters)`
+- **Agent** `{"description":"Explore waves, difficulty, practice","subagent_type":"Explore","prompt":"In /Users/[removed]/projects/inkling (TypeScript + Vite + PixiJS typing game), explore thoroughly and report with file paths and line numbers, quoting key code:\n1. Wave generation in src/core/: how waves are 
+… (976 more characters)`
+- **Agent** `{"description":"Explore rendering of targets","subagent_type":"Explore","prompt":"In /Users/[removed]/projects/inkling (TypeScript + Vite + PixiJS typing game), explore src/render/ and related core state thoroughly and report with file paths and line numbers, quoting key code:\n1. How targets (ink
+… (936 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Three explorers are running in parallel (UI/storage/unlocks, waves/difficulty/practice, target rendering). I'll continue once they report.
+
+### 🤖 Claude
+
+The rendering explorer has finished. Waiting on the other two.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Search difficulty labels and color names in UI strings
+
+  ```bash
+  grep -n -i "crimson\|violet\|expert\|hard" src/i18n/en.ts | head -40; grep -n -i "crimson\|violet" src/ui/*.ts | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Two of three explorers are done. Still waiting on the UI/storage/unlocks explorer.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check contents strings, remote and GitHub folder
+
+  ```bash
+  grep -n "contents\.\|about\|github" src/i18n/en.ts; git remote -v; ls .github 2>/dev/null; ls .github/* 2>/dev/null
+  ```
+
+</details>
+
+### ❓ Claude asked
+
+- For profiles, what should each player get their own copy of? (Today the save — keys, stats, Apprentice stars, ink/level, cosmetics, notebook — lives in IndexedDB, and display settings like theme/text size/volume live separately in localStorage.)
+  - Save per profile (Recommended)
+  - Save + settings per profile
+- On 'crimson and violet should use smaller words / I can't get past chapter 3 of expert': crimson/violet are the 2- and 3-life creatures, which don't appear until Apprentice chapter 5 — so chapter 3 on Expert is hard because of the Expert profile itself (1.5× speed, +2 on screen, longer words). What should I change?
+  - Both (Recommended)
+  - Only crimson/violet words
+  - Only soften Expert
+- Mixed pages: drips and blotlings become the two main page types, with run-ons (phrases) and misprints (corrections) sprinkled in later. Should the dedicated run-on and misprint pages go away?
+  - Sprinkle only (Recommended)
+  - Keep a few dedicated
+- When you say 'unlocks a new character', do you mean the cosmetic unlocks (pen nib styles like Quill/Brush/Gold, splatter colours, paper styles), or new letters/keys learned in an Apprentice chapter?
+  - Cosmetics (Recommended)
+  - Both
+
+**Answer:** Your questions have been answered: "For profiles, what should each player get their own copy of? (Today the save — keys, stats, Apprentice stars, ink/level, cosmetics, notebook — lives in IndexedDB, and display settings like theme/text size/volume live separately in localStorage.)"="Save per profile (Recommended)", "On 'crimson and violet should use smaller words / I can't get past chapter 3 of expert': crimson/violet are the 2- and 3-life creatures, which don't appear until Apprentice chapter 5 — so chapter 3 on Expert is hard because of the Expert profile itself (1.5× speed, +2 on screen, longer words). What should I change?"="Both (Recommended)", "Mixed pages: drips and blotlings become the two main page types, with run-ons (phrases) and misprints (corrections) sprinkled in later. Should the dedicated run-on and misprint pages go away?"="Sprinkle only (Recommended)", "When you say 'unlocks a new character', do you mean the cosmetic unlocks (pen nib styles like Quill/Brush/Gold, splatter colours, paper styles), or new letters/keys learned in an Apprentice chapter?"="Cosmetics (Recommended)". You can now continue with these answers in mind.
+
+<details><summary>3 tool calls</summary>
+
+- **Asked questions** (shown above)
+- **Shell:** Read README intro and on-screen cap logic
+
+  ```bash
+  sed -n 1,40p README.md; grep -n "maxOnScreen\|distinct" src/core/world.ts | head
+  ```
+- **Wrote** `/Users/[removed]/.claude/plans/i-want-to-start-sorted-wall.md`
+
+</details>
+
+<details><summary><strong>📋 Plan for approval</strong></summary>
+
+# Inkling: next round of improvements
+
+## Context
+Playtesting turned up a list of polish, balance and feature requests: uneven chapter cards, hard-to-read blotling text, no way for siblings to share a browser, no bridge from Apprentice into Practice, an unclear "did I finish it?" moment while ink is in flight, Expert being brutal early, single-kind pages feeling samey, variants that only differ by colour, text-only unlock rewards, and no About page. Decisions confirmed with the user:
+- **Profiles:** one full save per profile; display/audio settings stay shared per browser.
+- **Difficulty:** shorter words on crimson/violet creatures *and* ease Expert/Hard early on.
+- **Wave mix:** no more dedicated run-on/misprint pages; drip and blotling pages, with run-ons/misprints sprinkled in later.
+- **Unlocks:** "character" = cosmetics (nib, splatter, paper); show them visually with an "Equip now" option.
+
+Work on branch `feat/m14-profiles-and-polish`, in the order below (each group is a natural commit). Every new string goes through `t()`/`en.ts`; every tuning number goes in `src/core/config.ts`.
+
+## 1. Quick polish
+- **Uniform chapter cards** (`src/ui/menu.ts:287-327`, `src/ui/menu.css:220-255`): the locked text "Clear the chapter before to open it" wraps to two lines. Shorten it to "Locked" (the 🔒 already explains), give `.menu-detail` `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`, and give `.menu-chapter` a fixed `min-height` so every card matches.
+- **Blotling letter spacing** (`src/render/creatures/common.ts:37-51`, `blotling.ts`): add a `letterSpacing` option (about 0.08em, as a named constant) to the blotling text style, and pass the same style to `measure`/`letterCenter` so shots still land on the right letter. The body pill already sizes from `measure`.
+- **Ghost reveal range:** replace `variants.revealAt: 0.55` with `revealAt: { min: 0.25, max: 0.5 }`. Roll a per-target `revealX` at spawn in `spawnTarget` (`src/core/world.ts:381-411`) using `world.random`, and have `isRevealed` (`world.ts:334-340`) and `applyGhost` (`common.ts:202-215`) use `target.revealX` instead of `GHOST_REVEAL_X`. Change "halfway" in the help text (`en.ts:238`) and comments.
+
+## 2. Difficulty and wave mix (`src/core/config.ts`, `world.ts`, `campaign.ts`, `content/contentSource.ts`)
+- **Cap drips by distinct keys:** this is the main reason early Expert feels impossible. With 2-5 keys and up to 8 drips on screen, many drips share a first letter. Cap `maxOnScreen` on drip pages at `max(2, keys − 1)` in `pageParams`/`updateSpawner`.
+- **Soften Expert and Hard:** retune `DIFFICULTY_PROFILES` (for example Expert speed 1.5→1.35, spawn 0.65→0.75, maxOnScreen +2→+1, complexity +0.3→+0.2). In Apprentice, blend the profile toward Normal over the first chapters (a new `apprentice.profileEaseChapters`, applied next to `easeForBeginners` in `campaign.ts:70-81`).
+- **Shorter words on variants:** add `variants.complexityScale: { 2: 0.6, 3: 0.4 }`. In `payloadFor` (`world.ts:355-375`) and `nextLife` (`world.ts:437-455`), scale the complexity used to pick each word by the creature's lives.
+- **Delay violet:** change `variants.violet.fromChapter` from 2 to 4 (Apprentice effective chapter, so violets first appear around chapter 17; Practice chapter 4).
+- **Sprinkles instead of dedicated pages:**
+  - Page plans (`apprenticePlan` in `campaign.ts:48-55`, `GAME_CONFIG.chapters`) only use `drip` and `blotling`.
+  - Add `GAME_CONFIG.sprinkles = { runon: { fromApprenticeChapter, fromChapter, chance, perChapter, max }, misprint: {…}, maxPerPage, maxOnScreen: 1 }`.
+  - `pageParams` returns per-page sprinkle chances; `spawnTarget` rolls on blotling pages to spawn a run-on (only when space is in the keys, as `canUse` checks) or a misprint, using that kind's base speed and ink loss.
+  - In Apprentice, run-ons come from about chapter 11 and misprints from about chapter 16, at most 1 on screen and about 2-3 per page.
+  - **Risk to check:** input routing with mixed kinds on one page. `typeChar`/`editBuffer` in `src/core/input.ts` must route by the *locked target's* kind, and Backspace must only edit a locked run-on or misprint. Add tests.
+- Update tests in `campaign.test.ts`, `variants.test.ts`, `config.test.ts` and `world.test.ts`, plus the README sentence that says "each page is either all drips or all Blotlings".
+
+## 3. Target visuals (`src/render/creatures/`, `renderer.ts`)
+- **Distinct variant shapes**, so lives no longer show by colour alone (DESIGN.md colour-blind rule):
+  - Black, 1 life: today's soft blob.
+  - Crimson, 2 lives: a jagged or spiky outline, two little horns, angry brows by default, a smirk.
+  - Violet, 3 lives: a larger, lumpier body with a wavy tentacle hem, a third eye and a drippy crown.
+  - Put this in `drip.ts` and `blotling.ts` via shared helpers in `common.ts` (`drawHorns`, `drawCrown`, outline jitter). As lives drop, the creature visibly transforms (violet → crimson → black).
+- **Defeated state before the ink lands:**
+  - Add `defeat()` to creature views.
+  - In the `'destroyed'` handler (`renderer.ts:291-310`), call it the moment the ghost view is created. It switches to an `x x` face, turns all text `inkFaded` with a strike line, and briefly squashes or shudders the body (skipped under reduced motion).
+  - The `dying` loop keeps animating that pose until `onLand` splatters it.
+  - For `'hit'` (a life lost), flash a quick ring and pop the pip immediately.
+
+## 4. Profiles (`src/storage/`, `src/ui/`, `src/main.ts`)
+- **Storage** (`src/storage/store.ts`):
+  - Keep the IndexedDB `saves` store. Add a `profiles` record holding `{ activeId, profiles: [{ id, name, badge, createdAt }] }`. Each profile's `SaveData` lives under its own key.
+  - On first load, the existing `main` save becomes profile 1 ("Player 1", id `main`), so no data moves.
+  - Add `SaveStore.switchTo(id)`, which flushes and then loads the other profile, and `ProfileStore` helpers to create, rename and delete profiles.
+  - Rename the existing `Profile` TS interface (ink and cosmetics) to `Progression` to avoid confusion. The `profile` field name is unchanged, so `SAVE_VERSION` does not change.
+  - The profiles record has its own small `version` and sanitizer, kept apart from `SaveData`.
+- **UI:**
+  - New `MenuScreen` `'profiles'` in `menu.ts`: a list of profile cards (name plus badge), Add (name input and a pick of colour badges), Rename, and Delete (confirm; refused for the last profile).
+  - The title screen shows "Writing as **Name** · Switch (P)". Practice moves to a different key if needed; check current `data-key` shortcuts first.
+  - On launch, if there are 2 or more profiles, open on the "Who's writing?" picker.
+  - Save data export, import and erase act on the active profile.
+- **Docs:** update `PRIVACY.md` to cover profiles, mention the localStorage settings, and fix the wrong "B on new-notebook" note.
+- **Tests:** profile index sanitizer, migration from a single save, switching keeps each profile's data apart (with `MemoryBackend`).
+
+## 5. Apprentice ↔ Practice
+- **"Practice these keys" in the pause menu**, Apprentice only (`menu.ts:372-384`):
+  - Use a new hook. It sets `store.data.keys = apprenticeKeys(chapter)` and `store.data.difficulty = world.difficulty`, then runs the same path as `actions.start` (`main.ts:174-193`) with `setContent(contentFor(keys))` and `startPractice`.
+  - Apprentice stars are already saved per page, so nothing is lost.
+- **Permanent "My Apprentice keys" preset:**
+  - Add a dynamic built-in preset to the Type Case (`src/core/keySelection.ts` `builtInPresets`, `src/ui/typeCase.ts`). Its label is "My Apprentice keys (Chapter N)" and its keys are `apprenticeKeys(unlocked − 1)` for the active profile.
+  - Add a one-click "Use my Apprentice keys" button on the Practice (`newNotebook`) screen.
+
+## 6. Visual unlocks with "Equip now"
+- **New `src/ui/cosmeticArt.ts`:** inline SVG for each cosmetic, following the `LOGO_SVG` pattern (`menu.ts:59-67`).
+  - Nibs are ported from the `drawNib` polygons (`renderer.ts:99-129`).
+  - Splatters are a splat shape in the `splatterColor` hex.
+  - Papers are a small ruled, graph or parchment swatch.
+  - The SVGs read the palette from `theme.ts`.
+- **New `src/ui/unlockDialog.ts`**, opened from `main.ts` after `earnInk()` (`main.ts:427-436`) whenever `unlocked` is non-empty, on both `pageCleared` and `notebookComplete` (the latter currently drops unlocks).
+  - For each new item: a big SVG, its name, and an **Equip now** button that calls the existing `onEquip` (`main.ts:370-375`). There is also a **Later** button.
+  - A level-up shows the rank name with the nib art.
+  - It uses the `dialogOpen` guard so game keys don't leak through.
+  - Check that `renderer.rebuild()` is safe during the `pageCleared` phase. If it isn't, defer equipping to the next page.
+- **The Desk screen** (`menu.ts:198-252`) also shows the SVG preview next to each radio option. Locked items appear as greyed silhouettes.
+
+## 7. About screen
+- **New `MenuScreen` `'about'`**, with an "About" button in the title screen's 3-column row (key `i`). It covers:
+  - what Inkling is (a cozy typing game where you choose your keys; offline, private, free)
+  - why it was made: for the author's kids, built with an AI coding assistant, with the transcripts public. Adapt this from the README note.
+  - a GitHub mark link to `https://github.com/pwbrown/inkling` ("View the source")
+  - a "Suggest an idea or report a bug" link to `https://github.com/pwbrown/inkling/issues/new/choose`
+- Links are plain `<a target="_blank" rel="noopener noreferrer">`. They are player-triggered navigation, not fetches, so the CSP is unchanged. Note this in `PRIVACY.md`.
+- The GitHub mark is inline SVG, used per GitHub's logo guidelines. Credit it in `CREDITS.md`.
+- **Add `.github/ISSUE_TEMPLATE/`:**
+  - `bug_report.yml`, `feature_request.yml`, and `config.yml`
+  - kid-friendly fields: what happened, what you expected, browser, and chapter or difficulty
+
+## Verification
+- `npm run check` and `npm run build` pass. New and updated unit tests cover drip caps, variant complexity scaling, the reveal range, sprinkles and input routing, profile storage and switching, and the Apprentice preset.
+- `npm run dev`, checked in the browser pane:
+  - Contents cards are equal height, and stay so on a narrow viewport.
+  - Blotling spacing looks right and shots hit the right letters.
+  - A defeated creature shows `x x` before the splat, including with sound muted.
+  - Variant shapes look distinct in the classic, contrast and night themes.
+  - Ghosts reveal between 25% and 50% of the page width.
+  - Expert chapters 1-4 are playable.
+  - A run-on or misprint sprinkle appears on a late Practice chapter.
+  - Create, switch, rename and delete profiles; each keeps its own progress.
+  - "Practice these keys" from the pause menu carries over keys and difficulty.
+  - The Apprentice preset matches the current chapter.
+  - The unlock dialog shows art and "Equip now" changes the nib in game.
+  - The About links open GitHub in a new tab.
+- `npm run build && npm run preview` to confirm the service worker still loads offline.
+
+
+</details>
+
+<details><summary>2 tool calls</summary>
+
+- **Presented the plan** (shown above)
+- **Shell:** Create feature branch and size key files
+
+  ```bash
+  git checkout -b feat/m14-profiles-and-polish && wc -l src/ui/menu.ts src/ui/menu.css src/main.ts src/core/world.ts src/core/config.ts src/core/campaign.ts src/core/input.ts src/render/renderer.ts src/render/creatures/*.ts src/storage/*.ts src/core/keySelection.ts src/ui/typeCase.ts src/content/contentSource.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I need to read the core files fully before editing.
+
+<details><summary>5 tool calls</summary>
+
+- **Read** `src/core/config.ts`
+- **Read** `src/core/world.ts`
+- **Read** `src/core/campaign.ts`
+- **Read** `src/ui/menu.ts`
+- **Read** `src/ui/menu.css`
+
+</details>
+
+### 🤖 Claude
+
+Step 1: chapter cards.
+
+<details><summary>9 tool calls</summary>
+
+- **Shell:** Make chapter cards uniform height
+
+  ```bash
+  python3 - <<'EOF'
+  import re
+  p='src/ui/menu.css'
+  s=open(p).read()
+  s=s.replace(""".menu .menu-chapter {
+    width: 100%;
+    padding-right: 76px;
+  }""",""".menu .menu-chapter {
+    width: 100%;
+    height: 100%;
+    min-height: 66px;
+    align-content: center;
+    padding-right: 76px;
+  }
+
+  /* One line each, so every card is the same height. */
+  .menu-chapter .menu-detail {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }""")
+  open(p,'w').write(s)
+  p='src/i18n/en.ts'
+  s=open(p).read()
+  s=s.replace("'contents.locked': 'Clear the chapter before to open it',","'contents.locked': 'Locked',")
+  open(p,
+  … (58 more characters)
+  ```
+- **Read** `src/render/creatures/common.ts`
+- **Read** `src/render/creatures/blotling.ts`
+- **Read** `src/render/creatures/drip.ts`
+- **Shell:** Add letter spacing and random ghost reveal point
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b, count=1):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:60]}")
+      s=s.replace(a,b,count); open(p,'w').write(s)
+
+  # letter spacing
+  sub('src/render/creatures/common.ts', """export function labelStyle(fill: number, fontSize: number) {
+    return { fontFamily: TEXT_FONT, fontSize, fontWeight: '600' as const, fill };
+  }""", """/** Extra space between letters on word creatures, as a fraction of the font size, for easier reading. */
+  export const WORD_LETTER_SPACING = 0.08;
+
+  export function labelStyle(fill: number, fontSize: number, lett
+  … (4000 more characters)
+  ```
+- **Shell:** Read ghost test section
+
+  ```bash
+  sed -n 110,140p src/core/variants.test.ts
+  ```
+- **Shell:** Update ghost tests and docs, run core tests
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/variants.test.ts'
+  s=open(p).read()
+  s=s.replace("import { GHOST_REVEAL_X, createWorld,","import { GHOST_REVEAL_MAX_X, GHOST_REVEAL_MIN_X, createWorld, ghostRevealX,")
+  s=s.replace("""  it('cannot be typed or tabbed to until halfway across', () => {
+      const world = playingWorld();
+      const g = spawnTarget(world, { kind: 'drip', text: 'q', ghost: true, x: GHOST_REVEAL_X + 50, prevX: GHOST_REVEAL_X + 50, lane: 0 })!;""","""  it('reveal somewhere between a quarter and half way across the page', () => {
+      expect(GHOST_REVEAL_MIN_X).toBe(1280 * 0.25);
+      expect(GHOS
+  … (1524 more characters)
+  ```
+- **Read** `src/core/input.ts`
+- **Shell:** Inspect content source and usages of page plans
+
+  ```bash
+  sed -n 170,238p src/content/contentSource.ts; grep -rn "createPage(\|pageParams(\|apprenticePlan\|chapterPlan\|GAME_CONFIG.chapters\|revealAt\|params.inkLoss" src --include=*.ts | grep -v "^src/core/world.ts\|^src/core/config.ts:2[3-9][0-9]"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Still on step 2 (difficulty and wave mix): checking every caller of the page-planning code before I change it.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Find callers of page planning code
+
+  ```bash
+  grep -rn "createPage(\|pageParams(\|apprenticePlan\|chapterPlan\|GAME_CONFIG.chapters\|params.inkLoss\|DIFFICULTY_PROFILES" src | grep -v "^src/core/world.ts:\(2[0-1][0-9]\)"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now writing the config changes.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Add sprinkles, variant scaling and eased profiles to config
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:70]}")
+      open(p,'w').write(s.replace(a,b,1))
+  C='src/core/config.ts'
+  sub(C, """  hard: { speed: 1.25, spawnInterval: 0.8, maxOnScreen: 1, complexity: 0.15, inkLoss: 1.25, variants: 1.3 },
+    expert: { speed: 1.5, spawnInterval: 0.65, maxOnScreen: 2, complexity: 0.3, inkLoss: 1.5, variants: 1.6 },""",
+  """  hard: { speed: 1.2, spawnInterval: 0.85, maxOnScreen: 1, complexity: 0.1, inkLoss: 1.2, variants: 1.25 },
+    expert: { speed: 1.35, spawnInterval: 0.75, maxOnScreen: 1, complexity
+  … (4709 more characters)
+  ```
+- **Shell:** Wire sprinkles, drip cap and shorter variant words in world
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:70]}")
+      open(p,'w').write(s.replace(a,b,1))
+  P='src/core/campaign.ts'
+  sub(P, """/**
+   * Pages in an Apprentice chapter. Every chapter opens with drips, where the
+   * new key comes up often. The first few chapters are all drips; short
+   * "words" join once there are enough keys; Run-ons arrive once space is
+   * learned, and Misprints later still.
+   */
+  export function apprenticePlan(chapter: number): TargetKind[] {
+    const keys = apprenticeKeys(chapter).length;
+    if (keys <= 5) return 
+  … (8939 more characters)
+  ```
+- **Shell:** Fix sprinkle detection, typecheck and run tests
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:70]}")
+      open(p,'w').write(s.replace(a,b,1))
+  W='src/core/world.ts'
+  sub(W, """  const kind = overrides.kind ?? sprinkleKind(world) ?? params.kind;
+    const sprinkled = kind !== params.kind;""", """  const sprinkle = overrides.kind === undefined ? sprinkleKind(world) : null;
+    const kind = overrides.kind ?? sprinkle ?? params.kind;
+    const sprinkled = sprinkle !== null;""")
+  sub(W, """  // A sprinkled Run-on or Misprint moves at its own kind's pace.
+    const speed = params.speed * (s
+  … (1390 more characters)
+  ```
+- **Shell:** Read failing tests
+
+  ```bash
+  sed -n 76,100p src/core/config.test.ts; sed -n 95,112p src/core/blotterBoss.test.ts; sed -n 125,160p src/core/campaign.test.ts
+  ```
+- **Shell:** Update config, boss and campaign tests
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:70]}")
+      open(p,'w').write(s.replace(a,b,1))
+  sub('src/core/blotterBoss.test.ts', "    expect(before - world.ink).toBe(Math.round(world.page.params.inkLoss * GAME_CONFIG.boss.inkLossFactor));",
+  """    const blotlingLoss = (world.page.params.inkLoss * GAME_CONFIG.base.blotling.inkLoss) / GAME_CONFIG.base[world.page.params.kind].inkLoss;
+      expect(before - world.ink).toBe(Math.round(blotlingLoss * GAME_CONFIG.boss.inkLossFactor));""")
+  sub('src/core/config.test.ts', """  it('swaps 
+  … (4413 more characters)
+  ```
+- **Shell:** Simplify Expert easing test
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/campaign.test.ts'
+  s=open(p).read()
+  a=s[s.index("  it('eases Expert in from near Normal"):s.index("  it('never puts more drips")]
+  s=s.replace(a,"""  it('eases Expert in from near Normal over the first chapters', () => {
+      const ratio = (chapter: number, mode: 'apprentice' | 'practice') =>
+        createPage('expert', chapter, 0, undefined, mode).params.speed / createPage('normal', chapter, 0, undefined, mode).params.speed;
+      const full = ratio(0, 'practice');
+      expect(ratio(0, 'apprentice')).toBeGreaterThan(1);
+      expect(ratio(0, 'apprentice')).toBeLessThan(1 
+  … (194 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Still on step 2: updating the tests for the new difficulty and wave rules, then I'll add tests for the sprinkles and the input routing.
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Fix import and rerun tests
+
+  ```bash
+  sed -i '' "s#^import { createPage, createWorld, type World } from './world';#import { GAME_CONFIG } from './config';\nimport { createPage, createWorld, type World } from './world';#" src/core/campaign.test.ts && npx vitest run src 2>&1 | grep -E "FAIL|Tests|Error" | head -20
+  ```
+- **Shell:** Look at test helpers in variants test
+
+  ```bash
+  sed -n 1,40p src/core/variants.test.ts
+  ```
+- **Wrote** `src/core/sprinkles.test.ts`
+- **Shell:** Run new sprinkle tests
+
+  ```bash
+  npx vitest run src/core/sprinkles.test.ts 2>&1 | grep -E "✓|×|FAIL|Tests|Error|expected" | head -30
+  ```
+- **Shell:** Find other uses of page kind outside core
+
+  ```bash
+  grep -rn "params.kind\|page.params" src --include=*.ts | grep -v "test.ts\|src/core/world.ts\|src/core/config.ts"
+  ```
+- **Shell:** Find other uses of page kind outside core
+
+  ```bash
+  grep -rn "params\.kind\|page\.params" src | grep -v "test.ts\|src/core/world.ts\|src/core/config.ts"
+  ```
+- **Shell:** Find docs mentioning run-on pages and variants
+
+  ```bash
+  grep -n -i "run-on\|misprint\|expert\|violet" README.md docs/DESIGN.md docs/REQUIREMENTS.md | head -40
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Still on step 2: updating the README to match the new wave rules. Then I'll move on to the variant shapes.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Read README Apprentice/creature sections
+
+  ```bash
+  sed -n 36,66p README.md
+  ```
+- **Shell:** Update README for wave and variant changes
+
+  ```bash
+  python3 - <<'EOF'
+  p='README.md'
+  s=open(p).read()
+  reps=[
+  ("Each page is either all **drips** (single characters) or all **Blotlings** (words). Pages speed up","Each page is mostly **drips** (single characters) or mostly **Blotlings** (words); from chapter 4, Blotling pages now and then slip in a **Run-on** or **Misprint** (at most one on screen and three per page). Pages speed up"),
+  ("Pick Relaxed, Normal, Hard or Expert when you start a notebook.","Pick Relaxed, Normal, Hard or Expert when you start a notebook. Drip pages never show more drips at once than you have keys to tell them apart."),
+
+  … (1736 more characters)
+  ```
+- **Read** `src/render/renderer.ts`
+- **Shell:** Check how run-on and misprint use faces
+
+  ```bash
+  sed -n 1,60p src/render/creatures/runon.ts; grep -n "drawFace\|mood" src/render/creatures/runon.ts src/render/creatures/misprint.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the shared helpers in `common.ts`.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Add variant shape helpers and defeated face
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:70]}")
+      open(p,'w').write(s.replace(a,b,1))
+  C='src/render/creatures/common.ts'
+  sub(C, """  reducedMotion: boolean;
+  }""", """  reducedMotion: boolean;
+    /**
+     * Finished: the last key was typed and the final drop of ink is on its way.
+     * The creature shows it's beaten (x x eyes) until the ink lands.
+     */
+    defeated?: boolean;
+  }""")
+  sub(C, "export type Mood = 'calm' | 'worried' | 'scared' | 'happy' | 'hurt' | 'angry';",
+  "export type Mood = 'calm' | 'worried' | 'scared' | 'hap
+  … (5360 more characters)
+  ```
+- **Shell:** Draw distinct crimson and violet shapes
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:70]}")
+      open(p,'w').write(s.replace(a,b,1))
+  B='src/render/creatures/blotling.ts'
+  sub(B, """  bodyColor,
+    drawFace,""", """  bodyColor,
+    drawCrown,
+    drawFace,
+    drawHem,
+    drawHorns,
+    drawSpikes,
+    variantOf,""")
+  sub(B, """      // Wobbly body: a rounded blob with bumps that rise and fall.
+        const color = bodyColor(t.lives);
+        const shake = hurtMs > 0 ? Math.sin(hurtMs / 18) * 3 : 0;
+        body.clear().roundRect(shake, -height / 2, width, height, height / 2).fill(col
+  … (6870 more characters)
+  ```
+- **Shell:** Center drip crown and lift pips
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/creatures/drip.ts'
+  s=open(p).read()
+  s=s.replace("if (variant === 'violet') drawCrown(face, eyeX + r * 0.55, eyeY - eyeR * 0.2, eyeR * 2.6, color);","if (variant === 'violet') drawCrown(face, eyeX, eyeY - eyeR * 1.2, eyeR * 2.6, color);")
+  s=s.replace("drawPips(pips, r - 6 * scale * (t.lives - 1), -r - 16 * scale, t.lives, scale);","drawPips(pips, r - 6 * scale * (t.lives - 1), -r - (variant === 'violet' ? 30 : 16) * scale, t.lives, scale);")
+  open(p,'w').write(s)
+  EOF
+  grep -n "drawCrown(face\|drawPips(pips" src/render/creatures/drip.ts
+  ```
+- **Shell:** Show defeated state while final ink flies
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:70]}")
+      open(p,'w').write(s.replace(a,b,1))
+  R='src/render/renderer.ts'
+  sub(R, """  /** Creatures already finished in the game, still on screen until the final drop of ink lands. */
+    let dying: { view: CreatureView; x: number; y: number; speed: number }[] = [];""", """  /**
+     * Creatures already finished in the game, still on screen until the final
+     * drop of ink lands. They show they're beaten straight away (x x eyes and a
+     * red-pen tick), so it's clear the word is done 
+  … (3617 more characters)
+  ```
+- **Shell:** Fade drip label when defeated; typecheck and lint
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/creatures/drip.ts'
+  s=open(p).read()
+  a="""      highlight.visible = ctx.locked;
+        applyGhost(t, root, [label], ctx.timeMs, ctx.reducedMotion);"""
+  assert a in s
+  s=s.replace(a,"""      highlight.visible = ctx.locked;
+        label.alpha = ctx.defeated ? 0.55 : 1;
+        applyGhost(t, root, [label], ctx.timeMs, ctx.reducedMotion);""")
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit -p . && npx eslint src/render src/core 2>&1 | tail -20
+  ```
+- **Shell:** Check launch config and debug hooks
+
+  ```bash
+  cat .claude/launch.json 2>/dev/null; grep -n "\"dev\"\|\"check\"\|\"preview\"" package.json; grep -rn "__DEV__\|import.meta.env.DEV\|window.game\|debug" src/main.ts | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Step 3 is coded: crimson and violet creatures now have their own shapes, and finished creatures show `x x` eyes and a red tick. Opening the dev server to check them visually.
+
+<details><summary>9 tool calls</summary>
+
+- **Shell:** Read dev-only debug hook
+
+  ```bash
+  sed -n 575,600p src/main.ts
+  ```
+- **preview_start** `{"name":"inkling-dev"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"p","action_summary":"Opens the Practice screen"}},{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Starts a practice notebook"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const w = 
+… (526 more characters)`
+- **computer** `{"action":"zoom","region":[170,150,680,400]}`
+- **computer** `{"action":"zoom","region":[360,150,680,240]}`
+- **resize_window** `{"width":1600,"height":900}`
+- **computer** `{"action":"screenshot"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const st = inkling.renderer.app.stage; st.scale.set(st.scale.x*2.6); st.position.set(-st.scale.x*330, -st.scale.x*140); 'ok'"}`
+- **computer** `{"action":"screenshot"}`
+
+</details>
+
+### 🤖 Claude
+
+Zoomed in on the creatures. The crimson spikes look good, but the horns float above the body. Fixing that, then checking the violet ones.
+
+<details><summary>7 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const st = inkling.renderer.app.stage; st.position.set(-st.scale.x*800, -st.scale.x*140); 'ok'"}`
+- **computer** `{"action":"screenshot"}`
+- **Shell:** Anchor horns and crown to the body and enlarge them
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, a, b):
+      s=open(p).read()
+      if a not in s: raise SystemExit(f"MISSING in {p}: {a[:70]}")
+      open(p,'w').write(s.replace(a,b,1))
+  sub('src/render/creatures/blotling.ts', """      if (variant === 'crimson') drawHorns(face, eyeX, eyeY - eyeR * 1.2, eyeR * 2.3, eyeR * 1.3, color);
+        if (variant === 'violet') drawCrown(face, eyeX, eyeY - eyeR * 1.3, eyeR * 2.6, color);""", """      // Horns and crown grow out of the body, behind the eyes.
+        if (variant === 'crimson') drawHorns(body, eyeX, eyeY + eyeR * 0.4, eyeR * 2.3, eyeR * 2.4, color);
+        if (variant =
+  … (535 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5174"}},{"name":"computer","input":{"action":"key","text":"p","action_summary":"Opens the Practice screen"}},{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Starts a practice notebook"}},{"name":"javascript_
+… (786 more characters)`
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const st = inkling.renderer.app.stage; st.scale.set(st.scale.x/1.9); st.position.set(0,0); inkling.renderer.rebuild(); const w=inkling.world; const t=w.targets.find(t=>t.id===901); t.x=t.prevX=1150; 'ok'"}},{"name":"co
+… (159 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"const w=inkling.world; ({phase:w.phase, score:w.stats.score, errors:w.stats.errors, locked:w.lockedId, ids:w.targets.map(t=>[t.id,t.text,t.typed,t.x|0]), active: document.activeElement?.tagName})"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"j u m p i n g","action_summary":"Types the word on the far Blotling"}},{"name":"computer","input":{"action":"screenshot"}}]}`
+
+</details>
+
+### 🤖 Claude
+
+Still checking step 3 in the browser: the defeated state works. A finished drip shows `x x` eyes and a red tick while the ink is in flight. Moving on to profiles (step 4).
+
+<details><summary>4 tool calls</summary>
+
+- **Read** `src/storage/store.ts`
+- **Read** `src/main.ts`
+- **Shell:** Check store tests and save data dialog usage
+
+  ```bash
+  cat src/storage/store.test.ts | head -50; grep -n "store\.\|confirm(" src/ui/saveData.ts | head -20; grep -rn "SaveBackend\|MemoryBackend" src | grep -v "^src/storage/store.ts"
+  ```
+- **Shell:** Key saves by player in the storage backend
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/storage/store.ts'
+  s=open(p).read()
+  reps=[
+  ("""const SAVE_KEY = 'main';
+
+  export interface SaveBackend {
+    /** Whether saves survive a reload. */
+    readonly persistent: boolean;
+    load(): Promise<unknown>;
+    save(data: SaveData): Promise<void>;
+    clear(): Promise<void>;
+  }
+
+  export class MemoryBackend implements SaveBackend {
+    readonly persistent = false;
+    private data: unknown;
+
+    async load(): Promise<unknown> {
+      return this.data === undefined ? undefined : structuredClone(this.data);
+    }
+
+    async save(data: SaveData): Promise<void> {
+      this.data = structuredClone
+  … (4626 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the profile list module.
+
+<details><summary>8 tool calls</summary>
+
+- **Wrote** `src/storage/profiles.ts`
+- **Wrote** `src/storage/profiles.test.ts`
+- **Shell:** Run storage tests
+
+  ```bash
+  npx vitest run src/storage 2>&1 | grep -E "×|FAIL|Tests|Error" | head
+  ```
+- **Shell:** Find uses of the Profile interface
+
+  ```bash
+  grep -rn "\bProfile\b" src | grep -v "DifficultyProfile"
+  ```
+- **Shell:** Rename Profile interface to Progression
+
+  ```bash
+  sed -i '' -e 's/^export interface Profile {/export interface Progression {/' -e 's/^  profile: Profile;/  profile: Progression;/' -e 's/function sanitizeProfile(v: unknown): Profile {/function sanitizeProfile(v: unknown): Progression {/' src/storage/schema.ts && sed -n 64,70p src/storage/schema.ts
+  ```
+- **Shell:** Read cosmetic drawing code and dialog CSS tokens
+
+  ```bash
+  sed -n 60,135p src/render/renderer.ts; grep -n "teal\|tc-" src/ui/dialog.css | head -30
+  ```
+- **Shell:** See how erase confirmation and h() work
+
+  ```bash
+  sed -n 100,135p src/ui/saveData.ts; cat src/ui/dom.ts | head -40
+  ```
+- **Wrote** `src/ui/art.ts`
+
+</details>
+
+### 🤖 Claude
+
+Step 4 (profiles): storage and tests are done. Now building the menu screens: a "Who's writing?" picker, a player editor, plus the pause, practice, desk and about additions that share the same file.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Read menu-related strings
+
+  ```bash
+  sed -n 150,245p src/i18n/en.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Adding all the new strings at once:
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Add strings for players, about, unlocks
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/i18n/en.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:60]; s=s.replace(a,b,1)
+  sub("""  'how.variants': 'Later chapters bring tougher creatures. Crimson ones need two words (the dots show how many are left), violet ones need three, and you can switch to another creature between words, and invisible-ink ghosts hide their text until they’re partway across the page.',""",
+  """  'how.variants': 'Later chapters bring tougher creatures. Spiky, horned crimson ones need two short words (the dots show how many are left) and crowned, three-eyed violet ones 
+  … (3527 more characters)
+  ```
+- **Shell:** Add player, about and pause screens to the menu
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:70]; s=s.replace(a,b,1)
+  sub("""import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
+  import { t, type MessageKey } from '../i18n';
+  import { h } from './dom';
+
+  export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk';""",
+  """import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
+  import { t, type MessageKey } from '../i18n';
+  import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage
+  … (15478 more characters)
+  ```
+- **Shell:** Fix focusable element typing and typecheck
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  s=s.replace("""  private buttons(): HTMLButtonElement[] {
+      return [...this.panel.querySelectorAll<HTMLButtonElement>('button:not([disabled]), a[href], input')];""","""  /** Everything focusable on the screen, in order. */
+    private buttons(): HTMLElement[] {
+      return [...this.panel.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input')];""")
+  s=s.replace("const index = buttons.indexOf(document.activeElement as HTMLButtonElement);","const index = buttons.indexOf(document.activeElement as HTMLElement);")
+  open(p,'w').write
+  … (45 more characters)
+  ```
+- **Shell:** Make the practice-keys hook a pair of methods
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  a="""  /** Paused in an Apprentice chapter: leave it and practice its keys. Null outside Apprentice. */
+    practiceChapterKeys: (() => void) | null;"""
+  assert a in s
+  s=s.replace(a,"""  /** Paused in an Apprentice chapter, so "Practice these keys" is offered. */
+    canPracticeChapterKeys(): boolean;
+    /** Leave the Apprentice chapter and practice its keys at the same difficulty. */
+    onPracticeChapterKeys(): void;""")
+  a="""        this.hooks.practiceChapterKeys
+            ? this.button('practice', t('pause.practice'), () => this.hooks.practiceC
+  … (363 more characters)
+  ```
+- **Shell:** Check preset type and naming
+
+  ```bash
+  sed -n 80,120p src/core/keySelection.ts; grep -n "export function presetName" -A8 src/ui/typeCase.ts
+  ```
+- **Shell:** Add Apprentice keys preset
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p,a,b):
+      s=open(p).read()
+      assert a in s, (p,a[:70]); open(p,'w').write(s.replace(a,b,1))
+  sub('src/ui/typeCase.ts', "  return preset.builtIn ? t(`preset.${preset.id}` as MessageKey) : (preset.name ?? '');",
+      "  return preset.builtIn && !preset.name ? t(`preset.${preset.id}` as MessageKey) : (preset.name ?? '');")
+  sub('src/core/keySelection.ts', """/** Every character a layout can produce. */""", """/**
+   * The keys of the Apprentice chapter a player has reached (`unlocked`
+   * chapters are open, so the highest is chapter `unlocked`, 1-based). Shown
+   * as a pres
+  … (404 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Still on step 4: wiring profiles, the "Practice these keys" button and the Apprentice keys preset into `main.ts`.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Wire players, practice bridge and Apprentice preset in main
+
+  ```bash
+  sed -i '' "s#^import type { KeyboardLayout, LayoutKey } from '../content/layouts/types';#import type { KeyboardLayout, LayoutKey } from '../content/layouts/types';\nimport { APPRENTICE_CHAPTERS, apprenticeKeys } from './campaign';#" src/core/keySelection.ts && python3 - <<'EOF'
+  p='src/main.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:70]; s=s.replace(a,b,1)
+  sub("""import { builtInPresets, matchingPreset, type Preset } from './core/keySelection';""",
+  """import { apprenticePreset, builtInPresets, matchingPreset, type Preset } from './core/keySelection';""")
+  sub("""import
+  … (5817 more characters)
+  ```
+- **Shell:** Use defaultSave, typecheck and lint
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'
+  s=open(p).read()
+  s=s.replace("import { migrate, type SaveData } from './storage/schema';","import { defaultSave, migrate, type SaveData } from './storage/schema';")
+  s=s.replace("raw === undefined ? describePlayer(defaultSaveFor()) : describePlayer(migrate(raw))","describePlayer(raw === undefined ? defaultSave() : migrate(raw))")
+  s=s.replace("  const defaultSaveFor = () => migrate({ version: 1 });\n","")
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit -p . && npx eslint src 2>&1 | tail -20
+  ```
+- **Shell:** Style player, about and desk art elements
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.css'
+  s=open(p).read()
+  a=""".menu-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }"""
+  assert a in s
+  s=s.replace(a,""".menu-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }""")
+  s+="""
+  /* Pictures (art.ts). */
+  .art {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Who's playing: a chip on the title screen. */
+  .menu .menu-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-self: center;
+    padding: 6px 14px 6px 8px;
+    border: 1.5px dashed var(--tc-ink-light);
+    border-radius: 999px;
+  … (2294 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5174"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"u","action_summary":"Opens the player list"}},{"name":"find","input":{"query":"Add a player"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_11","action_summary":"Opens the new player form"}},{"name":"computer","input":{"action":"type","text":"Sam","action_summary":"Types the new player's name"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+
+</details>
+
+### 🤖 Claude
+
+Step 4: testing the player screens in the browser. Adding a player works; now checking that switching players keeps each one's progress separate.
+
+<details><summary>8 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Saves the new player"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+- **Shell:** Check global keyboard handler
+
+  ```bash
+  grep -n "preventDefault\|ignore\|Enter\|addEventListener" src/input/keyboard.ts | head -20
+  ```
+- **Shell:** Read keyboard handler body
+
+  ```bash
+  sed -n 30,62p src/input/keyboard.ts
+  ```
+- **read_console_messages** `{"onlyErrors":true}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const f=document.querySelector('.menu-player-form'); ({form: !!f, submit: f?.querySelector('[type=submit]')?.outerHTML, active: document.activeElement?.outerHTML.slice(0,120)})"}`
+- **computer** `{"action":"screenshot","scale":0.6}`
+- **Shell:** Highlight active player instead of dark fill
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  a="className: `menu-btn menu-player-pick${p.active ? ' menu-primary' : ''}`,"
+  assert a in s
+  s=s.replace(a,"className: 'menu-btn menu-player-pick',\n                'aria-current': p.active ? 'true' : undefined,")
+  open(p,'w').write(s)
+  p='src/ui/menu.css'
+  s=open(p).read()
+  s=s.replace(""".menu-player-pick .menu-player-badge {""",""".menu .menu-player-pick[aria-current='true'] {
+    background: var(--tc-highlight);
+  }
+
+  .menu-player-pick[aria-current='true'] .menu-label::after {
+    content: ' ✓';
+  }
+
+  .menu-player-pick .menu-player-badge {""")
+  open(p,
+  … (25 more characters)
+  ```
+- **javascript_tool** `{"action":"javascript_exec","text":"inkling.store.update(s => { s.keys = ['f','j']; s.profile.ink = 500; }); await inkling.store.flush(); document.querySelector('[data-id^=\"player-p\"]').click(); await new Promise(r=>setTimeout(r,300)); const a = {keys: inkling.store.data.keys.join(''), ink: inklin
+… (408 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Still on step 4: the dev server reloaded mid-test, so I'm rerunning the check that switching players keeps their progress apart.
+
+<details><summary>6 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,1500)); const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); if (inkling.menu.screen!=='title') inkling.menu.show('title'); inkling.store.update(s => { s.keys = ['f','j']; s.profile.ink = 500; }); await inkling.store.flush(); inkli
+… (644 more characters)`
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5174"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Picks Player 1"}},{"name":"computer","input":{"action":"key","text":"a","action_summary":"Opens the Apprentice contents"}},{"name":"computer","input":{"action":"key","text":"4","action_summary":"Selects Expert d
+… (445 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"({phase: inkling.world.phase, mode: inkling.world.mode, diff: inkling.world.difficulty, screen: inkling.menu.screen})"}`
+- **computer** `{"action":"screenshot","scale":0.6}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"p","action_summary":"Switches to practicing the chapter's keys"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,300)); ({phase: inkling.world.phase, mode: inkling.world.mode, diff
+… (151 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Step 5 works: "Practice these keys" from the pause menu switched to Practice with keys `f j` on Expert, and saved both. Starting step 6, the visual unlock dialog.
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Read an existing dialog's structure
+
+  ```bash
+  sed -n 1,60p src/ui/settingsDialog.ts; grep -n "close\|Escape\|keydown\|remove()" src/ui/settingsDialog.ts | head -20
+  ```
+- **Shell:** Read dialog close handling
+
+  ```bash
+  sed -n 95,130p src/ui/settingsDialog.ts
+  ```
+- **Wrote** `src/ui/unlockDialog.ts`
+- **Wrote** `src/ui/unlock.css`
+- **Shell:** Show unlock dialog after earning unlocks
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/unlock.css'
+  s=open(p).read()
+  s=s.replace("""
+  :root[data-motion='reduced'] .ul-burst,
+  :root[data-motion='reduced'] .ul-card {
+    animation: none;
+  }
+  ""","")
+  open(p,'w').write(s)
+  p='src/main.ts'
+  s=open(p).read()
+  def sub(a,b):
+      global s
+      assert a in s, a[:70]; s=s.replace(a,b,1)
+  sub("""import { openWordLists } from './ui/wordLists';""","""import { openUnlockDialog, type UnlockedItem } from './ui/unlockDialog';
+  import { openWordLists } from './ui/wordLists';""")
+  sub("""  let reward: { ink: number; levelUp: number | null; unlocked: string[] } = { ink: 0, levelUp: nul
+  … (3358 more characters)
+  ```
+- **javascript_tool** `{"action":"javascript_exec","text":"inkling.store.update(s => { s.profile.ink = 590; }); const w = inkling.world; w.page.spawned = w.page.params.size; w.targets = []; w.pageStats.score = 300; await new Promise(r=>setTimeout(r,400)); ({phase: w.phase, dialog: !!document.querySelector('.dialog.unlock'
+… (42 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"const sleep=(ms)=>new Promise(r=>setTimeout(r,ms)); inkling.menu.show('newNotebook'); await sleep(50); document.querySelector('[data-id=\"start\"]').click(); await sleep(200); inkling.store.update(s => { s.profile.ink = 590; }); const w = inkling.world; w.page.spa
+… (216 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Step 6: the unlock dialog opens when a page clear levels the player up. Checking how it looks and that "Use it now" equips the item.
+
+<details><summary>5 tool calls</summary>
+
+- **computer** `{"action":"screenshot","scale":0.6}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Equips the violet splatter ink"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"({splatter: inkling.store.data.profile.cosmetics.splatter, btn: document.querySelector('.ul-equip')?.textCo
+… (181 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"({active: document.activeElement?.className, open: !!document.querySelector('.dialog.unlock')})"}`
+- **Shell:** Check primary button styles
+
+  ```bash
+  grep -n "tc-primary" -A4 src/ui/dialog.css | head -30
+  ```
+- **Shell:** Keep equipped button text readable
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/unlock.css'
+  s=open(p).read()
+  a=""".ul-equip[aria-pressed='true'] {
+    background: var(--tc-highlight);
+    color: var(--tc-ink);
+  }"""
+  assert a in s
+  s=s.replace(a,"""/* Equipped: highlighted, and the text says so (not color alone). */
+  .ul-card .ul-equip[aria-pressed='true'] {
+    background: var(--tc-highlight);
+    color: var(--tc-ink) !important;
+  }""")
+  open(p,'w').write(s)
+  EOF
+  echo ok
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Step 6 works: "Use it now" equipped the violet splatter and the dialog closes cleanly. Moving to step 7, the About screen's GitHub issue forms and docs.
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Read privacy and credits docs
+
+  ```bash
+  cat PRIVACY.md; echo ----; cat CREDITS.md | head -60
+  ```
+- **Shell:** Update privacy and credits docs
+
+  ```bash
+  python3 - <<'EOF'
+  p='PRIVACY.md'
+  s=open(p).read()
+  a="""- **Your data stays in your browser.** Your chosen keys, presets, progress, best scores and per-key typing stats are stored on your device (IndexedDB) and never sent anywhere.
+  - **You control it.** In the game, open **Save data** (press **B** on the new-notebook screen) to export a backup file, import one, or erase everything. Clearing your browser's site data for Inkling also erases it."""
+  assert a in s
+  s=s.replace(a,"""- **Your data stays in your browser.** Your chosen keys, presets, progress, best scores and per-key typing stats are sto
+  … (1855 more characters)
+  ```
+- **Wrote** `.github/ISSUE_TEMPLATE/config.yml`
+- **Wrote** `.github/ISSUE_TEMPLATE/bug_report.yml`
+- **Wrote** `.github/ISSUE_TEMPLATE/feature_request.yml`
+- **Shell:** Document players, practice bridge and unlocks in README
+
+  ```bash
+  python3 - <<'EOF'
+  p='README.md'
+  s=open(p).read()
+  reps=[
+  ("- **Practice** uses exactly the keys you choose in the Type Case, with endless chapters.",
+  """- **Practice** uses exactly the keys you choose in the Type Case, with endless chapters.
+  - **From Apprentice to Practice:** pause a chapter and pick **Practice these keys** (P) to keep practicing that chapter's keys at the same difficulty. The Practice screen and the Type Case also offer **My Apprentice keys**, which always matches the furthest chapter you've reached.
+
+  ### Players
+
+  Several people can share one browser. Each player has their own
+  … (1136 more characters)
+  ```
+- **Shell:** Update README main menu description
+
+  ```bash
+  python3 - <<'EOF'
+  p='README.md'
+  s=open(p).read()
+  a="The **main menu** has buttons for everything: **Continue** (C), **New notebook** (N, then pick a difficulty with 1–4 or the arrow keys), **Choose keys** (K), **Word lists** (W), **Settings** (S), **Save data** (B) and **How to play** (H)."
+  s=s.replace(a,"The **main menu** has buttons for everything: **Continue** (C), **Apprentice** (A), **Practice** (P, then pick a difficulty with 1–4 and change keys), **Word lists** (W), **Desk** (D), **Settings** (S), **Save data** (B), **How to play** (H), **About** (I, with links to the source code and a 
+  … (119 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Step 7 docs are done. Now checking the About, Desk and Practice screens in the browser.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5174"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,800)); inkling.menu.show('about'); 'ok'"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"inkling.menu.show('about'); 'ok'"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"[...document.querySelectorAll('.menu-link-card')].map(a=>[a.href,a.target,a.rel])"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"inkling.menu.show('desk'); 'ok'"}},{"name":"computer","input":{
+… (37 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Screenshots lag a frame; taking it again.
+
+<details><summary>4 tool calls</summary>
+
+- **computer** `{"action":"screenshot","scale":0.6}`
+- **javascript_tool** `{"action":"javascript_exec","text":"inkling.menu.show('contents'); await new Promise(r=>setTimeout(r,50)); const hs = [...document.querySelectorAll('.menu-chapter')].map(b=>Math.round(b.getBoundingClientRect().height)); inkling.menu.show('newNotebook'); await new Promise(r=>setTimeout(r,50)); const 
+… (285 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"inkling.openKeys(); await new Promise(r=>setTimeout(r,100)); const txt = [...document.querySelectorAll('.dialog button, .dialog option')].map(b=>b.textContent).filter(t=>/Apprentice/.test(t)); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); tx
+… (3 more characters)`
+- **Shell:** Run typecheck, lint, tests and build
+
+  ```bash
+  npm run check 2>&1 | tail -15 && npm run build 2>&1 | tail -8
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks and build pass (242 tests). Checking the menus at phone width, and printing early-chapter Expert settings next to Normal.
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Print early Apprentice page settings for Normal vs Expert
+
+  ```bash
+  cat > <temp file> <<'EOF'
+  import { it } from 'vitest';
+  import { startApprentice } from '../../../../../../Users/[removed]/projects/inkling/src/core/input';
+  import { createWorld } from '../../../../../../Users/[removed]/projects/inkling/src/core/world';
+  it('print', () => {
+    for (const d of ['normal', 'expert'] as const) for (const c of [0, 1, 2, 3, 5]) {
+      const w = createWorld({ difficulty: d }); startApprentice(w, c, d);
+      const p = w.page.params;
+      console.log(d, c + 1, w
+  … (510 more characters)
+  ```
+- **resize_window** `{"preset":"mobile"}`
+- **Shell:** Print early Apprentice page settings
+
+  ```bash
+  cp <temp file> src/zz_params.test.ts && sed -i '' "s#'../../../../../../Users/[removed]/projects/inkling/src/#'./#g" src/zz_params.test.ts && npx vitest run src/zz_params.test.ts 2>&1 | grep -E "speed"; rm -f src/zz_params.test.ts; git status --short | grep zz
+  ```
+- **Shell:** Print early Apprentice page settings with console output
+
+  ```bash
+  cp <temp file> src/zz_params.test.ts && sed -i '' "s#'../../../../../../Users/[removed]/projects/inkling/src/#'./#g" src/zz_params.test.ts && npx vitest run src/zz_params.test.ts --silent=false 2>&1 | tail -20; rm -f src/zz_params.test.ts
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5174"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,800)); inkling.menu.show('title'); await new Promise(r=>setTimeout(r,50)); ({scrollW: document.documentElement.scrollWidth, 
+… (84 more characters)`
+- **resize_window** `{"preset":"desktop"}`
+- **Shell:** Summarize changed files
+
+  ```bash
+  git status --short && git diff --stat | tail -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Everything on your list is built on `feat/m14-profiles-and-polish`. `npm run check` and `npm run build` pass (242 tests), and I tried most of it in the browser. Nothing is committed yet.
+
+**Quick polish**
+- **Chapter cards:** every card is now the same height. The locked ones had a long message that wrapped to two lines; it now just says "Locked".
+- **Letter spacing:** Blotling words have a little more space between letters. The ink shots still hit the right letter.
+- **Ghosts:** each ghost now shows its text at a random point between a quarter and half way across the page.
+
+**Difficulty and wave mix**
+- **Why Expert felt impossible:** early drip pages could have up to 8 drips on screen while you only knew 2–5 keys. Many drips shared a letter, so typing one could hit the wrong drip. Drip pages now never show more drips than your keys can tell apart.
+- **Expert and Hard toned down:** both are softer overall. In Apprentice they also start close to Normal and build up to full strength by chapter 10. Expert chapter 3 now runs at about speed 73 and 3 drips on screen; Normal is 63 and 3.
+- **Shorter words:** crimson creatures get shorter words for every life, and violet ones shorter still.
+- **Violet comes later:** violet creatures now first appear around Apprentice chapter 17 (chapter 5 in Practice).
+- **Mixed pages:** every page is now drips or Blotlings. Run-ons (from chapter 11 in Apprentice) and Misprints (from chapter 16) sneak onto word pages now and then: at most one on screen and three per page. Star totals per chapter don't change.
+  - One rule change came with this: if you mistype on a word page, the key no longer lands in a nearby Misprint by accident. You start a Misprint with Backspace, Delete, the arrow keys or Tab.
+
+**How the creatures look**
+- **Own shapes:** crimson creatures are spiky, with horns and a scowl. Violet ones are lumpy, with a crown, a third eye and a wavy edge along the bottom. A creature changes shape as it loses lives.
+- **Finished targets:** the moment you type the last letter, the creature gets `x x` eyes, a red-pen tick and a quick squash, before the ink lands. It works with the sound off.
+
+**Players**
+- **"Who's writing?":** each player has a name and a coloured ink-drop badge, and their own notebook, stars, ink, desk and key stats. Theme, text size and sound settings stay shared.
+- **Switching:** press U on the main menu (or click "Writing as…") to switch, add, rename or delete players. With more than one player, this screen opens when the game starts.
+- **Existing progress:** today's save simply becomes "Player 1", so no progress is lost and the save format doesn't change.
+
+**Apprentice to Practice**
+- **From the pause menu:** pausing an Apprentice chapter offers "Practice these keys" (P). It starts Practice with that chapter's keys at the same difficulty.
+- **"My Apprentice keys":** a permanent choice on the Practice screen and in the Type Case. It always matches the furthest chapter you've reached.
+
+**Unlocks**
+- **Unlock card:** when you unlock something, a card pops up with a picture of it and a "Use it now" button.
+- **Desk pictures:** the Desk now shows a picture of every pen, ink and paper. Locked ones are greyed out.
+
+**About screen**
+- **Content:** press I on the main menu. It explains what Inkling is and why it was made, with a GitHub-logo link to the code and a "Suggest an idea or report a bug" link. I wrote the "why" text from your README note, so adjust it if you'd like it in your own words.
+- **Issue forms:** I added kid-friendly bug and idea forms in `.github/ISSUE_TEMPLATE/`.
+- **Docs:** `PRIVACY.md` and `CREDITS.md` now cover players and the GitHub links.
+
+Not tried yet:
+- I didn't watch a ghost reveal or a Run-on/Misprint sneak in during a real game; only the unit tests cover those.
+- I didn't run the production build in preview to confirm it still works offline.
+- My test players ("Sam", plus ink and a violet splatter on Player 1) are left in the dev browser's local storage.
+
+When you commit, I'll also run `npm run transcript` and include the updated transcripts.
+
+## 🧑 Prompt
+
+> Commit the working tree changes with a sensible message.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export session transcripts
+
+  ```bash
+  npm run transcript 2>&1 | tail -8 && git status --short docs/transcripts | head
+  ```
+
+</details>

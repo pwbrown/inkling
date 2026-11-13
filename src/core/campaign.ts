@@ -42,16 +42,39 @@ const SPACE_CHAPTER = LESSONS.findIndex((l) => l.newKeys.includes(' '));
 /**
  * Pages in an Apprentice chapter. Every chapter opens with drips, where the
  * new key comes up often. The first few chapters are all drips; short
- * "words" join once there are enough keys; Run-ons arrive once space is
- * learned, and Misprints later still.
+ * "words" join once there are enough keys. Pages are only ever drips or
+ * Blotlings: Run-ons (once space is learned) and Misprints are sprinkled
+ * into Blotling pages instead (GAME_CONFIG.sprinkles).
  */
 export function apprenticePlan(chapter: number): TargetKind[] {
   const keys = apprenticeKeys(chapter).length;
   if (keys <= 5) return ['drip', 'drip', 'drip'];
   if (keys <= 8) return ['drip', 'drip', 'blotling'];
-  if (chapter < SPACE_CHAPTER + 1) return ['drip', 'blotling', 'drip', 'blotling'];
-  if (chapter < SPACE_CHAPTER + 6) return ['drip', 'blotling', 'runon', 'blotling'];
-  return ['drip', 'blotling', 'misprint', 'runon', 'blotling'];
+  if (chapter < SPACE_CHAPTER + 6) return ['drip', 'blotling', 'drip', 'blotling'];
+  return ['drip', 'blotling', 'blotling', 'drip', 'blotling'];
+}
+
+/** Chapter (0-based) where space is learned. */
+export { SPACE_CHAPTER };
+
+/**
+ * Hard and Expert ease in over the first Apprentice chapters: page settings
+ * start partway between Normal and the chosen difficulty and reach it by
+ * `profileEaseChapters`. `normal` is the same page at Normal difficulty.
+ */
+export function easeDifficulty(params: PageParams, normal: PageParams, chapter: number): PageParams {
+  const a = GAME_CONFIG.apprentice;
+  const weight = Math.min(1, a.profileEaseFloor + (1 - a.profileEaseFloor) * (chapter / a.profileEaseChapters));
+  if (weight >= 1) return params;
+  const mix = (n: number, d: number) => n + (d - n) * weight;
+  return {
+    ...params,
+    speed: mix(normal.speed, params.speed),
+    spawnIntervalMs: mix(normal.spawnIntervalMs, params.spawnIntervalMs),
+    maxOnScreen: Math.round(mix(normal.maxOnScreen, params.maxOnScreen)),
+    complexity: mix(normal.complexity, params.complexity),
+    inkLoss: Math.round(mix(normal.inkLoss, params.inkLoss)),
+  };
 }
 
 /**

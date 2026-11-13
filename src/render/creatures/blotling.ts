@@ -9,12 +9,18 @@ import {
   MoodTracker,
   applyGhost,
   bodyColor,
+  drawCrown,
   drawFace,
+  drawHem,
+  drawHorns,
+  drawSpikes,
+  variantOf,
   drawPips,
   labelStyle,
   letterCenter,
   measure,
   wave,
+  WORD_LETTER_SPACING,
   type CreatureView,
   type FrameContext,
 } from './common';
@@ -23,8 +29,8 @@ export function createBlotling(target: Target, scale: number): CreatureView {
   const height = 46 * scale;
   const padX = 20 * scale;
   const fontSize = 26 * scale;
-  const typedStyle = new TextStyle(labelStyle(COLORS.inkFaded, fontSize));
-  const restStyle = new TextStyle(labelStyle(COLORS.label, fontSize));
+  const typedStyle = new TextStyle(labelStyle(COLORS.inkFaded, fontSize, WORD_LETTER_SPACING));
+  const restStyle = new TextStyle(labelStyle(COLORS.label, fontSize, WORD_LETTER_SPACING));
 
   const root = new Container();
   const highlight = new Graphics();
@@ -73,33 +79,50 @@ export function createBlotling(target: Target, scale: number): CreatureView {
         drawPips(pips, width - 8 * scale * t.lives, -height / 2 - 10 * scale, t.lives, scale);
       }
 
-      // Wobbly body: a rounded blob with bumps that rise and fall.
+      // Wobbly body: a rounded blob with bumps that rise and fall. Crimson
+      // ones bristle with spikes; violet ones are lumpier, with a wavy hem.
       const color = bodyColor(t.lives);
+      const variant = variantOf(t.lives);
       const shake = hurtMs > 0 ? Math.sin(hurtMs / 18) * 3 : 0;
       body.clear().roundRect(shake, -height / 2, width, height, height / 2).fill(color);
       const bumps = Math.max(2, Math.round(width / (36 * scale)));
-      for (let i = 0; i < bumps; i++) {
-        const bx = shake + ((i + 0.5) / bumps) * width;
-        const lift = 2 * scale * wave(ctx, 0.005, phase + i * 1.7);
-        body.circle(bx, -height / 2 + 4 * scale + lift, height * 0.24).fill(color);
-        if (i % 2 === 0) body.circle(bx + 9 * scale, height / 2 - 4 * scale - lift, height * 0.18).fill(color);
+      if (variant === 'crimson') {
+        const lift = 2 * scale * wave(ctx, 0.008, phase);
+        drawSpikes(body, shake + height * 0.35, shake + width - height * 0.35, -height / 2 + 2 * scale, bumps * 2, 9 * scale + lift, -1, color);
+        drawSpikes(body, shake + height * 0.45, shake + width - height * 0.45, height / 2 - 2 * scale, bumps + 1, 6 * scale, 1, color);
+      } else {
+        const lumpy = variant === 'violet' ? 1.3 : 1;
+        for (let i = 0; i < bumps; i++) {
+          const bx = shake + ((i + 0.5) / bumps) * width;
+          const lift = 2 * scale * lumpy * wave(ctx, 0.005, phase + i * 1.7);
+          body.circle(bx, -height / 2 + 4 * scale + lift, height * 0.24 * lumpy).fill(color);
+          if (i % 2 === 0 && variant === 'plain') body.circle(bx + 9 * scale, height / 2 - 4 * scale - lift, height * 0.18).fill(color);
+        }
       }
+      if (variant === 'violet') drawHem(body, shake + height * 0.3, shake + width - height * 0.3, height / 2 - 2 * scale, 7 * scale, color, wave(ctx, 0.006, phase));
       // A drip hanging off the back.
       body.circle(width + shake - 2 * scale, height * 0.15, 5 * scale).fill(color);
 
-      // Legs scurry: alternate pairs lift in turn.
+      // Legs scurry: alternate pairs lift in turn. (Violet ones glide on their hem.)
       legs.clear();
-      const legCount = Math.max(3, Math.round(width / (28 * scale)));
-      for (let i = 0; i < legCount; i++) {
-        const lx = shake + ((i + 0.5) / legCount) * width;
-        const step = 3 * scale * wave(ctx, 0.016, i * Math.PI);
-        legs.ellipse(lx + step, height / 2 + 3 * scale - Math.abs(step) * 0.6, 4.5 * scale, 3.2 * scale).fill(COLORS.inkLight);
+      if (variant !== 'violet') {
+        const legCount = Math.max(3, Math.round(width / (28 * scale)));
+        for (let i = 0; i < legCount; i++) {
+          const lx = shake + ((i + 0.5) / legCount) * width;
+          const step = ctx.defeated ? 0 : 3 * scale * wave(ctx, 0.016, i * Math.PI);
+          legs.ellipse(lx + step, height / 2 + 3 * scale - Math.abs(step) * 0.6, 4.5 * scale, 3.2 * scale).fill(COLORS.inkLight);
+        }
       }
 
       // Eyes peek over the front (left) of the body, toward where it's heading.
       face.clear();
       const eyeR = 7 * scale;
-      drawFace(face, shake + padX + eyeR * 0.6, -height / 2 - 3 * scale, eyeR, m, blink, ctx.lookX, ctx.lookY, color);
+      const eyeX = shake + padX + eyeR * (variant === 'violet' ? 1.6 : 0.6);
+      const eyeY = -height / 2 - 3 * scale;
+      // Horns and crown grow out of the body, behind the eyes.
+      if (variant === 'crimson') drawHorns(body, eyeX, eyeY + eyeR * 0.4, eyeR * 2.3, eyeR * 2.4, color);
+      if (variant === 'violet') drawCrown(body, eyeX, eyeY - eyeR * 0.4, eyeR * 4.2, color);
+      drawFace(face, eyeX, eyeY, eyeR, m, blink, ctx.lookX, ctx.lookY, color, null, variant === 'violet' ? 3 : 2);
       highlight.visible = ctx.locked;
       applyGhost(t, root, [typedLabel, restLabel], ctx.timeMs, ctx.reducedMotion);
     },

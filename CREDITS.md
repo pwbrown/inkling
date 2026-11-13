@@ -28,3 +28,9 @@ Third-party content bundled with Inkling, with its source and license (REQUIREME
 - **Source:** the [Braille Institute](https://www.brailleinstitute.org/freefont/) and the Atkinson Hyperlegible Next Project Authors, via the [`@fontsource/atkinson-hyperlegible-next`](https://fontsource.org/fonts/atkinson-hyperlegible-next) and [`@fontsource/atkinson-hyperlegible-mono`](https://fontsource.org/fonts/atkinson-hyperlegible-mono) npm packages.
 - **License:** SIL Open Font License 1.1. The full texts are in [`licenses/AtkinsonHyperlegibleNext-OFL.txt`](licenses/AtkinsonHyperlegibleNext-OFL.txt) and [`licenses/AtkinsonHyperlegibleMono-OFL.txt`](licenses/AtkinsonHyperlegibleMono-OFL.txt).
 - **Why:** it was designed so look-alike characters (l I 1 |, 0 O) are easy to tell apart.
+
+## GitHub mark
+
+- **What:** the GitHub logo (the "Invertocat" mark) beside the source-code link on the About screen, drawn inline in `src/ui/menu.ts`.
+- **Source:** [GitHub's logos](https://github.com/logos), from the [Octicons](https://github.com/primer/octicons) `mark-github` icon (MIT).
+- **Use:** only to link to Inkling's repository on GitHub, as GitHub's logo guidelines allow. GitHub and the Invertocat logo are trademarks of GitHub, Inc.

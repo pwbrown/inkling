@@ -8,9 +8,24 @@ import './menu.css';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
 import { t, type MessageKey } from '../i18n';
+import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage/profiles';
+import { artElement, badgeSvg, cosmeticSvg } from './art';
 import { h } from './dom';
 
-export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk';
+export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk' | 'players' | 'playerEdit' | 'about';
+
+/** Inkling's source code and issue forms. */
+export const REPO_URL = 'https://github.com/pwbrown/inkling';
+export const ISSUES_URL = `${REPO_URL}/issues/new/choose`;
+
+export interface PlayerEntry {
+  id: string;
+  name: string;
+  badge: Badge;
+  /** e.g. "Scribe · Level 5 · Apprentice chapter 4". */
+  detail: string;
+  active: boolean;
+}
 
 export interface ChapterEntry {
   /** 0-based. */
@@ -53,7 +68,24 @@ export interface MenuHooks {
   onResume(): void;
   onRestart(): void;
   onQuit(): void;
+  /** Paused in an Apprentice chapter, so "Practice these keys" is offered. */
+  canPracticeChapterKeys(): boolean;
+  /** Leave the Apprentice chapter and practice its keys at the same difficulty. */
+  onPracticeChapterKeys(): void;
+  /** The chapter whose keys "Use my Apprentice keys" picks (1-based). */
+  apprenticeKeysChapter(): number;
+  onUseApprenticeKeys(): void;
+  players(): PlayerEntry[];
+  activePlayer(): { name: string; badge: Badge };
+  canAddPlayer(): boolean;
+  onChoosePlayer(id: string): void;
+  /** Add (`id` null) or edit a player. Resolves false if the name is unusable. */
+  onSavePlayer(id: string | null, name: string, badge: Badge): Promise<boolean>;
+  onDeletePlayer(id: string): void;
 }
+
+/** The GitHub mark, for the About page's link to the source. */
+const GITHUB_SVG = `<svg class="art art-github" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>`;
 
 /** The Inkling wordmark: an ink drop beside the name, drawn in SVG. */
 const LOGO_SVG = `
@@ -70,6 +102,8 @@ export class Menu {
   private readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
   private current: MenuScreen | null = null;
+  /** The player being added (id null) or edited on the playerEdit screen. */
+  private editing: { id: string | null; name: string; badge: Badge; confirmDelete: boolean; error: string | null } | null = null;
 
   constructor(
     host: HTMLElement,
@@ -133,6 +167,15 @@ export class Menu {
       case 'pause':
         this.panel.replaceChildren(...this.pause());
         break;
+      case 'players':
+        this.panel.replaceChildren(...this.players());
+        break;
+      case 'playerEdit':
+        this.panel.replaceChildren(...this.playerEdit());
+        break;
+      case 'about':
+        this.panel.replaceChildren(...this.about());
+        break;
       default:
         return;
     }
@@ -165,12 +208,22 @@ export class Menu {
     logo.innerHTML = LOGO_SVG;
     const cont = this.hooks.continueDetail();
     const best = this.hooks.bestLine(this.hooks.selectedDifficulty());
+    const player = this.hooks.activePlayer();
     return [
       h('header', { className: 'menu-header' }, [
         logo,
         h('h1', { id: 'menu-title', className: 'visually-hidden' }, ['Inkling']),
         h('p', { className: 'menu-tagline' }, [t('menu.tagline')]),
       ]),
+      h(
+        'button',
+        { type: 'button', className: 'menu-player', 'data-id': 'player', 'data-key': 'u', onClick: () => this.show('players') },
+        [
+          artElement(badgeSvg(player.badge), 'menu-player-badge'),
+          h('span', { className: 'menu-player-name' }, [t('menu.player', { name: player.name })]),
+          h('span', { className: 'menu-player-switch' }, [t('menu.switchPlayer'), ' ', h('kbd', { 'aria-hidden': 'true' }, ['U'])]),
+        ],
+      ),
       h('nav', { className: 'menu-list' }, [
         cont ? this.button('continue', t('menu.continue'), () => this.hooks.onContinue(), { detail: cont, key: 'c', primary: true }) : null,
         this.button('apprentice', t('menu.apprentice'), () => this.show('contents'), {
@@ -188,6 +241,7 @@ export class Menu {
           this.button('settings', t('menu.settings'), () => this.hooks.onSettings(), { key: 's' }),
           this.button('saves', t('menu.saveData'), () => this.hooks.onSaveData(), { key: 'b' }),
           this.button('how', t('menu.howToPlay'), () => this.show('howToPlay'), { key: 'h' }),
+          this.button('about', t('menu.about'), () => this.show('about'), { key: 'i' }),
         ]),
       ]),
       h('p', { className: 'menu-best' }, [this.hooks.rankLine(), best ? h('br') : null, best]),
@@ -228,6 +282,7 @@ export class Menu {
                 },
               },
               [
+                artElement(cosmeticSvg(slot, item), 'desk-art'),
                 h('span', { className: 'menu-label' }, [t(`${slot}.${item}` as MessageKey)]),
                 open ? null : h('span', { className: 'menu-detail' }, [t('desk.locked', { level: at })]),
               ],
@@ -338,6 +393,21 @@ export class Menu {
           t('newNotebook.changeKeys'),
         ]),
       ]),
+      h('p', { className: 'menu-keys-line' }, [
+        h(
+          'button',
+          {
+            type: 'button',
+            className: 'menu-link',
+            'data-id': 'apprentice-keys',
+            onClick: () => {
+              this.hooks.onUseApprenticeKeys();
+              this.render(false);
+            },
+          },
+          [t('newNotebook.useApprentice', { chapter: this.hooks.apprenticeKeysChapter() })],
+        ),
+      ]),
       h('div', { className: 'tc-actions' }, [
         h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'back', onClick: () => this.show('title') }, [t('menu.back')]),
         h('button', { type: 'button', className: 'tc-primary', 'data-id': 'start', 'data-autofocus': true, onClick: () => this.hooks.onStart() }, [
@@ -359,7 +429,7 @@ export class Menu {
         'how.creaturesTitle',
         h('ul', { className: 'how-list' }, (['how.drip', 'how.blotling', 'how.runon', 'how.misprint'] as const).map((k) => h('li', {}, [t(k)]))),
       ),
-      section('how.variantsTitle', p('how.variants')),
+      section('how.variantsTitle', p('how.variants'), p('how.mix')),
       section('how.powersTitle', p('how.powers')),
       section('how.keysTitle', p('how.keys')),
       section('how.controlsTitle', p('how.controls')),
@@ -376,6 +446,9 @@ export class Menu {
       h('nav', { className: 'menu-list' }, [
         this.button('resume', t('pause.resume'), () => this.hooks.onResume(), { key: 'Esc', primary: true }),
         this.button('restart', t('pause.restart'), () => this.hooks.onRestart(), { key: 'r' }),
+        this.hooks.canPracticeChapterKeys()
+          ? this.button('practice', t('pause.practice'), () => this.hooks.onPracticeChapterKeys(), { detail: t('pause.practiceDetail'), key: 'p' })
+          : null,
         this.button('settings', t('menu.settings'), () => this.hooks.onSettings(), { key: 's' }),
         this.button('quit', t('pause.quit'), () => this.hooks.onQuit(), { key: 'q' }),
       ]),
@@ -383,21 +456,216 @@ export class Menu {
     ];
   }
 
-  private buttons(): HTMLButtonElement[] {
-    return [...this.panel.querySelectorAll<HTMLButtonElement>('button:not([disabled])')];
+  /** Pick who's playing, or add and edit players. */
+  private players(): HTMLElement[] {
+    const players = this.hooks.players();
+    return [
+      h('h2', { id: 'menu-title' }, [t('players.title')]),
+      h('p', { className: 'tc-intro' }, [t('players.intro')]),
+      h(
+        'ul',
+        { className: 'menu-players' },
+        players.map((p) =>
+          h('li', { className: 'menu-player-row' }, [
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'menu-btn menu-player-pick',
+                'aria-current': p.active ? 'true' : undefined,
+                'data-id': `player-${p.id}`,
+                'data-autofocus': p.active ? true : undefined,
+                'aria-label': t('players.choose', { name: p.name }),
+                onClick: () => this.hooks.onChoosePlayer(p.id),
+              },
+              [
+                artElement(badgeSvg(p.badge), 'menu-player-badge'),
+                h('span', { className: 'menu-label' }, [p.name]),
+                h('span', { className: 'menu-detail' }, [p.detail]),
+              ],
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                className: 'tc-secondary menu-player-edit',
+                'data-id': `edit-${p.id}`,
+                'aria-label': t('players.editLabel', { name: p.name }),
+                onClick: () => this.editPlayer(p),
+              },
+              [t('players.edit')],
+            ),
+          ]),
+        ),
+      ),
+      h('div', { className: 'tc-actions' }, [
+        this.hooks.canAddPlayer()
+          ? h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'add-player', onClick: () => this.editPlayer(null) }, [t('players.add')])
+          : h('p', { className: 'menu-keys-line' }, [t('players.full')]),
+        h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', onClick: () => this.show('title') }, [t('menu.back')]),
+      ]),
+    ];
+  }
+
+  private editPlayer(player: PlayerEntry | null): void {
+    const used = new Set(this.hooks.players().map((p) => p.badge));
+    this.editing = player
+      ? { id: player.id, name: player.name, badge: player.badge, confirmDelete: false, error: null }
+      : { id: null, name: '', badge: BADGES.find((b) => !used.has(b)) ?? 'ink', confirmDelete: false, error: null };
+    this.show('playerEdit');
+  }
+
+  private playerEdit(): HTMLElement[] {
+    const e = this.editing;
+    if (!e) return this.players();
+    const name = h('input', {
+      type: 'text',
+      id: 'player-name',
+      className: 'menu-input',
+      maxlength: MAX_NAME_LENGTH,
+      autocomplete: 'off',
+      spellcheck: 'false',
+      value: e.name,
+      'data-id': 'player-name',
+      'data-autofocus': true,
+      onInput: (event) => {
+        e.name = (event.target as HTMLInputElement).value;
+      },
+    });
+    const save = async () => {
+      const ok = await this.hooks.onSavePlayer(e.id, e.name, e.badge);
+      if (ok) {
+        this.editing = null;
+        this.show('players');
+      } else {
+        e.error = t('players.nameNeeded');
+        this.render(false);
+        this.panel.querySelector<HTMLInputElement>('#player-name')?.focus();
+      }
+    };
+    const canDelete = e.id !== null && this.hooks.players().length > 1;
+    const player = this.hooks.players().find((p) => p.id === e.id);
+    return [
+      h('h2', { id: 'menu-title' }, [t(e.id ? 'players.editTitle' : 'players.newTitle')]),
+      h(
+        'form',
+        {
+          className: 'menu-player-form',
+          onSubmit: (event) => {
+            event.preventDefault();
+            void save();
+          },
+        },
+        [
+          h('label', { className: 'menu-field', for: 'player-name' }, [t('players.name')]),
+          name,
+          e.error ? h('p', { className: 'tc-warning', role: 'alert' }, [e.error]) : null,
+          h('fieldset', { className: 'st-group' }, [
+            h('legend', {}, [t('players.badge')]),
+            h(
+              'div',
+              { className: 'menu-badges', role: 'radiogroup', 'aria-label': t('players.badge') },
+              BADGES.map((badge) =>
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    role: 'radio',
+                    className: 'menu-badge',
+                    'aria-checked': String(badge === e.badge),
+                    'aria-label': t(`badge.${badge}` as MessageKey),
+                    'data-id': `badge-${badge}`,
+                    onClick: () => {
+                      e.badge = badge;
+                      this.render(false);
+                    },
+                  },
+                  [artElement(badgeSvg(badge), 'menu-player-badge')],
+                ),
+              ),
+            ),
+          ]),
+          canDelete && e.confirmDelete
+            ? h('div', { className: 'menu-confirm', role: 'alert' }, [
+                h('p', {}, [t('players.deleteConfirm', { name: player?.name ?? e.name })]),
+                h('div', { className: 'tc-actions' }, [
+                  h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'delete-no', onClick: () => {
+                    e.confirmDelete = false;
+                    this.render(false);
+                  } }, [t('players.cancel')]),
+                  h('button', { type: 'button', className: 'tc-secondary sd-danger', 'data-id': 'delete-yes', onClick: () => {
+                    if (e.id) this.hooks.onDeletePlayer(e.id);
+                    this.editing = null;
+                    this.show('players');
+                  } }, [t('players.deleteYes')]),
+                ]),
+              ])
+            : null,
+          h('div', { className: 'tc-actions' }, [
+            canDelete && !e.confirmDelete
+              ? h('button', { type: 'button', className: 'tc-secondary sd-danger', 'data-id': 'delete', onClick: () => {
+                  e.confirmDelete = true;
+                  this.render(false);
+                  this.panel.querySelector<HTMLElement>('[data-id="delete-no"]')?.focus();
+                } }, [t('players.delete')])
+              : null,
+            h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'cancel', onClick: () => {
+              this.editing = null;
+              this.show('players');
+            } }, [t('players.cancel')]),
+            h('button', { type: 'submit', className: 'tc-primary', 'data-id': 'save' }, [t('players.save')]),
+          ]),
+        ],
+      ),
+    ];
+  }
+
+  /** What Inkling is, why it exists, and where its code lives. */
+  private about(): HTMLElement[] {
+    const link = (id: string, href: string, label: string, detail: string, icon: string | null) =>
+      h('a', { className: 'menu-btn menu-link-card', href, target: '_blank', rel: 'noopener noreferrer', 'data-id': id }, [
+        icon ? artElement(icon, 'menu-link-icon') : null,
+        h('span', { className: 'menu-label' }, [label, h('span', { className: 'visually-hidden' }, [' ', t('about.newTab')])]),
+        h('span', { className: 'menu-detail' }, [detail]),
+      ]);
+    return [
+      h('h2', { id: 'menu-title' }, [t('about.title')]),
+      h('p', { className: 'tc-intro' }, [t('about.what')]),
+      h('p', { className: 'tc-intro' }, [t('about.why')]),
+      h('p', { className: 'tc-intro' }, [t('about.private')]),
+      h('nav', { className: 'menu-list' }, [
+        link('source', REPO_URL, t('about.source'), t('about.sourceDetail'), GITHUB_SVG),
+        link('suggest', ISSUES_URL, t('about.suggest'), t('about.suggestDetail'), null),
+      ]),
+      h('div', { className: 'tc-actions' }, [
+        h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', 'data-autofocus': true, onClick: () => this.show('title') }, [
+          t('menu.back'),
+        ]),
+      ]),
+    ];
+  }
+
+  /** Everything focusable on the screen, in order. */
+  private buttons(): HTMLElement[] {
+    return [...this.panel.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input')];
   }
 
   private onKeyDown(event: KeyboardEvent): void {
     if (!this.current || event.ctrlKey || event.metaKey || event.altKey) return;
     const buttons = this.buttons();
-    const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const index = buttons.indexOf(document.activeElement as HTMLElement);
 
     if (event.key === 'Escape') {
       event.preventDefault();
       if (this.current === 'pause') this.hooks.onResume();
-      else if (this.current !== 'title') this.show('title');
+      else if (this.current === 'playerEdit') {
+        this.editing = null;
+        this.show('players');
+      } else if (this.current !== 'title') this.show('title');
       return;
     }
+    // Typing a name: leave the keys to the text box (Enter submits the form).
+    if (event.target instanceof HTMLInputElement) return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       const step = event.key === 'ArrowDown' ? 1 : -1;

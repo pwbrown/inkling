@@ -65,7 +65,7 @@ export interface ApprenticeProgress {
 }
 
 /** Ink earned (XP) and equipped cosmetics (added in version 4). */
-export interface Profile {
+export interface Progression {
   /** Total ink earned; level and rank follow from it. */
   ink: number;
   cosmetics: Cosmetics;
@@ -90,7 +90,7 @@ export interface SaveData {
   /** Added in version 3. */
   apprentice: ApprenticeProgress;
   /** Added in version 4. */
-  profile: Profile;
+  profile: Progression;
 }
 
 /** File format for export/import. */
@@ -201,7 +201,7 @@ function sanitizeApprentice(v: unknown): ApprenticeProgress {
   };
 }
 
-function sanitizeProfile(v: unknown): Profile {
+function sanitizeProfile(v: unknown): Progression {
   const p = isObject(v) ? v : {};
   const c = isObject(p.cosmetics) ? p.cosmetics : {};
   const pick = <S extends keyof Cosmetics>(slot: S): Cosmetics[S] =>

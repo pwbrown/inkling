@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_CONFIG, pageParams, variantChances } from './config';
 import { cycleLock, typeChar } from './input';
-import { GHOST_REVEAL_X, createWorld, isRevealed, spawnTarget, type World } from './world';
+import { GHOST_REVEAL_MAX_X, GHOST_REVEAL_MIN_X, createWorld, ghostRevealX, isRevealed, spawnTarget, type World } from './world';
 
 function playingWorld(random: () => number = () => 0.5): World {
   const world = createWorld({ random, keys: [...'abcdefghijklmnopqrstuvwxyz'] });
@@ -117,9 +117,26 @@ describe('switching between words', () => {
 });
 
 describe('ghosts', () => {
-  it('cannot be typed or tabbed to until halfway across', () => {
+  it('reveal somewhere between a quarter and half way across the page', () => {
+    expect(GHOST_REVEAL_MIN_X).toBe(1280 * 0.25);
+    expect(GHOST_REVEAL_MAX_X).toBe(1280 * 0.5);
+    expect(ghostRevealX(0)).toBe(GHOST_REVEAL_MIN_X);
+    expect(ghostRevealX(0.999)).toBeLessThan(GHOST_REVEAL_MAX_X);
     const world = playingWorld();
-    const g = spawnTarget(world, { kind: 'drip', text: 'q', ghost: true, x: GHOST_REVEAL_X + 50, prevX: GHOST_REVEAL_X + 50, lane: 0 })!;
+    world.page.params.variants = { crimson: 0, violet: 0, ghost: 1 };
+    for (let i = 0; i < 20; i++) {
+      world.targets = [];
+      const g = spawnTarget(world)!;
+      expect(g.ghost).toBe(true);
+      expect(g.revealX).toBeGreaterThanOrEqual(GHOST_REVEAL_MIN_X);
+      expect(g.revealX).toBeLessThan(GHOST_REVEAL_MAX_X);
+    }
+  });
+
+  it('cannot be typed or tabbed to until their reveal point', () => {
+    const world = playingWorld();
+    const revealX = 400;
+    const g = spawnTarget(world, { kind: 'drip', text: 'q', ghost: true, revealX, x: revealX + 50, prevX: revealX + 50, lane: 0 })!;
     expect(isRevealed(g)).toBe(false);
     typeChar(world, 'q');
     expect(world.targets).toContain(g);
@@ -127,7 +144,7 @@ describe('ghosts', () => {
     cycleLock(world);
     expect(world.lockedId).toBeNull();
 
-    g.x = GHOST_REVEAL_X - 1;
+    g.x = revealX - 1;
     expect(isRevealed(g)).toBe(true);
     typeChar(world, 'q');
     expect(world.targets).not.toContain(g);

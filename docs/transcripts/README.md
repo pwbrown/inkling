@@ -5,3 +5,4 @@ Inkling was written almost entirely by Claude (an AI coding assistant) in Claude
 Each file is exported from the session log with `npm run transcript` (see `scripts/export-transcript.ts`). Tool output, hidden reasoning and system prompts are left out, and private details are removed.
 
 - [2026-11-12-typer-shark-game-brainstorm-eeb06805](2026-11-12-typer-shark-game-brainstorm-eeb06805.md)
+- [2026-11-13-apprentice-mode-improvements-836f321d](2026-11-13-apprentice-mode-improvements-836f321d.md)

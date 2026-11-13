@@ -14,6 +14,7 @@ import {
   totalStars,
 } from './campaign';
 import { confirm, finishedNotebook, retryChapter, startApprentice, startPractice } from './input';
+import { GAME_CONFIG } from './config';
 import { createPage, createWorld, type World } from './world';
 
 describe('lessons', () => {
@@ -146,6 +147,32 @@ describe('Apprentice pacing', () => {
       const v = createPage('normal', c, 0, undefined, 'apprentice').params.variants;
       expect(v).toEqual({ crimson: 0, violet: 0, ghost: 0 });
     }
+  });
+
+  it('eases Expert in from near Normal over the first chapters', () => {
+    const ratio = (chapter: number, mode: 'apprentice' | 'practice') =>
+      createPage('expert', chapter, 0, undefined, mode).params.speed / createPage('normal', chapter, 0, undefined, mode).params.speed;
+    const full = ratio(0, 'practice');
+    expect(ratio(0, 'apprentice')).toBeGreaterThan(1);
+    expect(ratio(0, 'apprentice')).toBeLessThan(1 + (full - 1) * 0.5);
+    expect(ratio(GAME_CONFIG.apprentice.profileEaseChapters, 'apprentice')).toBeCloseTo(full, 5);
+  });
+
+  it('never puts more drips on screen than the keys can tell apart', () => {
+    for (const d of ['normal', 'expert'] as const) {
+      for (let c = 0; c < 5; c++) {
+        const world = createWorld({ difficulty: d });
+        startApprentice(world, c, d);
+        expect(world.page.params.maxOnScreen).toBeLessThanOrEqual(Math.max(2, world.keys.length - 1));
+      }
+    }
+  });
+
+  it('keeps violets back until late in the course', () => {
+    for (let c = 0; c < 16; c++) {
+      expect(createPage('expert', c, 0, undefined, 'apprentice').params.variants.violet).toBe(0);
+    }
+    expect(createPage('normal', APPRENTICE_CHAPTERS - 1, 0, undefined, 'apprentice').params.variants.violet).toBeGreaterThan(0);
   });
 
   it('only brings the Spill once the basics are learned', () => {

@@ -1,0 +1,39 @@
+name: Something went wrong
+description: Tell us about a bug, a crash, or something that looks broken.
+title: "Bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make Inkling better! Please don't include personal details like your full name, email or where you live.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see? A screenshot helps a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we make it happen again?
+      description: The steps you took, one per line.
+      placeholder: |
+        1. Open Apprentice
+        2. Start chapter 3 on Hard
+        3. ...
+  - type: input
+    id: where
+    attributes:
+      label: Mode, chapter and difficulty
+      placeholder: Apprentice, chapter 5, Normal
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Chrome on a Chromebook

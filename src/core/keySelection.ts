@@ -4,6 +4,7 @@
  * `1`/`!` are separate choices.
  */
 import type { KeyboardLayout, LayoutKey } from '../content/layouts/types';
+import { APPRENTICE_CHAPTERS, apprenticeKeys } from './campaign';
 
 export type RegionId =
   | 'lowercase'
@@ -108,6 +109,16 @@ export function builtInPresets(layout: KeyboardLayout): Preset[] {
     preset('code', [...'{}[]()<>;:=+-*/\\|&!?"\'`~_#$%^@']),
     preset('everything', [...r('lowercase'), ...r('uppercase'), ...r('digits'), ...r('symbols'), ...r('shiftedSymbols'), ' ']),
   ];
+}
+
+/**
+ * The keys of the Apprentice chapter a player has reached (`unlocked`
+ * chapters are open, so the highest is chapter `unlocked`, 1-based). Shown
+ * as a preset so Practice can always match Apprentice progress.
+ */
+export function apprenticePreset(unlocked: number, name: string): Preset {
+  const chapter = Math.max(1, Math.min(unlocked, APPRENTICE_CHAPTERS));
+  return { id: 'apprentice', name, chars: apprenticeKeys(chapter - 1), builtIn: true };
 }
 
 /** Every character a layout can produce. */

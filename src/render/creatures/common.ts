@@ -3,7 +3,7 @@
  * colors and life pips. Everything is drawn procedurally in PixiJS.
  */
 import { BlurFilter, CanvasTextMetrics, type Container, type Graphics, type Text, type TextStyle } from 'pixi.js';
-import { GHOST_REVEAL_X, MARGIN_X, isRevealed, type Target } from '../../core/world';
+import { MARGIN_X, isRevealed, revealXOf, type Target } from '../../core/world';
 import { COLORS, TEXT_FONT } from '../theme';
 
 /** Per-frame information every creature needs. */
@@ -16,6 +16,11 @@ export interface FrameContext {
   lookX: number;
   lookY: number;
   reducedMotion: boolean;
+  /**
+   * Finished: the last key was typed and the final drop of ink is on its way.
+   * The creature shows it's beaten (x x eyes) until the ink lands.
+   */
+  defeated?: boolean;
 }
 
 export interface CreatureView {
@@ -42,17 +47,84 @@ export function letterCenter(text: string, index: number, left: number, style: T
   return left + measure(before, style) + measure(chars[i]!, style) / 2;
 }
 
-export type Mood = 'calm' | 'worried' | 'scared' | 'happy' | 'hurt' | 'angry';
+export type Mood = 'calm' | 'worried' | 'scared' | 'happy' | 'hurt' | 'angry' | 'defeated';
 
 export const measure = (text: string, style: TextStyle) => CanvasTextMetrics.measureText(text, style).width;
 
-export function labelStyle(fill: number, fontSize: number) {
-  return { fontFamily: TEXT_FONT, fontSize, fontWeight: '600' as const, fill };
+/** Extra space between letters on word creatures, as a fraction of the font size, for easier reading. */
+export const WORD_LETTER_SPACING = 0.08;
+
+export function labelStyle(fill: number, fontSize: number, letterSpacing = 0) {
+  return { fontFamily: TEXT_FONT, fontSize, fontWeight: '600' as const, fill, letterSpacing: fontSize * letterSpacing };
 }
 
 /** Body color for a creature's remaining lives: violet (3), crimson (2), ink (1). */
 export function bodyColor(lives: number): number {
   return lives >= 3 ? COLORS.inkViolet : lives === 2 ? COLORS.inkCrimson : COLORS.ink;
+}
+
+/**
+ * Each variant has its own look, so lives never show by color alone:
+ * plain ink is a soft blob, crimson is spiky with horns and a scowl, and
+ * violet is lumpy, with a crown of drips, a third eye and a wavy hem.
+ */
+export type Variant = 'plain' | 'crimson' | 'violet';
+
+export function variantOf(lives: number): Variant {
+  return lives >= 3 ? 'violet' : lives === 2 ? 'crimson' : 'plain';
+}
+
+/** Two little curved horns either side of (cx, baseY), pointing up and out. */
+export function drawHorns(g: Graphics, cx: number, baseY: number, spread: number, size: number, color: number): void {
+  for (const side of [-1, 1]) {
+    const x = cx + side * spread;
+    g.moveTo(x - size * 0.45, baseY)
+      .quadraticCurveTo(x + side * size * 0.1, baseY - size * 0.6, x + side * size * 0.55, baseY - size * 1.1)
+      .quadraticCurveTo(x + side * size * 0.15, baseY - size * 0.35, x + size * 0.45, baseY)
+      .closePath()
+      .fill(color);
+  }
+}
+
+/** A crown of three ink drips pointing up from (cx, baseY). */
+export function drawCrown(g: Graphics, cx: number, baseY: number, width: number, color: number): void {
+  const h = width * 0.55;
+  g.moveTo(cx - width / 2, baseY)
+    .lineTo(cx - width / 2, baseY - h * 0.55)
+    .lineTo(cx - width / 4, baseY - h * 0.25)
+    .lineTo(cx, baseY - h)
+    .lineTo(cx + width / 4, baseY - h * 0.25)
+    .lineTo(cx + width / 2, baseY - h * 0.55)
+    .lineTo(cx + width / 2, baseY)
+    .closePath()
+    .fill(color);
+  for (const [x, y] of [
+    [cx - width / 2, baseY - h * 0.55],
+    [cx, baseY - h],
+    [cx + width / 2, baseY - h * 0.55],
+  ] as const) {
+    g.circle(x, y, width * 0.09).fill(color);
+  }
+}
+
+/** Triangular spikes along a horizontal edge at `y`, pointing up (dir -1) or down (dir 1). */
+export function drawSpikes(g: Graphics, x0: number, x1: number, y: number, count: number, size: number, dir: -1 | 1, color: number): void {
+  const step = (x1 - x0) / count;
+  for (let i = 0; i < count; i++) {
+    const x = x0 + step * i;
+    g.poly([x, y, x + step / 2, y + dir * size, x + step, y]).fill(color);
+  }
+}
+
+/** A wavy, tentacled hem along the bottom edge at `y`, swaying with time. */
+export function drawHem(g: Graphics, x0: number, x1: number, y: number, size: number, color: number, sway: number): void {
+  const count = Math.max(3, Math.round((x1 - x0) / (size * 1.6)));
+  const step = (x1 - x0) / count;
+  for (let i = 0; i < count; i++) {
+    const x = x0 + step * (i + 0.5);
+    const wiggle = sway * size * 0.3 * (i % 2 === 0 ? 1 : -1);
+    g.ellipse(x + wiggle, y + size * 0.35, step * 0.42, size * 0.75).fill(color);
+  }
 }
 
 /**
@@ -71,6 +143,7 @@ export class MoodTracker {
 
   update(target: Target, ctx: FrameContext): { mood: Mood; blink: boolean; hurtMs: number } {
     const t = ctx.timeMs;
+    if (ctx.defeated) return { mood: 'defeated', blink: false, hurtMs: 0 };
     if (this.lastLives && target.lives < this.lastLives) this.hurtUntil = t + 350;
     else if (target.typed > this.lastTyped || (target.text !== this.lastText && this.lastText && target.lives === this.lastLives))
       this.happyUntil = t + 180;
@@ -90,7 +163,7 @@ export class MoodTracker {
           ? 'happy'
           : ctx.locked
             ? 'scared'
-            : target.boss
+            : target.boss || target.lives >= 2
               ? 'angry'
               : target.x < MARGIN_X + 240
                 ? 'worried'
@@ -115,6 +188,8 @@ export function drawFace(
   lookY: number,
   pupil: number,
   mouth: { x: number; y: number } | null = null,
+  /** Violet creatures have a third eye in the middle. */
+  eyes: 2 | 3 = 2,
 ): void {
   const white = COLORS.label;
   const gap = r * 1.25;
@@ -122,9 +197,19 @@ export function drawFace(
   const dx = ((lookX - cx) / len) * r * 0.38;
   const dy = ((lookY - cy) / len) * r * 0.38;
 
-  for (const side of [-1, 1]) {
-    const ex = cx + side * gap;
-    if (mood === 'happy') {
+  for (const offset of eyes === 3 ? [-2, 0, 2] : [-1, 1]) {
+    const ex = cx + offset * gap;
+    // Which way brows and > < marks slant (the middle eye leans like the right one).
+    const side = Math.sign(offset) || 1;
+    if (mood === 'defeated') {
+      // x x
+      const k = r * 0.65;
+      g.moveTo(ex - k, cy - k)
+        .lineTo(ex + k, cy + k)
+        .moveTo(ex + k, cy - k)
+        .lineTo(ex - k, cy + k)
+        .stroke({ width: Math.max(1.5, r * 0.34), color: white, cap: 'round' });
+    } else if (mood === 'happy') {
       // ^ ^
       g.moveTo(ex - r * 0.8, cy + r * 0.3)
         .lineTo(ex, cy - r * 0.5)
@@ -168,6 +253,13 @@ export function drawFace(
     case 'scared':
       g.circle(x, y + w * 0.2, w * 0.45).fill(white);
       break;
+    case 'defeated':
+      // A dazed wavy line.
+      g.moveTo(x - w, y + w * 0.2)
+        .quadraticCurveTo(x - w * 0.5, y - w * 0.3, x, y + w * 0.2)
+        .quadraticCurveTo(x + w * 0.5, y + w * 0.7, x + w, y + w * 0.2)
+        .stroke({ width: Math.max(1.2, r * 0.24), color: white, cap: 'round' });
+      break;
     case 'worried':
     case 'hurt':
     case 'angry':
@@ -196,7 +288,7 @@ export function drawPips(g: Graphics, x: number, y: number, lives: number, scale
 const ghostBlur = () => new BlurFilter({ strength: 7, quality: 2 });
 
 /**
- * Invisible ink: until the creature reaches halfway, its text is blurred and
+ * Invisible ink: until the creature reaches its reveal point, its text is blurred and
  * the body is faint. Returns true while hidden.
  */
 export function applyGhost(target: Target, root: Container, labels: Text[], timeMs: number, reducedMotion: boolean): boolean {
@@ -207,7 +299,7 @@ export function applyGhost(target: Target, root: Container, labels: Text[], time
     for (const label of labels) if (!label.filters || (label.filters as unknown[]).length === 0) label.filters = [ghostBlur()];
   } else {
     // Fade in over the first stretch after the reveal line.
-    const since = Math.max(0, GHOST_REVEAL_X - target.x);
+    const since = Math.max(0, revealXOf(target) - target.x);
     root.alpha = Math.min(1, 0.45 + since / 120);
     for (const label of labels) if (label.filters) label.filters = [];
   }

@@ -106,7 +106,8 @@ describe('the Spill', () => {
     boss.speed = 1000;
     const before = world.ink;
     stepWorld(world, 16);
-    expect(before - world.ink).toBe(Math.round(world.page.params.inkLoss * GAME_CONFIG.boss.inkLossFactor));
+    const blotlingLoss = (world.page.params.inkLoss * GAME_CONFIG.base.blotling.inkLoss) / GAME_CONFIG.base[world.page.params.kind].inkLoss;
+    expect(before - world.ink).toBe(Math.round(blotlingLoss * GAME_CONFIG.boss.inkLossFactor));
   });
 
   it('must be dealt with before the page clears', () => {

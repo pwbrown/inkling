@@ -224,8 +224,11 @@ export function typeChar(world: World, key: string): void {
   if (!target) {
     // Lock onto the closest visible target this key can start…
     target = mostUrgent(visibleTargets(world).filter((t) => startsWith(t, key)));
-    // …or else the most urgent Misprint, which is edited in place.
-    target ??= editTarget(world);
+    // …or else, when only Misprints are on the page, the most urgent one,
+    // which is edited in place. (A Misprint sprinkled among Blotlings is
+    // started with Backspace, the arrows or Tab, so a slip on a Blotling
+    // doesn't land in it.)
+    if (!target && visibleTargets(world).every((t) => t.kind === 'misprint')) target = editTarget(world);
     if (!target) {
       registerError(world, key, undefined);
       return;

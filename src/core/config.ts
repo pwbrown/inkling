@@ -52,8 +52,8 @@ export interface DifficultyProfile {
 export const DIFFICULTY_PROFILES: Record<Difficulty, DifficultyProfile> = {
   relaxed: { speed: 0.75, spawnInterval: 1.3, maxOnScreen: -1, complexity: -0.1, inkLoss: 0.5, variants: 0.5 },
   normal: { speed: 1, spawnInterval: 1, maxOnScreen: 0, complexity: 0, inkLoss: 1, variants: 1 },
-  hard: { speed: 1.25, spawnInterval: 0.8, maxOnScreen: 1, complexity: 0.15, inkLoss: 1.25, variants: 1.3 },
-  expert: { speed: 1.5, spawnInterval: 0.65, maxOnScreen: 2, complexity: 0.3, inkLoss: 1.5, variants: 1.6 },
+  hard: { speed: 1.2, spawnInterval: 0.85, maxOnScreen: 1, complexity: 0.1, inkLoss: 1.2, variants: 1.25 },
+  expert: { speed: 1.35, spawnInterval: 0.75, maxOnScreen: 1, complexity: 0.2, inkLoss: 1.4, variants: 1.5 },
 };
 
 interface KindSettings {
@@ -126,16 +126,39 @@ export const GAME_CONFIG = {
   },
 
   /**
-   * Page types in each chapter (each page is a single type, REQUIREMENTS §2).
+   * Page types in each chapter. Pages are drips or Blotlings; later on,
+   * Run-ons and Misprints are sprinkled into Blotling pages (`sprinkles`).
    * Chapters past the end of this list reuse the last entry.
    */
   chapters: [
     ['drip', 'drip', 'blotling'],
     ['drip', 'blotling', 'drip', 'blotling'],
     ['blotling', 'drip', 'blotling', 'drip', 'blotling'],
-    ['drip', 'blotling', 'runon', 'blotling'],
-    ['drip', 'blotling', 'misprint', 'runon', 'blotling'],
+    ['drip', 'blotling', 'drip', 'blotling'],
+    ['drip', 'blotling', 'blotling', 'drip', 'blotling'],
   ] as TargetKind[][],
+
+  /**
+   * Occasional Run-ons and Misprints on Blotling pages, for variety without
+   * whole pages of them. Chance per spawn: `start` from chapter `fromChapter`
+   * (Practice) or `fromApprenticeChapter` (Apprentice, both 0-based), plus
+   * `perChapter` after that (Apprentice chapters count `apprentice.pace` each),
+   * capped at `max`.
+   */
+  sprinkles: {
+    pageKinds: ['blotling'] as TargetKind[],
+    runon: { fromChapter: 3, fromApprenticeChapter: 10, start: 0.1, perChapter: 0.03, max: 0.2 },
+    misprint: { fromChapter: 4, fromApprenticeChapter: 15, start: 0.1, perChapter: 0.03, max: 0.2 },
+    /** Most sprinkled targets on one page, and on screen at once. */
+    maxPerPage: 3,
+    maxOnScreen: 1,
+  },
+
+  /**
+   * Drip pages never have more drips on screen than the player has keys
+   * (minus `keysMinus`), so the first keystroke always says which drip you mean.
+   */
+  dripsPerKeys: { keysMinus: 1, min: 2 },
 
   /** Run-on phrases: how many words, growing with complexity. */
   phraseWords: {
@@ -182,10 +205,18 @@ export const GAME_CONFIG = {
   variants: {
     kinds: ['drip', 'blotling'] as TargetKind[],
     crimson: { fromChapter: 1, start: 0.1, perChapter: 0.04, max: 0.3 },
-    violet: { fromChapter: 2, start: 0.05, perChapter: 0.03, max: 0.18 },
+    violet: { fromChapter: 4, start: 0.05, perChapter: 0.03, max: 0.18 },
+    /**
+     * Word complexity is multiplied by this for creatures that start with
+     * 2 or 3 lives: they need several words, so each one is shorter.
+     */
+    complexityScale: { 2: 0.6, 3: 0.4 } as Record<number, number>,
     ghost: { fromChapter: 2, start: 0.08, perChapter: 0.03, max: 0.25 },
-    /** Ghost text appears once the creature is this far from the left edge (fraction of page width). */
-    revealAt: 0.55,
+    /**
+     * Ghost text appears once the creature crosses a point this far from the
+     * left edge (fraction of page width), picked at random per ghost.
+     */
+    revealAt: { min: 0.25, max: 0.5 },
   },
 
   /**
@@ -224,6 +255,13 @@ export const GAME_CONFIG = {
     easeInterval: 0.5,
     easeOnScreen: 3,
     easeSize: 0.3,
+    /**
+     * Hard and Expert ease in too: over the first `profileEaseChapters`
+     * chapters, page settings blend from Normal toward the chosen difficulty,
+     * starting `profileEaseFloor` of the way there.
+     */
+    profileEaseChapters: 10,
+    profileEaseFloor: 0.35,
   },
 
   /** Each target's speed varies randomly by up to ±this fraction. */
@@ -249,6 +287,36 @@ export interface PageParams {
   inkLoss: number;
   /** Chance per spawn of each tougher variant. */
   variants: VariantChances;
+  /** Chance per spawn of a sprinkled Run-on or Misprint (see GAME_CONFIG.sprinkles). */
+  sprinkles: SprinkleChances;
+}
+
+export interface SprinkleChances {
+  runon: number;
+  misprint: number;
+}
+
+type SprinkleSettings = { fromChapter: number; fromApprenticeChapter: number; start: number; perChapter: number; max: number };
+
+/**
+ * Chances of a sprinkled Run-on or Misprint on a page of type `kind`.
+ * `apprentice`: count from the Apprentice start chapters, at Apprentice pace.
+ */
+export function sprinkleChances(
+  kind: TargetKind,
+  chapter: number,
+  apprentice = false,
+  canUse: (kind: TargetKind) => boolean = () => true,
+): SprinkleChances {
+  const s = GAME_CONFIG.sprinkles;
+  if (!s.pageKinds.includes(kind)) return { runon: 0, misprint: 0 };
+  const chance = (c: SprinkleSettings, sprinkled: TargetKind) => {
+    const from = apprentice ? c.fromApprenticeChapter : c.fromChapter;
+    if (chapter < from || !canUse(sprinkled)) return 0;
+    const steps = (chapter - from) * (apprentice ? GAME_CONFIG.apprentice.pace : 1);
+    return Math.min(c.max, c.start + c.perChapter * steps);
+  };
+  return { runon: chance(s.runon, 'runon'), misprint: chance(s.misprint, 'misprint') };
 }
 
 export interface VariantChances {
@@ -256,7 +324,7 @@ export interface VariantChances {
   crimson: number;
   /** Needs 3 completions in a row. */
   violet: number;
-  /** Text hidden until halfway (independent of the other two). */
+  /** Text hidden until partway across (independent of the other two). */
   ghost: number;
 }
 
@@ -311,5 +379,6 @@ export function pageParams(
     ),
     inkLoss: Math.round(base.inkLoss * profile.inkLoss),
     variants: variantChances(kind, chapter, difficulty),
+    sprinkles: sprinkleChances(kind, chapter, false, canUse),
   };
 }

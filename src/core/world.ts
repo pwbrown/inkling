@@ -6,6 +6,7 @@ import { createContentSource, type ContentSource } from '../content/contentSourc
 import {
   apprenticeKeys,
   apprenticePlan,
+  easeDifficulty,
   easeForBeginners,
   effectiveChapter,
   hasSpill,
@@ -15,9 +16,11 @@ import {
 import {
   DEFAULT_DIFFICULTY,
   DEFAULT_KEYS,
+  DIFFICULTY_PROFILES,
   GAME_CONFIG,
   chapterPlan,
   pageParams,
+  sprinkleChances,
   type Difficulty,
   type PageParams,
   type TargetKind,
@@ -59,8 +62,12 @@ export interface Target {
    * completion but the last brings a fresh payload on the same creature.
    */
   lives: number;
-  /** Invisible ink: the text stays hidden until the creature is halfway across. */
+  /** Invisible ink: the text stays hidden until the creature crosses `revealX`. */
   ghost: boolean;
+  /** Ghosts only: the x at which the text appears (see GAME_CONFIG.variants.revealAt). */
+  revealX?: number;
+  /** Lives the creature started with (when more than 1), which keeps its words short. */
+  maxLives?: number;
   /** The Spill: a chapter's boss. */
   boss?: boolean;
   /** Current position (left edge of the target body). */
@@ -122,6 +129,8 @@ export interface PageState {
   bossSpawned: boolean;
   params: PageParams;
   spawned: number;
+  /** Run-ons and Misprints sprinkled into this page so far. */
+  sprinkled: number;
   /** Counts down to the next spawn. */
   spawnTimerMs: number;
 }
@@ -199,16 +208,29 @@ export function createPage(
   difficulty: Difficulty,
   chapter: number,
   index: number,
-  content?: Pick<ContentSource, 'supports'>,
+  content?: Pick<ContentSource, 'supports'> & Partial<Pick<ContentSource, 'keys'>>,
   mode: GameMode = 'practice',
 ): PageState {
   const apprentice = mode === 'apprentice';
   const plan = apprentice ? apprenticePlan(chapter) : chapterPlan(chapter);
   const canUse = content ? (kind: TargetKind) => content.supports(kind) : undefined;
-  // The Apprentice climbs a gentler curve, with extra easing for beginners.
-  const params = apprentice
-    ? easeForBeginners(pageParams(difficulty, effectiveChapter(chapter), index, canUse, plan), chapter)
-    : pageParams(difficulty, chapter, index, canUse, plan);
+  let params: PageParams;
+  if (apprentice) {
+    // The Apprentice climbs a gentler curve, with extra easing for beginners,
+    // and harder difficulties blend in over the first chapters.
+    const eff = effectiveChapter(chapter);
+    let raw = pageParams(difficulty, eff, index, canUse, plan);
+    if (DIFFICULTY_PROFILES[difficulty].speed > 1) raw = easeDifficulty(raw, pageParams('normal', eff, index, canUse, plan), chapter);
+    params = { ...easeForBeginners(raw, chapter), sprinkles: sprinkleChances(raw.kind, chapter, true, canUse) };
+  } else {
+    params = pageParams(difficulty, chapter, index, canUse, plan);
+  }
+  // Never more drips than keys to tell them apart.
+  const keyCount = content?.keys?.length;
+  if (params.kind === 'drip' && keyCount) {
+    const { keysMinus, min } = GAME_CONFIG.dripsPerKeys;
+    params.maxOnScreen = Math.min(params.maxOnScreen, Math.max(min, keyCount - keysMinus));
+  }
   return {
     chapter,
     index,
@@ -217,6 +239,7 @@ export function createPage(
     bossSpawned: false,
     params,
     spawned: 0,
+    sprinkled: 0,
     // Spawn the first target right away.
     spawnTimerMs: 0,
   };
@@ -316,7 +339,7 @@ export function resetWorld(world: World, difficulty: Difficulty = world.difficul
 export function estimateWidth(target: Pick<Target, 'kind' | 'text' | 'buffer'>, scale = 1): number {
   if (target.kind === 'drip') return 58 * scale;
   const length = Math.max([...target.text].length, [...(target.buffer ?? '')].length);
-  return (36 + 15 * length) * scale;
+  return (36 + 17 * length) * scale;
 }
 
 /** Lanes whose most recent target has moved far enough in to make room. */
@@ -331,12 +354,23 @@ function freeLanes(world: World): number[] {
   return lanes;
 }
 
-/** Ghost text shows once the creature has crossed this x. */
-export const GHOST_REVEAL_X = WORLD_WIDTH * GAME_CONFIG.variants.revealAt;
+/** Ghost text shows once the creature crosses an x somewhere in this range. */
+export const GHOST_REVEAL_MIN_X = WORLD_WIDTH * GAME_CONFIG.variants.revealAt.min;
+export const GHOST_REVEAL_MAX_X = WORLD_WIDTH * GAME_CONFIG.variants.revealAt.max;
+
+/** Where a ghost's text appears: `roll` in [0, 1) picks a point in the reveal range. */
+export function ghostRevealX(roll: number): number {
+  return GHOST_REVEAL_MIN_X + (GHOST_REVEAL_MAX_X - GHOST_REVEAL_MIN_X) * roll;
+}
+
+/** Where this target's text appears (ghosts without a rolled point use the far end of the range). */
+export function revealXOf(target: Pick<Target, 'revealX'>): number {
+  return target.revealX ?? GHOST_REVEAL_MAX_X;
+}
 
 /** Whether the player can read (and so type) a target's text yet. */
-export function isRevealed(target: Pick<Target, 'ghost' | 'x'>): boolean {
-  return !target.ghost || target.x < GHOST_REVEAL_X;
+export function isRevealed(target: Pick<Target, 'ghost' | 'x' | 'revealX'>): boolean {
+  return !target.ghost || target.x < revealXOf(target);
 }
 
 /** Up to this many re-rolls to avoid two targets starting with the same character. */
@@ -352,8 +386,9 @@ export function isBufferKind(kind: TargetKind): boolean {
  * target already on the page. That keeps targeting unambiguous: the first
  * keystroke picks exactly the target you meant.
  */
-function payloadFor(world: World, kind: TargetKind): Pick<Target, 'text' | 'buffer' | 'cursor'> {
-  const { complexity } = world.page.params;
+function payloadFor(world: World, kind: TargetKind, maxLives = 1): Pick<Target, 'text' | 'buffer' | 'cursor'> {
+  // Creatures with several lives carry shorter words.
+  const complexity = world.page.params.complexity * (GAME_CONFIG.variants.complexityScale[maxLives] ?? 1);
   const { content, random } = world;
   if (kind === 'misprint') {
     // Misprints are picked by urgency, not first letter, so no re-rolls needed.
@@ -382,20 +417,27 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
   const lanes = freeLanes(world);
   if (lanes.length === 0 && overrides.lane === undefined) return null;
 
-  const { kind, speed } = world.page.params;
+  const params = world.page.params;
+  const sprinkle = overrides.kind === undefined ? sprinkleKind(world) : null;
+  const kind = overrides.kind ?? sprinkle ?? params.kind;
+  const sprinkled = sprinkle !== null;
+  // A sprinkled Run-on or Misprint moves at its own kind's pace.
+  const speed = params.speed * (kind === params.kind ? 1 : GAME_CONFIG.base[kind].speed / GAME_CONFIG.base[params.kind].speed);
   const jitter = GAME_CONFIG.speedJitter;
   const lane = overrides.lane ?? pick(lanes, world.random);
   // Tougher variants (config.variants): roll lives, then ghost.
-  const { crimson, violet, ghost } = world.page.params.variants;
+  const { crimson, violet, ghost } = sprinkled ? { crimson: 0, violet: 0, ghost: 0 } : params.variants;
   const roll = world.random();
   const lives = roll < violet ? 3 : roll < violet + crimson ? 2 : 1;
+  const startLives = overrides.lives ?? lives;
   const isGhost = world.random() < ghost;
+  const revealX = isGhost ? ghostRevealX(world.random()) : undefined;
   // Never faster than the target ahead in the same lane, so they can't overlap.
   const leaderSpeed = Math.min(...world.targets.filter((t) => t.lane === lane).map((t) => t.speed));
   const target: Target = {
     id: world.nextId++,
     kind,
-    ...payloadFor(world, kind),
+    ...payloadFor(world, kind, startLives),
     typed: 0,
     x: SPAWN_X,
     prevX: SPAWN_X,
@@ -404,10 +446,29 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
     speed: Math.min(leaderSpeed, speed * (1 + (world.random() * 2 - 1) * jitter)),
     lives,
     ghost: isGhost,
+    ...(revealX === undefined ? {} : { revealX }),
+    ...(startLives > 1 ? { maxLives: startLives } : {}),
     ...overrides,
   };
+  if (sprinkled) world.page.sprinkled++;
   world.targets.push(target);
   return target;
+}
+
+/**
+ * Maybe sprinkle a Run-on or Misprint into this page instead of its usual
+ * type (GAME_CONFIG.sprinkles). Returns null for an ordinary spawn.
+ */
+function sprinkleKind(world: World): TargetKind | null {
+  const { sprinkles } = world.page.params;
+  if (sprinkles.runon <= 0 && sprinkles.misprint <= 0) return null;
+  const s = GAME_CONFIG.sprinkles;
+  if (world.page.sprinkled >= s.maxPerPage) return null;
+  if (world.targets.filter((t) => isBufferKind(t.kind)).length >= s.maxOnScreen) return null;
+  const roll = world.random();
+  if (roll < sprinkles.runon) return 'runon';
+  if (roll < sprinkles.runon + sprinkles.misprint) return 'misprint';
+  return null;
 }
 
 function updateSpawner(world: World, stepMs: number): void {
@@ -449,8 +510,9 @@ export function nextLife(world: World, target: Target): void {
     Object.assign(target, { text: fresh(() => world.content.nextWord(complexity, world.random)), typed: 0 });
     return;
   }
-  let payload = payloadFor(world, target.kind);
-  for (let i = 0; i < NEXT_LIFE_TRIES && payload.text === previous; i++) payload = payloadFor(world, target.kind);
+  const make = () => payloadFor(world, target.kind, target.maxLives ?? 1);
+  let payload = make();
+  for (let i = 0; i < NEXT_LIFE_TRIES && payload.text === previous; i++) payload = make();
   Object.assign(target, payload, { typed: 0 });
 }
 
@@ -517,7 +579,7 @@ export function stepWorld(world: World, stepMs: number): void {
       continue;
     }
 
-    const inkLost = Math.round(world.page.params.inkLoss * (target.boss ? GAME_CONFIG.boss.inkLossFactor : 1));
+    const inkLost = inkLossFor(world, target);
     world.ink = Math.max(0, world.ink - inkLost);
     world.stats.combo = 0;
     world.pageStats.combo = 0;
@@ -545,6 +607,13 @@ export function stepWorld(world: World, stepMs: number): void {
     }
     setPhase(world, 'pageCleared');
   }
+}
+
+/** Ink lost when `target` reaches the margin. Sprinkled kinds cost what their own kind costs. */
+export function inkLossFor(world: World, target: Target): number {
+  const params = world.page.params;
+  const kindFactor = target.kind === params.kind ? 1 : GAME_CONFIG.base[target.kind].inkLoss / GAME_CONFIG.base[params.kind].inkLoss;
+  return Math.round(params.inkLoss * kindFactor * (target.boss ? GAME_CONFIG.boss.inkLossFactor : 1));
 }
 
 /** Interpolated x position for rendering between two steps. */

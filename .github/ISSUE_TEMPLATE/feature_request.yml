@@ -1,0 +1,31 @@
+name: I have an idea
+description: Suggest a new feature, creature, reward, or a way to make Inkling more fun.
+title: "Idea: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We love ideas! Please don't include personal details like your full name, email or where you live.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What's your idea?
+      description: Describe it however you like. Drawings and screenshots are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it make Inkling better?
+      description: What would it help with, or what would be more fun?
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of idea is it?
+      options:
+        - A new creature or challenge
+        - Rewards, ranks or unlocks
+        - Learning to type
+        - Making it easier to use or read
+        - Something else

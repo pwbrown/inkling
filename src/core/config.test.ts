@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIFFICULTIES, GAME_CONFIG, TARGET_KINDS, chapterPlan, pageParams } from './config';
+import { DIFFICULTIES, GAME_CONFIG, TARGET_KINDS, chapterPlan, pageParams, sprinkleChances } from './config';
 
 describe('chapterPlan', () => {
   it('uses the configured chapters, then repeats the last one', () => {
@@ -78,19 +78,33 @@ describe('pageParams', () => {
   });
 
   it('swaps in a Blotling page when the keys cannot make the planned type', () => {
-    const runonPage = chapterPlan(3).indexOf('runon');
-    expect(pageParams('normal', 3, runonPage).kind).toBe('runon');
-    expect(pageParams('normal', 3, runonPage, (k) => k !== 'runon').kind).toBe('blotling');
+    expect(pageParams('normal', 3, 0, () => true, ['runon']).kind).toBe('runon');
+    expect(pageParams('normal', 3, 0, (k) => k !== 'runon', ['runon']).kind).toBe('blotling');
   });
 
-  it('introduces Run-ons in chapter 4 and Misprints in chapter 5', () => {
-    for (const chapter of [0, 1, 2]) {
-      expect(chapterPlan(chapter)).not.toContain('runon');
-      expect(chapterPlan(chapter)).not.toContain('misprint');
+  it('only plans drip and Blotling pages', () => {
+    for (let chapter = 0; chapter < GAME_CONFIG.chapters.length + 2; chapter++) {
+      expect(chapterPlan(chapter).every((k) => k === 'drip' || k === 'blotling')).toBe(true);
     }
-    expect(chapterPlan(3)).toContain('runon');
-    expect(chapterPlan(3)).not.toContain('misprint');
-    expect(chapterPlan(4)).toEqual(expect.arrayContaining(['runon', 'misprint']));
+  });
+
+  it('sprinkles Run-ons from chapter 4 and Misprints from chapter 5, on Blotling pages only', () => {
+    expect(sprinkleChances('blotling', 2)).toEqual({ runon: 0, misprint: 0 });
+    expect(sprinkleChances('blotling', 3).runon).toBeGreaterThan(0);
+    expect(sprinkleChances('blotling', 3).misprint).toBe(0);
+    expect(sprinkleChances('blotling', 4).misprint).toBeGreaterThan(0);
+    expect(sprinkleChances('drip', 9)).toEqual({ runon: 0, misprint: 0 });
+    expect(sprinkleChances('blotling', 9, false, (k) => k !== 'runon').runon).toBe(0);
+    const late = sprinkleChances('blotling', 99);
+    expect(late.runon).toBeLessThanOrEqual(GAME_CONFIG.sprinkles.runon.max);
+    expect(late.runon + late.misprint).toBeLessThan(0.5);
+  });
+
+  it('starts Apprentice sprinkles after space is learned', () => {
+    expect(sprinkleChances('blotling', 9, true).runon).toBe(0);
+    expect(sprinkleChances('blotling', 10, true).runon).toBeGreaterThan(0);
+    expect(sprinkleChances('blotling', 14, true).misprint).toBe(0);
+    expect(sprinkleChances('blotling', 15, true).misprint).toBeGreaterThan(0);
   });
 
   it('keeps Relaxed playable: at least one target on screen and complexity ≥ 0', () => {
