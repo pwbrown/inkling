@@ -15,6 +15,7 @@ Inkling is an offline-first, open-source browser typing game (TypeScript + Vite 
 - `npm run check` (typecheck, lint, tests) and `npm run build` must pass.
 - For anything visible, run the game (`npm run dev`) and check it in a browser.
 - Service workers only run in production builds (`npm run build && npm run preview`).
+- At the end of a milestone, run `npm run snapshots -- m<N>` (and `-- latest`) and add it to `docs/progression/README.md`, calling out what's new or changed next to earlier versions. That file's last section has the steps.
 
 ## Code conventions
 

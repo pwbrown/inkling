@@ -9,6 +9,7 @@ No servers and no analytics. Everything stays on your device (see [PRIVACY.md](P
 
 - Requirements: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)
 - Design: [docs/DESIGN.md](docs/DESIGN.md)
+- How it grew, in screenshots from every milestone: [docs/progression](docs/progression/README.md)
 
 ## How to play
 

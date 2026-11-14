@@ -7,3 +7,4 @@ Each file is exported from the session log with `npm run transcript` (see `scrip
 - [2026-11-12-typer-shark-game-brainstorm-eeb06805](2026-11-12-typer-shark-game-brainstorm-eeb06805.md)
 - [2026-11-13-apprentice-mode-improvements-836f321d](2026-11-13-apprentice-mode-improvements-836f321d.md)
 - [2026-11-13-visual-improvements-hands-keyboard-ui-fixes-65163df2](2026-11-13-visual-improvements-hands-keyboard-ui-fixes-65163df2.md)
+- [2026-11-14-app-milestone-screenshots-and-progression-75b38b66](2026-11-14-app-milestone-screenshots-and-progression-75b38b66.md)

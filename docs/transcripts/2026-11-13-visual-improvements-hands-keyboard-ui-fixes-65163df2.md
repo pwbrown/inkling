@@ -1,6 +1,6 @@
 # Visual improvements: hands, keyboard, UI fixes
 
-Claude Code session started 2026-11-13. 8 prompts.
+Claude Code session started 2026-11-13. 9 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1244,12 +1244,79 @@ I've added the credit even though it isn't required:
 
 > commit this and merge to main
 
-<details><summary>1 tool call</summary>
+<details><summary>3 tool calls</summary>
 
 - **Shell:** Export the session transcript
 
   ```bash
   npm run transcript 2>&1 | tail -5 && git status --short docs/transcripts | head
   ```
+- **Shell:** Scan transcript for private details
+
+  ```bash
+  F=docs/transcripts/2026-11-13-visual-improvements-hands-keyboard-ui-fixes-65163df2.md; grep -nEi "@[a-z0-9.-]+\.(com|org|net)|pwbrown|/Users/|/private/tmp|Downloads|token|api[_-]?key|secret|password|sk-[a-z0-9]" $F | head -20; git diff docs/transcripts/2026-11-13-apprentice-mode-improvements-836f321d.md | grep -E "^[+-]" | grep -nEi "@[a-z0-9.-]+\.(com|org)|/Users/|/private/tmp|token|secret" | head; git diff --stat docs/transcripts
+  ```
+- **Shell:** Final scan, check and build
+
+  ```bash
+  grep -nci "philip" docs/transcripts/2026-11-13-visual-improvements-hands-keyboard-ui-fixes-65163df2.md; git diff docs/transcripts/2026-11-13-apprentice-mode-improvements-836f321d.md | grep "^+" ; npm run check 2>&1 | grep -E "Tests |error" ; npm run build 2>&1 | grep -iE "error|built in"
+  ```
 
 </details>
+
+### 🤖 Claude
+
+Transcript is clean (paths are already redacted). Committing and merging:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit, fast-forward main, delete branch
+
+  ```bash
+  git add -A && git status --short && git commit -q -F - <<'EOF'
+  Hands guide, typewriter keyboard and menu fixes
+
+  - Hands on the home row for new keys: the chapter's first card and the
+    Type Case suggestion show both hands, the finger for each new key shaded
+    in highlighter, the key circled in red pen, and a dashed arrow when the
+    key is off the home row
+  - Hands drawing is "Hands 1" by Stipo (FreeSVG, CC0), fitted so the
+    fingertips sit on the home keys; credited in CREDITS.md
+  - Type Case keyboard restyled as an old typewriter: black enamel body,
+    gold pinstripe, round chrome-rimmed keys th
+  … (527 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+This round is committed as `114804b` and merged into `main`. It went in as a fast-forward, and the `feat/hands-typewriter` branch is deleted.
+
+- **What's in it:** the tagline, the player-list and badge fixes, the typewriter keyboard, and the FreeSVG hands with their credit in `CREDITS.md`.
+- **Checks:** `npm run check` (253 tests) and `npm run build` pass.
+- **Transcript:** this session's export is included. I checked it for private details: your username is already removed from the file paths, and there are no emails, tokens or other personal details.
+
+I haven't pushed, so `main` is one commit ahead of GitHub. Pushing will start the GitHub Pages deploy:
+
+```bash
+git push origin main
+```
+
+## 🧑 Prompt
+
+> push it
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main to GitHub
+
+  ```bash
+  git push origin main 2>&1 | tail -3 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` to GitHub, so it now has `114804b` and your local `main` matches it. The push starts the GitHub Pages deploy, but I haven't checked whether that finished.
