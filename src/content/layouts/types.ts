@@ -23,10 +23,21 @@ export interface LayoutKey {
   finger: Finger;
   /** Relative key width (1 = a normal key). */
   width?: number;
+  /** A home key, where a finger rests (one per finger, thumbs aside). */
+  home?: true;
 }
 
+/** The layouts Inkling knows. */
+export type LayoutId = 'us-qwerty' | 'dvorak' | 'colemak';
+
 export interface KeyboardLayout {
-  id: string;
+  id: LayoutId;
   /** Rows from the number row down to the space bar. */
   rows: LayoutKey[][];
+  /**
+   * The Apprentice course (core/campaign.ts): the keys each chapter
+   * introduces, in teaching order. Every layout has the same number of
+   * chapters, so progress carries over when a player switches.
+   */
+  lessons: readonly (readonly string[])[];
 }

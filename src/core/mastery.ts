@@ -3,6 +3,7 @@
  * miss counts (DESIGN §4). Drives the Type Case's ink fill and the
  * Apprentice-style "ready to learn…" suggestions.
  */
+import type { KeyboardLayout } from '../content/layouts/types';
 import { GAME_CONFIG } from './config';
 
 export interface KeyCounts {
@@ -52,16 +53,24 @@ export function improvedKeys(
 }
 
 /**
- * Order letters are usually taught in: home keys, then reaching out a row
- * at a time, common letters first.
+ * Order keys are usually taught in on a layout: the Apprentice course, then
+ * the rest of the letter block (the first ten keys of each letter row).
  */
-export const LESSON_ORDER = 'fjdksla;ghrueiwotyqpvmcnbx,z./' as const;
+export function lessonOrder(layout: KeyboardLayout): string[] {
+  const taught = layout.lessons.flat().filter((key) => key !== ' ');
+  const rest = layout.rows.slice(1, 4).flatMap((row) => row.slice(0, 10).map((key) => key.base));
+  return [...new Set([...taught, ...rest])];
+}
 
 /**
  * Keys to suggest learning next (DESIGN §4, "Apprentice path"): only once most
  * of the current keys are mastered and none is still unfamiliar.
  */
-export function suggestNextKeys(selection: readonly string[], stats: Readonly<Record<string, KeyCounts>>): string[] {
+export function suggestNextKeys(
+  layout: KeyboardLayout,
+  selection: readonly string[],
+  stats: Readonly<Record<string, KeyCounts>>,
+): string[] {
   const m = GAME_CONFIG.mastery;
   if (selection.length === 0) return [];
   const levels = selection.map((key) => masteryLevel(stats[key]));
@@ -70,5 +79,5 @@ export function suggestNextKeys(selection: readonly string[], stats: Readonly<Re
   if (mastered < m.suggestWhenMastered) return [];
 
   const chosen = new Set(selection);
-  return [...LESSON_ORDER].filter((key) => !chosen.has(key)).slice(0, m.suggestCount);
+  return lessonOrder(layout).filter((key) => !chosen.has(key)).slice(0, m.suggestCount);
 }

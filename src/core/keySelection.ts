@@ -84,21 +84,44 @@ export interface Preset {
   chars: string[];
   /** Built-in presets have translated names; custom ones carry their own. */
   name?: string;
+  /** Values for a built-in name's placeholders, e.g. the keys in "Home row + {keys}". */
+  nameParams?: Record<string, string>;
   builtIn: boolean;
 }
 
-/** Home keys plus G and H, as taught in a first typing lesson. */
-export const HOME_ROW_LESSON = 'asdfghjkl;';
+/**
+ * The home row as taught in a first typing lesson: the eight home keys and
+ * the two between them, without the far-right key (`asdfghjkl;` on QWERTY).
+ */
+export function homeRowLesson(layout: KeyboardLayout): string[] {
+  return baseChars((layout.rows[2] ?? []).slice(0, 10));
+}
+
+/**
+ * The two keys a typing course adds after the home row (E and I on QWERTY),
+ * the first ones the Apprentice teaches after space.
+ */
+export function firstReachKeys(layout: KeyboardLayout): string[] {
+  const space = layout.lessons.findIndex((keys) => keys.includes(' '));
+  return layout.lessons.slice(space + 1, space + 3).flatMap((keys) => [...keys]);
+}
 
 /** Common lessons, roughly in the order a typing course teaches them. */
 export function builtInPresets(layout: KeyboardLayout): Preset[] {
   const r = (id: RegionId) => regionChars(layout, id);
-  const preset = (id: string, chars: string[]): Preset => ({ id, chars: [...new Set(chars)], builtIn: true });
+  const preset = (id: string, chars: string[], nameParams?: Record<string, string>): Preset => ({
+    id,
+    chars: [...new Set(chars)],
+    builtIn: true,
+    ...(nameParams ? { nameParams } : {}),
+  });
+  const home = homeRowLesson(layout);
+  const reach = firstReachKeys(layout);
   return [
-    // The classic first lesson: the home row without the far-right quote key.
-    preset('homeRow', [...HOME_ROW_LESSON]),
-    preset('homeRowEI', [...HOME_ROW_LESSON, 'e', 'i']),
-    preset('homeTopRows', [...HOME_ROW_LESSON, ...r('topRow').filter(isLetter)]),
+    // The classic first lesson: the home row without the far-right key.
+    preset('homeRow', home),
+    preset('homeRowPlus', [...home, ...reach], { keys: reach.map((k) => k.toUpperCase()).join(' ') }),
+    preset('homeTopRows', [...home, ...r('topRow').filter(isLetter)]),
     preset('allLetters', r('lowercase')),
     preset('lettersCapitals', [...r('lowercase'), ...r('uppercase')]),
     preset('lettersPunctuation', [...r('lowercase'), ...r('uppercase'), ',', '.', "'", '?', '!', ' ']),
@@ -116,9 +139,21 @@ export function builtInPresets(layout: KeyboardLayout): Preset[] {
  * chapters are open, so the highest is chapter `unlocked`, 1-based). Shown
  * as a preset so Practice can always match Apprentice progress.
  */
-export function apprenticePreset(unlocked: number, name: string): Preset {
+export function apprenticePreset(layout: KeyboardLayout, unlocked: number, name: string): Preset {
   const chapter = Math.max(1, Math.min(unlocked, APPRENTICE_CHAPTERS));
-  return { id: 'apprentice', name, chars: apprenticeKeys(chapter - 1), builtIn: true };
+  return { id: 'apprentice', name, chars: apprenticeKeys(layout, chapter - 1), builtIn: true };
+}
+
+/**
+ * The player's keys after switching layout: a built-in or Apprentice preset
+ * becomes the same preset on the new layout (the home row stays the home
+ * row); any other selection is kept as it is.
+ */
+export function remapSelection(from: KeyboardLayout, to: KeyboardLayout, keys: readonly string[], unlocked: number): string[] {
+  const presets = (layout: KeyboardLayout) => [apprenticePreset(layout, unlocked, ''), ...builtInPresets(layout)];
+  const match = matchingPreset(presets(from), keys);
+  const target = match && presets(to).find((p) => p.id === match.id);
+  return target ? orderedSelection(to, target.chars) : [...keys];
 }
 
 /** Every character a layout can produce. */

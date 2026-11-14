@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { US_QWERTY } from '../content/layouts/us-qwerty';
+import { COLEMAK, DVORAK, US_QWERTY } from '../content/layouts';
 import { fitSimilarity, handsArt } from './handsArt';
 
 const colors = { ink: '#111', paper: '#fff', hand: '#ddd', highlight: '#ff0', margin: '#f00', rim: '#888' };
@@ -29,6 +29,18 @@ describe('handsArt', () => {
     const hands = (keys: string[]) => handsArt(US_QWERTY, keys, colors).svg.match(/<path data-hand="[^"]*" d="[^"]*"/g);
     expect(hands(['e'])).toHaveLength(2);
     expect(hands(['e'])).toEqual(hands(['f']));
+  });
+
+  it('rests the hands on the home keys of the layout in use', () => {
+    const arrows = (layout: typeof US_QWERTY, keys: string[]) => count(handsArt(layout, keys, colors).svg, 'stroke-dasharray');
+    expect(arrows(DVORAK, ['u', 'h', 'e', 's'])).toBe(0);
+    expect(arrows(DVORAK, ['f'])).toBe(1);
+    expect(arrows(COLEMAK, ['t', 'n', 'a', 'o'])).toBe(0);
+    expect(arrows(COLEMAK, ['d', 'h'])).toBe(2);
+    // The hands sit in the same place on every ANSI layout.
+    const hands = (layout: typeof US_QWERTY) => handsArt(layout, ['e'], colors).svg.match(/<path data-hand="[^"]*" d="[^"]*"/g);
+    expect(hands(DVORAK)).toEqual(hands(US_QWERTY));
+    expect(handsArt(DVORAK, ['e'], colors).svg).toContain('>o<');
   });
 
   it('adds the number row only when a key needs it', () => {

@@ -1,6 +1,8 @@
 /** Settings dialog: text size, colors, motion and sound (REQUIREMENTS §10). */
 import './dialog.css';
 import { t, type MessageKey } from '../i18n';
+import { LAYOUT_IDS } from '../content/layouts';
+import type { LayoutId } from '../content/layouts/types';
 import { THEMES } from '../render/theme';
 import { MOTION_SETTINGS, SCREEN_EFFECTS, TEXT_SIZES, type Settings } from '../settings';
 import { h, trapFocus } from './dom';
@@ -12,6 +14,8 @@ export interface SettingsDialogOptions {
   onTestSound(): void;
   /** Tutorial tips for the current player (they live in the save, not in Settings). */
   tips?: { enabled: boolean; onToggle(enabled: boolean): void; onReset(): void };
+  /** The current player's keyboard layout (also in their save); left out while a page is in play. */
+  layout?: { current: LayoutId; onPick(id: LayoutId): void };
   onClose(): void;
 }
 
@@ -125,6 +129,16 @@ export function openSettings(host: HTMLElement, options: SettingsDialogOptions):
       (v) => t(`settings.screenEffects.${v}` as MessageKey),
       (screenEffects) => change({ screenEffects }),
     ),
+    options.layout
+      ? radioGroup(
+          t('settings.layout'),
+          t('settings.layout.help'),
+          LAYOUT_IDS,
+          options.layout.current,
+          (v) => t(`layout.${v}` as MessageKey),
+          (id) => options.layout?.onPick(id),
+        )
+      : null,
     tipsGroup(options.tips),
     h('fieldset', { className: 'st-group' }, [
       h('legend', {}, [t('settings.sound')]),

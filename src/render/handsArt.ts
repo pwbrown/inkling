@@ -46,11 +46,6 @@ interface Point {
 const U = 40;
 /** How far each row is shifted right, in key pitches (like a real keyboard's stagger). */
 const ROW_OFFSET = [0, 0.5, 0.75, 1.25];
-/** Home-row key under each finger. */
-const HOME: Record<Side, Record<Digit, string>> = {
-  left: { pinky: 'a', ring: 's', middle: 'd', index: 'f' },
-  right: { pinky: ';', ring: 'l', middle: 'k', index: 'j' },
-};
 const DIGITS: Digit[] = ['pinky', 'ring', 'middle', 'index'];
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -130,12 +125,13 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
     if (r < firstRow || r > 3) return;
     row.forEach((key, i) => centers.set(key.code, { x: 0.5 + (ROW_OFFSET[r] ?? 0) + i + 0.5, y: top + (r - firstRow) + 0.5 }));
   });
-  const homeOf = (ch: string) => {
-    const key = all.find((k) => k.base === ch);
+  // Where each finger rests: the layout's home key for it.
+  const homeOf = (side: Side, finger: Digit) => {
+    const key = all.find((k) => k.home && k.hand === side && k.finger === finger);
     return key ? centers.get(key.code) : undefined;
   };
-  const f = homeOf('f') ?? { x: 4.75, y: 2.1 };
-  const j = homeOf('j') ?? { x: 7.75, y: 2.1 };
+  const f = homeOf('left', 'index') ?? { x: 4.75, y: 2.1 };
+  const j = homeOf('right', 'index') ?? { x: 7.75, y: 2.1 };
   const spaceY = top + (4 - firstRow) + 0.5;
   const spaceKey = layout.rows[4]?.[0];
   const spaceW = spaceKey?.width ?? 6;
@@ -157,7 +153,7 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
       continue;
     }
     lit.add(`${side}-${finger}`);
-    const home = homeOf(HOME[side][finger]);
+    const home = homeOf(side, finger);
     if (at && home && (at.x !== home.x || at.y !== home.y)) reaches.push({ from: home, to: at });
   }
 
@@ -169,7 +165,7 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
   const hands = (['left', 'right'] as const).map((side) => {
     const mirror = side === 'right' ? -1 : 1;
     const pairs = DIGITS.map((digit) => {
-      const home = homeOf(HOME[side][digit]);
+      const home = homeOf(side, digit);
       const [x, y] = TIPS[digit];
       return home ? { from: { x: x * mirror, y }, to: { x: home.x * U, y: home.y * U } } : null;
     }).filter((pair) => pair !== null);

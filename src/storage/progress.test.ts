@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createContentSource } from '../content/contentSource';
+import { US_QWERTY } from '../content/layouts';
 import { APPRENTICE_CHAPTERS, apprenticeKeys } from '../core/campaign';
 import { createStats } from '../core/stats';
 import { createPage, createWorld } from '../core/world';
@@ -116,6 +117,6 @@ describe('continuing an Apprentice notebook', () => {
     continueNotebook(resumed, saved);
     expect(resumed.mode).toBe('apprentice');
     expect(resumed.page.chapter).toBe(4);
-    expect(resumed.keys).toEqual(apprenticeKeys(4));
+    expect(resumed.keys).toEqual(apprenticeKeys(US_QWERTY, 4));
   });
 });

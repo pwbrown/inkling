@@ -1,26 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { US_QWERTY } from '../content/layouts/us-qwerty';
+import { COLEMAK, DVORAK, LAYOUTS, US_QWERTY } from '../content/layouts';
 import { DEFAULT_KEYS } from './config';
 import {
   REGIONS,
+  apprenticePreset,
   builtInPresets,
+  homeRowLesson,
   layoutChars,
   matchingPreset,
   orderedSelection,
   regionChars,
   regionState,
+  remapSelection,
   toggleRegion,
 } from './keySelection';
 
 const layout = US_QWERTY;
 const region = (id: Parameters<typeof regionChars>[1]) => regionChars(layout, id);
 
-describe('US QWERTY layout', () => {
-  it('produces all 95 printable ASCII characters exactly once', () => {
-    const chars = [...layoutChars(layout)];
-    expect(chars).toHaveLength(95);
-    for (let code = 32; code <= 126; code++) expect(chars).toContain(String.fromCharCode(code));
-  });
+describe('ANSI layouts', () => {
+  for (const each of LAYOUTS) {
+    it(`${each.id} produces all 95 printable ASCII characters exactly once`, () => {
+      const chars = [...layoutChars(each)];
+      expect(chars).toHaveLength(95);
+      for (let code = 32; code <= 126; code++) expect(chars).toContain(String.fromCharCode(code));
+    });
+  }
 });
 
 describe('regions', () => {
@@ -89,8 +94,40 @@ describe('presets', () => {
   });
 
   it('match only exact selections', () => {
-    expect(matchingPreset(presets, [...DEFAULT_KEYS, 'e'])).toBeUndefined();
+    expect(matchingPreset(presets, [...DEFAULT_KEYS, 'e', 'r'])).toBeUndefined();
     expect(matchingPreset(presets, [...region('digits')].reverse())?.id).toBe('numbers');
+  });
+
+  it('follow the layout: its home row and the first keys taught after it', () => {
+    expect(homeRowLesson(US_QWERTY).join('')).toBe('asdfghjkl;');
+    expect(homeRowLesson(DVORAK).join('')).toBe('aoeuidhtns');
+    expect(homeRowLesson(COLEMAK).join('')).toBe('arstdhneio');
+    const plus = (l: typeof layout) => builtInPresets(l).find((p) => p.id === 'homeRowPlus')!;
+    expect(plus(US_QWERTY).nameParams).toEqual({ keys: 'E I' });
+    expect(plus(DVORAK).chars).toEqual([...'aoeuidhtnsrl']);
+    expect(plus(COLEMAK).nameParams).toEqual({ keys: 'U L' });
+  });
+
+  it('have no two built-ins with the same keys on any layout', () => {
+    for (const each of LAYOUTS) {
+      const sets = builtInPresets(each).map((p) => [...p.chars].sort().join(''));
+      expect(new Set(sets).size, each.id).toBe(sets.length);
+    }
+  });
+});
+
+describe('remapSelection', () => {
+  it('carries a preset over to the same preset on the new layout', () => {
+    expect(remapSelection(US_QWERTY, DVORAK, DEFAULT_KEYS, 1)).toEqual([...'aoeuidhtns']);
+    const qwertyApprentice = apprenticePreset(US_QWERTY, 3, '').chars;
+    expect(qwertyApprentice).toEqual([...'fjdk']);
+    expect(remapSelection(US_QWERTY, COLEMAK, qwertyApprentice, 3).sort()).toEqual([...'tnse'].sort());
+    const allLetters = region('lowercase');
+    expect(remapSelection(US_QWERTY, DVORAK, allLetters, 1).sort()).toEqual([...allLetters].sort());
+  });
+
+  it('keeps a custom selection as it is', () => {
+    expect(remapSelection(US_QWERTY, DVORAK, ['q', 'z', '7'], 1)).toEqual(['q', 'z', '7']);
   });
 });
 

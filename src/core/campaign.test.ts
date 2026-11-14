@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createContentSource } from '../content/contentSource';
+import { DVORAK, US_QWERTY } from '../content/layouts';
 import {
   APPRENTICE_CHAPTERS,
-  LESSONS,
   apprenticeKeys,
   apprenticePlan,
   chapterStars,
@@ -19,11 +19,11 @@ import { createPage, createWorld, spawnTarget, type World } from './world';
 
 describe('lessons', () => {
   it('teach every letter exactly once, starting with F and J, then one key at a time', () => {
-    const all = LESSONS.flatMap((l) => l.newKeys);
+    const all = US_QWERTY.lessons.flat();
     expect(new Set(all).size).toBe(all.length);
     for (const letter of 'abcdefghijklmnopqrstuvwxyz') expect(all).toContain(letter);
-    expect(newKeysFor(0)).toEqual(['f', 'j']);
-    for (let c = 1; c < APPRENTICE_CHAPTERS; c++) expect(newKeysFor(c)).toHaveLength(1);
+    expect(newKeysFor(US_QWERTY, 0)).toEqual(['f', 'j']);
+    for (let c = 1; c < APPRENTICE_CHAPTERS; c++) expect(newKeysFor(US_QWERTY, c)).toHaveLength(1);
   });
 
   it('start with drips only while there are few keys', () => {
@@ -32,14 +32,14 @@ describe('lessons', () => {
   });
 
   it('build up keys chapter by chapter', () => {
-    expect(apprenticeKeys(0)).toEqual(newKeysFor(0));
-    expect(apprenticeKeys(1)).toEqual([...newKeysFor(0), ...newKeysFor(1)]);
-    expect(apprenticeKeys(APPRENTICE_CHAPTERS - 1)).toHaveLength(LESSONS.flatMap((l) => l.newKeys).length);
+    expect(apprenticeKeys(US_QWERTY, 0)).toEqual(newKeysFor(US_QWERTY, 0));
+    expect(apprenticeKeys(US_QWERTY, 1)).toEqual([...newKeysFor(US_QWERTY, 0), ...newKeysFor(US_QWERTY, 1)]);
+    expect(apprenticeKeys(US_QWERTY, APPRENTICE_CHAPTERS - 1)).toHaveLength(US_QWERTY.lessons.flat().length);
   });
 
   it('only plan Run-ons once space is learned', () => {
     for (let c = 0; c < APPRENTICE_CHAPTERS; c++) {
-      if (apprenticePlan(c).includes('runon')) expect(apprenticeKeys(c)).toContain(' ');
+      if (apprenticePlan(c).includes('runon')) expect(apprenticeKeys(US_QWERTY, c)).toContain(' ');
       expect(apprenticePlan(c)[0]).toBe('drip');
     }
   });
@@ -72,13 +72,24 @@ function apprenticeWorld(): World {
 }
 
 describe('Apprentice flow', () => {
+  it("teaches the player's own layout, and keeps it across notebooks", () => {
+    const world = apprenticeWorld();
+    world.layout = DVORAK;
+    startApprentice(world, 0, 'normal');
+    expect(world.layout).toBe(DVORAK);
+    expect(world.keys).toEqual(['u', 'h']);
+    startApprentice(world, 10, 'normal');
+    expect(world.keys).toEqual(apprenticeKeys(DVORAK, 10));
+    expect(world.keys).toContain('r');
+  });
+
   it("starts a chapter on its new-keys card, with that chapter's keys", () => {
     const world = apprenticeWorld();
     startApprentice(world, 2, 'hard');
     expect(world.phase).toBe('intro');
     expect(world.mode).toBe('apprentice');
     expect(world.difficulty).toBe('hard');
-    expect(world.keys).toEqual(apprenticeKeys(2));
+    expect(world.keys).toEqual(apprenticeKeys(US_QWERTY, 2));
     expect(world.page.pageCount).toBe(apprenticePlan(2).length);
     confirm(world);
     expect(world.phase).toBe('playing');
@@ -93,7 +104,7 @@ describe('Apprentice flow', () => {
     confirm(world);
     expect(world.page.chapter).toBe(1);
     expect(world.phase).toBe('intro');
-    expect(world.keys).toEqual(apprenticeKeys(1));
+    expect(world.keys).toEqual(apprenticeKeys(US_QWERTY, 1));
   });
 
   it('completes the notebook after the last chapter', () => {
@@ -115,7 +126,7 @@ describe('Apprentice flow', () => {
     retryChapter(world);
     expect(world.mode).toBe('apprentice');
     expect(world.page.chapter).toBe(3);
-    expect(world.keys).toEqual(apprenticeKeys(3));
+    expect(world.keys).toEqual(apprenticeKeys(US_QWERTY, 3));
   });
 
   it('Practice never completes and keeps its own chapters', () => {

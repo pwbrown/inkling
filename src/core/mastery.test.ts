@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_CONFIG } from './config';
-import { LESSON_ORDER, improvedKeys, masteryLevel, masteryProgress, suggestNextKeys } from './mastery';
+import { US_QWERTY } from '../content/layouts';
+import { improvedKeys, lessonOrder, masteryLevel, masteryProgress, suggestNextKeys } from './mastery';
 
 const m = GAME_CONFIG.mastery;
 const mastered = { hits: m.masteredHits, misses: 0 };
@@ -44,20 +45,21 @@ describe('suggestNextKeys', () => {
   const allMastered = Object.fromEntries(home.map((k) => [k, mastered]));
 
   it('suggests the next keys in lesson order once the current ones are mastered', () => {
-    const next = suggestNextKeys(home, allMastered);
-    expect(next).toEqual([...'ru']);
-    expect(next.every((k) => LESSON_ORDER.includes(k))).toBe(true);
+    const next = suggestNextKeys(US_QWERTY, home, allMastered);
+    // The Apprentice course's order: E and I come after the home row.
+    expect(next).toEqual([...'ei']);
+    expect(next.every((k) => lessonOrder(US_QWERTY).includes(k))).toBe(true);
   });
 
   it('waits while any key is still unfamiliar or too few are mastered', () => {
-    expect(suggestNextKeys(home, { ...allMastered, a: { hits: 1, misses: 0 } })).toEqual([]);
+    expect(suggestNextKeys(US_QWERTY, home, { ...allMastered, a: { hits: 1, misses: 0 } })).toEqual([]);
     const someMastered = Object.fromEntries(home.map((k, i) => [k, i < 5 ? mastered : practicing]));
-    expect(suggestNextKeys(home, someMastered)).toEqual([]);
+    expect(suggestNextKeys(US_QWERTY, home, someMastered)).toEqual([]);
   });
 
   it('suggests nothing when every lesson key is already selected', () => {
-    const everything = [...LESSON_ORDER];
+    const everything = lessonOrder(US_QWERTY);
     const stats = Object.fromEntries(everything.map((k) => [k, mastered]));
-    expect(suggestNextKeys(everything, stats)).toEqual([]);
+    expect(suggestNextKeys(US_QWERTY, everything, stats)).toEqual([]);
   });
 });

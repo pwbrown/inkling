@@ -192,7 +192,8 @@ English is the only language at launch, but the game is built so new languages c
 
 ### Keyboard layouts
 - Keyboard layouts are **data**, not code: each layout is a definition file describing rows, keys and the characters each key produces (plain, Shift, and later AltGr/dead keys).
-- US QWERTY ships first. Other layouts (Dvorak, Colemak, AZERTY, QWERTZ, …) can be added as new layout files.
+- US QWERTY shipped first; Dvorak and Colemak followed in M16. Other layouts (AZERTY, QWERTZ, UK, …) can be added as new layout files. Each layout also carries its Apprentice key order (the same number of chapters on every layout).
+- The layout is chosen per player and kept in their save, since the Apprentice course and key choices depend on it.
 - Locale and keyboard layout are **independent** settings (e.g. English words on a Dvorak layout).
 
 ### MVP scope
@@ -267,12 +268,13 @@ Inkling is **open source** and will be **publicly hosted** as a static web app.
 | 13 | **Rewards** | Ink (XP), levels and ranks, cosmetic unlocks on the Desk, the Blotter power, the Spill boss |
 | 14 | **Players and looks** | Several players per browser, picture tiles on the Desk, distinct crimson/violet shapes; later a per-player word filter, the hands guide and the typewriter Type Case |
 | 15 | **Character and teaching** | Game feel (Nib face, screen shake, damage flash, animated HUD, more sounds); mistakes cost points and ink; ink recovery; five powers unlocked over the course; briefings and guided first tries for every new mechanic (save version 7) |
+| 16 | **Keyboard layouts** | Dvorak and Colemak beside US QWERTY, chosen per player (save version 8); the Apprentice course, Type Case, hands guide, finger hints and presets follow the layout |
 
 ## 14. Open Questions / TODO
 
 - [x] **Theme, art direction and audio.** See [DESIGN.md](DESIGN.md) (Inkwell direction). Name: **Inkling**.
 - [ ] Health or lives? (DESIGN.md proposes an ink-reservoir health meter.) Does game-over restart the level or the campaign?
-- [ ] Which additional locales and keyboard layouts to add first (§11)?
+- [ ] Which additional locales to add first, and which layouts after Dvorak and Colemak (§11)? AZERTY and QWERTZ need dead keys, accented letters and Shift for digits (which affects the 1/2/3 ability shortcuts).
 - [x] Word-list source: SCOWL levels 10–50 (via `wordlist-english`) plus the LDNOOBW blocklist. See CREDITS.md.
 - [x] Vocabulary API: Datamuse (`api.datamuse.com/words?ml=<topic>`). No key needed, CORS-enabled, sends only the topic. See PRIVACY.md.
 - [ ] Confirm the code license (MIT vs GPL-3.0) and the art/audio license.

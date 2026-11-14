@@ -107,7 +107,7 @@ export class Hud {
         ? t('hud.apprentice', {
             ...progress,
             chapters: APPRENTICE_CHAPTERS,
-            keys: newKeysFor(chapter).map(keyLabel).join(' '),
+            keys: newKeysFor(world.layout, chapter).map(keyLabel).join(' '),
           })
         : t('hud.page', progress),
     );

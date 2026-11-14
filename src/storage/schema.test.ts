@@ -92,6 +92,14 @@ describe('save schema', () => {
     expect(now.notebook).toMatchObject({ charges: 2, eraser: true, shield: false });
   });
 
+  it('puts players from before version 8 on US QWERTY, and keeps a chosen layout', () => {
+    expect(migrate({ version: 7 }).layout).toBe('us-qwerty');
+    expect(migrate({ version: 1 }).layout).toBe('us-qwerty');
+    expect(migrate({ ...defaultSave(), layout: 'dvorak' }).layout).toBe('dvorak');
+    expect(migrate({ ...defaultSave(), layout: 'azerty' }).layout).toBe('us-qwerty');
+    expect(defaultSave().layout).toBe('us-qwerty');
+  });
+
   it('drops unknown tutorial ids and keeps the tips choice', () => {
     const save = migrate({ version: 7, tutorials: { enabled: false, seen: ['basics', 'nonsense', 'basics', 4] } });
     expect(save.tutorials).toEqual({ enabled: false, seen: ['basics'] });

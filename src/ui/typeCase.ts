@@ -51,7 +51,7 @@ export function capLabel(ch: string): string {
 }
 
 export function presetName(preset: Preset): string {
-  return preset.builtIn && !preset.name ? t(`preset.${preset.id}` as MessageKey) : (preset.name ?? '');
+  return preset.builtIn && !preset.name ? t(`preset.${preset.id}` as MessageKey, preset.nameParams) : (preset.name ?? '');
 }
 
 export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeCaseHandle {
@@ -133,7 +133,7 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
 
   const keyboard = h(
     'div',
-    { className: 'tc-keyboard', role: 'group', 'aria-label': t('typeCase.keyboard') },
+    { className: 'tc-keyboard', role: 'group', 'aria-label': t('typeCase.keyboard', { layout: t(`layout.${layout.id}` as MessageKey) }) },
     layout.rows.map((row, i) => h('div', { className: `tc-row tc-row-${i}` }, row.map(keyCap))),
   );
 
@@ -212,7 +212,10 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
     h('header', {}, [h('h2', { id: 'tc-title' }, [t('typeCase.title')]), h('p', { className: 'tc-intro' }, [t('typeCase.intro')])]),
     h('section', {}, [h('h3', {}, [t('typeCase.presets')]), presetList, customSection]),
     suggestion,
-    h('div', {}, [keyboard, h('p', { className: 'tc-legend' }, [t('typeCase.legend')])]),
+    h('div', {}, [
+      keyboard,
+      h('p', { className: 'tc-legend' }, [t('typeCase.legend'), ' ', t('typeCase.layoutNote', { layout: t(`layout.${layout.id}` as MessageKey) })]),
+    ]),
     h('section', {}, [h('h3', {}, [t('typeCase.groups')]), regions]),
     h('footer', {}, [
       h('div', { className: 'tc-status' }, [summary, warning]),
@@ -256,7 +259,7 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
     doneButton.disabled = keys.length === 0;
 
     // Apprentice path: suggest the next keys once these are mostly mastered.
-    const next = suggestNextKeys(orderedSelection(layout, selection), options.keyStats);
+    const next = suggestNextKeys(layout, orderedSelection(layout, selection), options.keyStats);
     suggestion.hidden = next.length === 0;
     suggestion.replaceChildren(
       ...(next.length === 0

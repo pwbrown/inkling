@@ -3,7 +3,8 @@ import 'pixi.js/unsafe-eval';
 import './style.css';
 import { countTypeableWords, createContentSource, MIN_WORD_POOL } from './content/contentSource';
 import { loadEnglishPack } from './content/en';
-import { US_QWERTY } from './content/layouts/us-qwerty';
+import { layoutById } from './content/layouts';
+import type { LayoutId } from './content/layouts/types';
 import {
   autoPause,
   confirm,
@@ -21,13 +22,13 @@ import {
   typeChar,
   type EditKey,
 } from './core/input';
-import { apprenticePreset, builtInPresets, matchingPreset, type Preset } from './core/keySelection';
+import { apprenticePreset, builtInPresets, matchingPreset, remapSelection, type Preset } from './core/keySelection';
 import { unlockedAbilities, type ActiveAbility } from './core/abilities';
 import { GAME_CONFIG } from './core/config';
 import { FixedStepLoop } from './core/loop';
 import { improvedKeys } from './core/mastery';
 import { accuracy, wpm } from './core/stats';
-import { APPRENTICE_CHAPTERS, LESSONS, NEW_KEY_WEIGHT, apprenticeKeys, chapterStars, starsForGrade, totalStars } from './core/campaign';
+import { APPRENTICE_CHAPTERS, NEW_KEY_WEIGHT, lessonsFor, apprenticeKeys, chapterStars, starsForGrade, totalStars } from './core/campaign';
 import { pageGrade } from './core/grade';
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, setLocale, t, type MessageKey } from './i18n';
@@ -68,8 +69,9 @@ async function main(): Promise<void> {
   setLocale(navigator.language);
   registerOffline();
 
-  const layout = US_QWERTY;
-  const presets = builtInPresets(layout);
+  /** The active player's keyboard layout (it lives in their save). */
+  const layout = () => layoutById(store.data.layout);
+  const presets = () => builtInPresets(layout());
   const backend = await openBackend();
   // Each player on this browser has their own save (storage/profiles.ts).
   const players = await PlayerStore.open(backend, t('players.defaultName'));
@@ -100,10 +102,10 @@ async function main(): Promise<void> {
   /** The chapter the player has reached in Apprentice (1-based). */
   const apprenticeChapter = () => Math.max(1, Math.min(store.data.apprentice.unlocked, APPRENTICE_CHAPTERS));
   /** Always matches the player's Apprentice progress. */
-  const myApprenticePreset = () => apprenticePreset(apprenticeChapter(), t('preset.apprentice', { chapter: apprenticeChapter() }));
+  const myApprenticePreset = () => apprenticePreset(layout(), apprenticeChapter(), t('preset.apprentice', { chapter: apprenticeChapter() }));
 
   const describeKeys = (keys: readonly string[]) => {
-    const preset = matchingPreset([myApprenticePreset(), ...presets, ...customPresets()], keys);
+    const preset = matchingPreset([myApprenticePreset(), ...presets(), ...customPresets()], keys);
     return preset ? presetName(preset) : t('preset.custom');
   };
 
@@ -179,6 +181,7 @@ async function main(): Promise<void> {
     content: contentFor(store.data.keys),
     difficulty: store.data.difficulty,
     makeContent: contentFor,
+    layout: layout(),
   });
   /**
    * Abilities this player has earned: by Apprentice chapter reached (including
@@ -212,6 +215,7 @@ async function main(): Promise<void> {
 
   /** Re-read keys and difficulty from the save (after an import or erase). */
   const applySave = () => {
+    game.layout = layout();
     setContent(game, contentFor(store.data.keys));
     game.selectedDifficulty = store.data.difficulty;
     refreshAbilities();
@@ -259,8 +263,8 @@ async function main(): Promise<void> {
     if (dialogOpen || game.phase !== 'ready') return;
     dialogOpen = true;
     openTypeCase(document.body, {
-      layout,
-      builtInPresets: [myApprenticePreset(), ...presets],
+      layout: layout(),
+      builtInPresets: [myApprenticePreset(), ...presets()],
       customPresets: customPresets(),
       initial: store.data.keys,
       keyStats: store.data.keyStats,
@@ -306,6 +310,21 @@ async function main(): Promise<void> {
     });
   };
 
+  /**
+   * Switch the player's keyboard layout. A preset selection (the home row,
+   * their Apprentice keys…) follows to the same preset on the new layout.
+   */
+  const setLayout = (id: LayoutId) => {
+    if (id === store.data.layout) return;
+    const from = layout();
+    const to = layoutById(id);
+    store.update((save) => {
+      save.keys = remapSelection(from, to, save.keys, save.apprentice.unlocked);
+      save.layout = id;
+    });
+    applySave();
+  };
+
   const openSettingsDialog = () => {
     if (dialogOpen || (game.phase !== 'ready' && game.phase !== 'paused')) return;
     dialogOpen = true;
@@ -338,6 +357,8 @@ async function main(): Promise<void> {
           refreshTips();
         },
       },
+      // Switching layout mid-page would change the keys under the player.
+      layout: game.phase === 'ready' ? { current: store.data.layout, onPick: (id) => setLayout(id) } : undefined,
       onClose: () => {
         dialogOpen = false;
       },
@@ -393,7 +414,7 @@ async function main(): Promise<void> {
   /** Pause menu in an Apprentice chapter: leave it and practice its keys at the same difficulty. */
   const practiceChapterKeys = () => {
     if (game.phase !== 'paused' || game.mode !== 'apprentice') return;
-    const keys = apprenticeKeys(game.page.chapter);
+    const keys = apprenticeKeys(game.layout, game.page.chapter);
     const difficulty = game.difficulty;
     quitToMenu(game);
     useKeys(keys);
@@ -531,7 +552,7 @@ async function main(): Promise<void> {
         : t('menu.apprenticeDetail', { chapter: store.data.apprentice.unlocked, total: APPRENTICE_CHAPTERS, earned, max });
     },
     chapters: () =>
-      LESSONS.map((lesson, chapter) => ({
+      lessonsFor(layout()).map((lesson, chapter) => ({
         chapter,
         newKeys: lesson.newKeys.map(keyLabel).join(' '),
         stars: chapterStars(store.data.apprentice.stars, chapter),

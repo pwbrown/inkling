@@ -6,7 +6,8 @@ import { Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { Difficulty } from '../core/config';
 import { APPRENTICE_CHAPTERS, newKeysFor, starsForGrade } from '../core/campaign';
 import { pageGrade, teacherNote, type Grade } from '../core/grade';
-import { US_QWERTY, findKey } from '../content/layouts/us-qwerty';
+import { findKey, layoutById } from '../content/layouts';
+import type { KeyboardLayout, LayoutId } from '../content/layouts/types';
 import { accuracy, topMissedKeys, wpm, type Stats } from '../core/stats';
 import { WORLD_HEIGHT, WORLD_WIDTH, isLastPageOfChapter, type World } from '../core/world';
 import { formatNumber, t, type MessageKey } from '../i18n';
@@ -40,8 +41,8 @@ export interface OverlayContent {
   circledLabel?: string;
   /** Teacher's note in the margin. */
   note?: string;
-  /** Keys to show on the hands-on-keyboard picture (an Apprentice chapter's new keys). */
-  hands?: string[];
+  /** Keys to show on the hands-on-keyboard picture (an Apprentice chapter's new keys), and the layout they're on. */
+  hands?: { layout: LayoutId; keys: string[] };
   /** Clickable links above the prompt (e.g. "Main menu"). */
   links?: OverlayLink[];
   prompt: string;
@@ -91,6 +92,13 @@ export function difficultyLabel(difficulty: Difficulty): string {
 }
 
 /** What the card shows for the current phase, or null while playing. */
+/** The home keys under the index fingers, which carry the bumps on a real keyboard. */
+function bumpKeys(layout: KeyboardLayout): { left: string; right: string } {
+  const bump = (hand: 'left' | 'right') =>
+    keyLabel(layout.rows.flat().find((k) => k.home && k.hand === hand && k.finger === 'index')?.base ?? '');
+  return { left: bump('left'), right: bump('right') };
+}
+
 export function overlayContent(world: World, context: OverlayContext = NO_CONTEXT): OverlayContent | null {
   const chapter = world.page.chapter + 1;
   const page = world.page.index + 1;
@@ -133,9 +141,9 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
         prompt: t('overlay.gameOver.prompt'),
       };
     case 'intro': {
-      const keys = newKeysFor(world.page.chapter);
+      const keys = newKeysFor(world.layout, world.page.chapter);
       const fingers = keys.map((key) => {
-        const k = findKey(US_QWERTY, key);
+        const k = findKey(world.layout, key);
         if (!k) return keyLabel(key);
         return k.finger === 'thumb'
           ? t('overlay.intro.thumb', { key: keyLabel(key) })
@@ -149,11 +157,11 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
         title: t('overlay.intro.title', { chapter, total: APPRENTICE_CHAPTERS }),
         lines: [
           fingers.join('   ·   '),
-          t(world.page.chapter === 0 ? 'overlay.intro.first' : 'overlay.intro.body'),
+          world.page.chapter === 0 ? t('overlay.intro.first', bumpKeys(world.layout)) : t('overlay.intro.body'),
         ],
         circled: keys,
         circledLabel: t('overlay.intro.newKeys'),
-        hands: keys,
+        hands: { layout: world.layout.id, keys },
         prompt: t('overlay.intro.prompt'),
       };
     }
@@ -335,7 +343,7 @@ export class Overlay {
     this.note.text = content.note ?? '';
     this.note.visible = Boolean(content.note);
     const noteHeight = content.note ? this.note.height + 12 : 0;
-    const handsHeight = this.layoutHands(content.hands ?? []);
+    const handsHeight = this.layoutHands(layoutById(content.hands?.layout ?? world.layout.id), content.hands?.keys ?? []);
     this.gradeText.text = content.grade ?? '';
     this.gradeText.visible = Boolean(content.grade);
     const starsHeight = this.layoutStars(content.stars);
@@ -384,7 +392,7 @@ export class Overlay {
    * away; the image itself appears once the SVG has decoded. Returns the
    * height used.
    */
-  private layoutHands(keys: string[]): number {
+  private layoutHands(layout: KeyboardLayout, keys: string[]): number {
     if (keys.length === 0) {
       this.hands.visible = false;
       this.handsKey = '';
@@ -398,7 +406,7 @@ export class Overlay {
         const cb = (b >> shift) & 0xff;
         return out | (Math.round(ca + (cb - ca) * amount) << shift);
       }, 0);
-    const art = handsArt(US_QWERTY, keys, {
+    const art = handsArt(layout, keys, {
       ink: hex(COLORS.ink),
       paper: hex(COLORS.paper),
       hand: hex(mix(COLORS.paper, COLORS.ink, HAND_WASH)),

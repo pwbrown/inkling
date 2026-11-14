@@ -10,8 +10,10 @@ import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from 
 import { isMechanic } from '../core/mechanics';
 import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 import { DEFAULT_CONTENT_LEVEL, isContentLevel, type ContentLevel } from '../content/contentFilter';
+import { DEFAULT_LAYOUT_ID, isLayoutId } from '../content/layouts';
+import type { LayoutId } from '../content/layouts/types';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -101,6 +103,8 @@ export interface SaveData {
   contentLevel: ContentLevel;
   /** Which mechanics this player has been shown, and whether to show more (added in version 7). */
   tutorials: Tutorials;
+  /** The keyboard layout this player types on (added in version 8). */
+  layout: LayoutId;
 }
 
 export interface Tutorials {
@@ -142,6 +146,7 @@ export function defaultSave(): SaveData {
     profile: { ink: 0, cosmetics: { ...DEFAULT_COSMETICS } },
     contentLevel: DEFAULT_CONTENT_LEVEL,
     tutorials: { enabled: true, seen: [] },
+    layout: DEFAULT_LAYOUT_ID,
   };
 }
 
@@ -266,6 +271,7 @@ function sanitize(v: Json): SaveData {
     profile: sanitizeProfile(v.profile),
     contentLevel: isContentLevel(v.contentLevel) ? v.contentLevel : DEFAULT_CONTENT_LEVEL,
     tutorials: sanitizeTutorials(v.tutorials),
+    layout: isLayoutId(v.layout) ? v.layout : DEFAULT_LAYOUT_ID,
   };
 }
 
@@ -333,6 +339,8 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
     tutorials: { enabled: true, seen: seenBeforeV7(save) },
     notebook: isObject(save.notebook) ? { ...save.notebook, charges: 0, eraser: false, shield: false } : null,
   }),
+  // v8 added a keyboard layout per player; everyone so far typed on US QWERTY.
+  7: (save) => ({ ...save, version: 8, layout: DEFAULT_LAYOUT_ID }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

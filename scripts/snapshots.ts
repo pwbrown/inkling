@@ -68,6 +68,13 @@ const LINEUP = `(() => {
   return 'ok';
 })()`;
 
+/** Scrolls Settings to the keyboard layout choice, if there is one. */
+const SHOW_LAYOUT = `(() => {
+  const legend = [...document.querySelectorAll('.settings legend')].find((l) => /layout/i.test(l.textContent));
+  if (legend) legend.scrollIntoView({ block: 'center' });
+  return 'ok';
+})()`;
+
 /** The next character the auto-typer should press, or '' to wait. */
 const NEXT_KEY = (maxX: number) => `(() => {
   const w = window.inkling && window.inkling.world;
@@ -83,6 +90,11 @@ const TOUR: Step[] = [
   { click: 'Desk' }, { eval: SCROLL_TOP }, { shot: 'desk' }, { key: 'Escape' },
   { click: 'Switch player' }, { shot: 'players' }, { key: 'Escape' },
   { click: 'Settings' }, { shot: 'settings' }, { key: 'Escape' },
+  // Another keyboard layout (M16): the Type Case and the first chapter card follow it.
+  { click: 'Settings' }, { click: 'Dvorak' }, { eval: SHOW_LAYOUT }, { shot: 'settings-layout' }, { key: 'Escape' },
+  { click: 'Practice' }, { click: 'Change keys' }, { shot: 'type-case-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
+  { click: 'Apprentice' }, { click: 'Chapter 1' }, { shot: 'chapter-intro-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
+  { click: 'Settings' }, { click: 'US QWERTY' }, { key: 'Escape' },
   { click: 'How to play' }, { eval: SCROLL_TOP }, { shot: 'how-to-play' }, { key: 'Escape' },
   { click: 'Practice' }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },

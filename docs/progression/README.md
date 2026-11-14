@@ -188,15 +188,28 @@ The notebook page, the red margin, the Nib, and one placeholder creature driftin
 
 **Changed:** headings, grades and notes use the handwritten Caveat font. A "Screen effects: Gentle" setting softens shake and turns off the red flash.
 
+### M16: Keyboard layouts
+
+| Settings | Chapter 1 on Dvorak | Type Case on Dvorak |
+|---|---|---|
+| <img src="m16/settings-layout.png" width="260" alt="Settings with a Keyboard layout choice: US QWERTY, Dvorak, Colemak"> | <img src="m16/chapter-intro-dvorak.png" width="260" alt="Dvorak chapter card teaching u and h, hands resting on a o e u and h t n s"> | <img src="m16/type-case-dvorak.png" width="260" alt="Type Case typewriter with Dvorak keys and the Dvorak home row selected"> |
+
+**New:**
+- **Dvorak and Colemak** alongside US QWERTY. Each player picks a layout in Settings, and it's kept in their save (save version 8). Players from before M16 start on US QWERTY.
+- The **Apprentice course follows the layout**. It starts on the index-finger home keys (F J, U H or T N), then the rest of the home row, then space and the other letters. Every layout has the same 27 chapters, so stars and progress stay put when a player switches.
+- The Type Case keyboard, hands guide, finger hints, presets ("Home row", "Home row + E I / R L / U L") and "ready to learn" suggestions all use the player's layout. Switching layout carries a preset selection to the same preset on the new layout.
+
+**Changed:** layouts are now built from one table of physical keys and fingering, with each layout giving only its characters (`src/content/layouts/`). On QWERTY, "ready to learn" now suggests keys in the Apprentice course's order, so E and I come after the home row rather than R and U.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m15
+npm run snapshots -- m16
 ```
 
-That writes a standard set of shots to `docs/progression/m15/` (menu, desk, players, settings, how-to-play, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m16/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

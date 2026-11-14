@@ -3,6 +3,8 @@
  * can be unit tested directly (REQUIREMENTS §7).
  */
 import { createContentSource, type ContentSource } from '../content/contentSource';
+import type { KeyboardLayout } from '../content/layouts/types';
+import { US_QWERTY } from '../content/layouts/us-qwerty';
 import {
   apprenticeKeys,
   apprenticePlan,
@@ -201,6 +203,8 @@ export interface World {
   content: ContentSource;
   /** Apprentice (the course) or Practice (free key choice, endless). */
   mode: GameMode;
+  /** The player's keyboard layout: which keys the Apprentice teaches, and where they are. */
+  layout: KeyboardLayout;
   /**
    * Builds content for a key set, with `focus` keys appearing more often.
    * The Apprentice campaign uses it to switch keys between chapters.
@@ -319,6 +323,8 @@ export interface WorldOptions {
   makeContent?: (keys: readonly string[], focus: readonly string[]) => ContentSource;
   /** Abilities unlocked (default: all of them). */
   abilities?: readonly AbilityId[];
+  /** The player's keyboard layout (default US QWERTY). */
+  layout?: KeyboardLayout;
 }
 
 export function createWorld(options: WorldOptions = {}): World {
@@ -343,6 +349,7 @@ export function createWorld(options: WorldOptions = {}): World {
     keys: content.keys,
     content,
     mode: 'practice',
+    layout: options.layout ?? US_QWERTY,
     makeContent: options.makeContent ?? ((keys) => createContentSource({ keys })),
     tips: false,
     seenMechanics: [],
@@ -367,7 +374,7 @@ export function createWorld(options: WorldOptions = {}): World {
 
 /** Load the keys for an Apprentice chapter, its new keys weighted up. */
 export function useApprenticeKeys(world: World, chapter: number): void {
-  world.content = world.makeContent(apprenticeKeys(chapter), newKeysFor(chapter));
+  world.content = world.makeContent(apprenticeKeys(world.layout, chapter), newKeysFor(world.layout, chapter));
   world.keys = world.content.keys;
 }
 
@@ -422,6 +429,7 @@ export function resetWorld(world: World, difficulty: Difficulty = world.difficul
     difficulty,
     makeContent: world.makeContent,
     abilities: world.abilities,
+    layout: world.layout,
   });
   fresh.nextId = world.nextId;
   fresh.mode = world.mode;

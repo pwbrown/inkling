@@ -4,6 +4,8 @@
  * key from earlier chapters. Finishing the last chapter completes the
  * notebook. Practice mode keeps the free key choice and endless chapters.
  */
+import type { KeyboardLayout } from '../content/layouts/types';
+import { US_QWERTY } from '../content/layouts/us-qwerty';
 import type { Grade } from './grade';
 import { GAME_CONFIG, type PageParams, type TargetKind } from './config';
 
@@ -15,29 +17,30 @@ export interface Lesson {
 }
 
 /**
- * The lessons. A beginner starts with just F and J (the keys with bumps),
- * then learns one key per chapter: the rest of the home row, space, then the
- * letters in roughly the order typing courses teach them.
+ * A layout's lessons (its `lessons` data). A beginner starts with the two
+ * home keys under the index fingers (F and J on QWERTY, the keys with
+ * bumps), then learns one key per chapter: the rest of the home row, space,
+ * then the other letters in roughly the order typing courses teach them.
  */
-export const LESSONS: readonly Lesson[] = [
-  { newKeys: ['f', 'j'] },
-  ...[...'dksla;gh', ' ', ...'eirutyownmcvbxpqz'].map((key) => ({ newKeys: [key] })),
-];
+export function lessonsFor(layout: KeyboardLayout): Lesson[] {
+  return layout.lessons.map((keys) => ({ newKeys: [...keys] }));
+}
 
-export const APPRENTICE_CHAPTERS = LESSONS.length;
+/** Every layout has this many chapters (checked by tests). */
+export const APPRENTICE_CHAPTERS = US_QWERTY.lessons.length;
 
 /** Every key learned by the end of `chapter` (0-based), in teaching order. */
-export function apprenticeKeys(chapter: number): string[] {
-  return LESSONS.slice(0, Math.min(chapter, LESSONS.length - 1) + 1).flatMap((l) => l.newKeys);
+export function apprenticeKeys(layout: KeyboardLayout, chapter: number): string[] {
+  return layout.lessons.slice(0, Math.min(chapter, layout.lessons.length - 1) + 1).flatMap((keys) => [...keys]);
 }
 
 /** The keys a chapter introduces. */
-export function newKeysFor(chapter: number): string[] {
-  return [...(LESSONS[Math.min(chapter, LESSONS.length - 1)]?.newKeys ?? [])];
+export function newKeysFor(layout: KeyboardLayout, chapter: number): string[] {
+  return [...(layout.lessons[Math.min(chapter, layout.lessons.length - 1)] ?? [])];
 }
 
-/** First chapter (0-based) where space is known, so phrases are possible. */
-const SPACE_CHAPTER = LESSONS.findIndex((l) => l.newKeys.includes(' '));
+/** First chapter (0-based) where space is known, so phrases are possible (the same on every layout). */
+const SPACE_CHAPTER = US_QWERTY.lessons.findIndex((keys) => keys.includes(' '));
 
 /**
  * Pages in an Apprentice chapter. Every chapter opens with drips, where the
@@ -48,7 +51,8 @@ const SPACE_CHAPTER = LESSONS.findIndex((l) => l.newKeys.includes(' '));
  * into Blotling pages instead (GAME_CONFIG.sprinkles).
  */
 export function apprenticePlan(chapter: number): TargetKind[] {
-  const keys = apprenticeKeys(chapter).length;
+  // Every layout teaches the same number of keys per chapter.
+  const keys = apprenticeKeys(US_QWERTY, chapter).length;
   if (keys <= 8) return ['drip', 'drip', 'blotling'];
   if (chapter < SPACE_CHAPTER + 6) return ['drip', 'blotling', 'drip', 'blotling'];
   return ['drip', 'blotling', 'blotling', 'drip', 'blotling'];
