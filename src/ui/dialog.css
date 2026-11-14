@@ -35,10 +35,10 @@
 
 .tc-panel h2 {
   margin: 0;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-style: italic;
-  font-weight: 400;
-  font-size: 34px;
+  font-family: Caveat, 'Segoe Print', 'Bradley Hand', Georgia, serif;
+  font-weight: 700;
+  font-size: 42px;
+  line-height: 1.1;
 }
 
 .tc-panel h3 {
@@ -619,4 +619,10 @@
 .wl-delete {
   border-radius: 999px !important;
   border-left: 1.5px solid var(--tc-ink) !important;
+}
+
+/* The in-game Motion setting, as well as the OS one. */
+:root[data-motion='reduced'] .tc-char,
+:root[data-motion='reduced'] .tc-chip {
+  transition: none;
 }

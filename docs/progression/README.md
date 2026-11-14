@@ -48,10 +48,10 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 
 ### End of a page
 
-| M2 | M7 | M12 | M13 | Latest |
+| M2 | M7 | M12 | M13 | M15 |
 |---|---|---|---|---|
-| <img src="m02/page-done.png" width="170" alt="M2 page complete card"> | <img src="m07/page-done.png" width="170" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="170" alt="M12 page with stars"> | <img src="m13/page-done.png" width="170" alt="M13 page with ink and level up"> | <img src="latest/page-done.png" width="170" alt="Latest page complete"> |
-| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | Same card as M13, here without a level-up. |
+| <img src="m02/page-done.png" width="170" alt="M2 page complete card"> | <img src="m07/page-done.png" width="170" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="170" alt="M12 page with stars"> | <img src="m13/page-done.png" width="170" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="170" alt="M15 page with handwritten title, drawn stars and best run"> |
+| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. |
 
 ### Starting a chapter
 
@@ -165,13 +165,28 @@ The notebook page, the red margin, the Nib, and one placeholder creature driftin
 
 **New:** several players can share one browser, each with their own save. The Desk shows pictures of each pen and ink. Crimson and violet creatures get their own shapes (see the lineup above), and beaten creatures show x x eyes.
 
-### Since M14 (latest)
+### After M14
 
 | Chapter card | Type Case |
 |---|---|
-| <img src="latest/chapter-intro.png" width="320" alt="Latest chapter card with hands"> | <img src="latest/type-case.png" width="320" alt="Latest Type Case typewriter"> |
+| <img src="m15/chapter-intro.png" width="320" alt="Chapter card with hands (shown as of M15)"> | <img src="m15/type-case.png" width="320" alt="Type Case typewriter (shown as of M15)"> |
 
 **New:** a per-player word filter (Family friendly, Older kids, Grown-ups), Blotlings from chapter 1 using made-up strings like `fjf`, the **hands guide** on chapter cards, and the **typewriter** Type Case. "Save data" became "Manage saves".
+
+### M15: Character, consequences, powers and tips
+
+| New on this page | A page in play |
+|---|---|
+| <img src="m15/briefing.png" width="320" alt="M15 briefing card explaining drips and mistakes"> | <img src="m15/play.png" width="320" alt="M15 page with the Nib's face"> |
+
+**New:**
+- **Character:** the Nib has a face that blinks, winces, gasps and grins. Creatures pop and squash as ink lands, grin when you mistype, and jitter slightly like hand-drawn animation. Drips flick and Blotlings soak into the page when beaten. The locked creature gets a red-pen underline.
+- **Feedback:** the page shakes and its edge flashes red when ink is lost, and throbs when ink is low. The score counts up, the multiplier kicks and falls away when a run breaks, and there are 11 new sounds.
+- **Consequences and recovery:** wrong keys cost points and, further on, a little ink. Ink comes back from clean runs and from a rare ink bottle.
+- **Powers:** charges earned by clean runs, harder to earn in later chapters. The Paperweight (↑), Highlighter (↓) and Blotter (Enter) spend them; the Eraser and Blotting paper work by themselves. They unlock over the Apprentice course or by level.
+- **Tips:** a "New on this page" card before anything new, then a guided first try with a handwritten note. Tips can be turned off or reset in Settings.
+
+**Changed:** headings, grades and notes use the handwritten Caveat font. A "Screen effects: Gentle" setting softens shake and turns off the red flash.
 
 ## Keeping this up to date
 
@@ -181,7 +196,7 @@ At the end of each milestone, run:
 npm run snapshots -- m15
 ```
 
-That writes a standard set of shots to `docs/progression/m15/` (menu, desk, players, settings, how-to-play, practice, type-case, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m15/` (menu, desk, players, settings, how-to-play, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

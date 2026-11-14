@@ -7,6 +7,10 @@ import { THEMES, type ThemeId } from './render/theme';
 export type TextSize = 'normal' | 'large' | 'larger';
 export type MotionSetting = 'system' | 'reduced' | 'full';
 
+/** Screen shake and the damage flash: 'gentle' softens the shake and drops the flash. */
+export type ScreenEffects = 'full' | 'gentle';
+export const SCREEN_EFFECTS: readonly ScreenEffects[] = ['full', 'gentle'];
+
 export const TEXT_SIZES: readonly TextSize[] = ['normal', 'large', 'larger'];
 export const MOTION_SETTINGS: readonly MotionSetting[] = ['system', 'reduced', 'full'];
 
@@ -17,6 +21,7 @@ export interface Settings {
   textSize: TextSize;
   theme: ThemeId;
   motion: MotionSetting;
+  screenEffects: ScreenEffects;
   /** Sound effects volume, 0..1. */
   volume: number;
   muted: boolean;
@@ -26,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   textSize: 'normal',
   theme: 'classic',
   motion: 'system',
+  screenEffects: 'full',
   volume: 0.6,
   muted: false,
 };
@@ -42,6 +48,7 @@ export function parseSettings(raw: unknown): Settings {
     textSize: pick(s.textSize, TEXT_SIZES, DEFAULT_SETTINGS.textSize),
     theme: pick(s.theme, THEMES, DEFAULT_SETTINGS.theme),
     motion: pick(s.motion, MOTION_SETTINGS, DEFAULT_SETTINGS.motion),
+    screenEffects: pick(s.screenEffects, SCREEN_EFFECTS, DEFAULT_SETTINGS.screenEffects),
     volume,
     muted: typeof s.muted === 'boolean' ? s.muted : DEFAULT_SETTINGS.muted,
   };

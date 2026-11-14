@@ -3,14 +3,14 @@
  * saving/resuming a notebook. Pure functions, so they're easy to test.
  */
 import { APPRENTICE_CHAPTERS, starKey } from '../core/campaign';
-import type { Difficulty } from '../core/config';
+import { GAME_CONFIG, type Difficulty } from '../core/config';
 import type { Stats } from '../core/stats';
 import {
+  beginPage,
   createPage,
   isLastPageOfChapter,
   markPageStart,
   resetWorld,
-  setPhase,
   useApprenticeKeys,
   type PageState,
   type World,
@@ -64,6 +64,9 @@ export function snapshotNotebook(
     destroyed: s.destroyed,
     bestCombo: s.bestCombo,
     playMs: s.playMs,
+    charges: world.charges,
+    eraser: world.eraser,
+    shield: world.shield,
     savedAt: now.toISOString(),
   };
 }
@@ -83,10 +86,13 @@ export function continueNotebook(world: World, saved: SavedNotebook): void {
     bestCombo: saved.bestCombo,
     playMs: saved.playMs,
   });
+  world.charges = Math.min(GAME_CONFIG.abilities.maxCharges, saved.charges);
+  world.eraser = saved.eraser && world.abilities.includes('eraser');
+  world.shield = saved.shield && world.abilities.includes('blottingPaper');
   markPageStart(world);
   // Mid-chapter, "Retry chapter" goes back to this resume point.
   if (saved.page > 0) world.chapterStart = structuredClone(world.pageStart);
-  setPhase(world, 'playing');
+  beginPage(world);
 }
 
 /**

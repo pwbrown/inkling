@@ -8,6 +8,8 @@ export interface Stats {
   /** Current run of correct keystrokes. */
   combo: number;
   bestCombo: number;
+  /** Points lost to wrong keys. */
+  penalty: number;
   /** Targets destroyed. */
   destroyed: number;
   /** Targets that reached the margin. */
@@ -24,7 +26,7 @@ export interface Stats {
 }
 
 export function createStats(): Stats {
-  return { correct: 0, errors: 0, score: 0, combo: 0, bestCombo: 0, destroyed: 0, leaks: 0, playMs: 0, missedKeys: {}, hitKeys: {} };
+  return { correct: 0, errors: 0, score: 0, combo: 0, bestCombo: 0, penalty: 0, destroyed: 0, leaks: 0, playMs: 0, missedKeys: {}, hitKeys: {} };
 }
 
 /** Accuracy from 0 to 1. Returns 1 before any keys are pressed. */

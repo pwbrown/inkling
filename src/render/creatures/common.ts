@@ -21,6 +21,8 @@ export interface FrameContext {
    * The creature shows it's beaten (x x eyes) until the ink lands.
    */
   defeated?: boolean;
+  /** The player just mistyped at this creature: it grins for a moment. */
+  taunting?: boolean;
 }
 
 export interface CreatureView {
@@ -159,7 +161,7 @@ export class MoodTracker {
     const mood: Mood =
       t < this.hurtUntil
         ? 'hurt'
-        : t < this.happyUntil
+        : t < this.happyUntil || ctx.taunting
           ? 'happy'
           : ctx.locked
             ? 'scared'

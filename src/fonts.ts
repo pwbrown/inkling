@@ -8,6 +8,8 @@ import '@fontsource/atkinson-hyperlegible-next/latin-400.css';
 import '@fontsource/atkinson-hyperlegible-next/latin-600.css';
 import '@fontsource/atkinson-hyperlegible-next/latin-700.css';
 import '@fontsource/atkinson-hyperlegible-mono/latin-600.css';
+// Caveat: a handwriting face for headings and the teacher's red-pen marks (DESIGN §7).
+import '@fontsource/caveat/latin-700.css';
 
 /**
  * Wait for the fonts before drawing any canvas text: PixiJS measures and
@@ -21,6 +23,7 @@ export async function loadFonts(timeoutMs = 3000): Promise<void> {
     document.fonts.load('600 20px "Atkinson Hyperlegible Next"'),
     document.fonts.load('700 20px "Atkinson Hyperlegible Next"'),
     document.fonts.load('600 20px "Atkinson Hyperlegible Mono"'),
+    document.fonts.load('700 20px "Caveat"'),
   ]);
   await Promise.race([loads.catch(() => undefined), new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
 }

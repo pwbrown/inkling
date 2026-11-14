@@ -1,0 +1,122 @@
+/**
+ * Mechanics the game teaches the first time they come up: a briefing card
+ * before the page, then a guided first try (the new thing arrives alone and
+ * slowed). What a page holds is read from the same settings the spawner uses,
+ * so the tutorials can't drift from the rules.
+ */
+import { ABILITIES, abilityCost, isActive, type AbilityId } from './abilities';
+import { GAME_CONFIG, mistakeInk } from './config';
+import type { Target, World } from './world';
+
+export type MechanicId =
+  | 'basics'
+  | 'combo'
+  | 'blotling'
+  | 'mistakes'
+  | 'recovery'
+  | 'crimson'
+  | 'ghost'
+  | 'spill'
+  | 'runon'
+  | 'misprint'
+  | 'violet'
+  | AbilityId;
+
+/** In teaching order: when several are new at once, the earlier ones are shown first. */
+export const MECHANICS: readonly MechanicId[] = [
+  'basics',
+  'blotling',
+  'combo',
+  'mistakes',
+  'recovery',
+  'crimson',
+  'spill',
+  'ghost',
+  'runon',
+  'misprint',
+  'violet',
+  ...ABILITIES,
+];
+
+export function isMechanic(value: unknown): value is MechanicId {
+  return (MECHANICS as readonly unknown[]).includes(value);
+}
+
+/** New things explained before one page, at most. The rest wait for the next page. */
+export const MAX_BRIEFINGS = 2;
+
+/** Everything that can come up on the page about to be played. */
+export function mechanicsForPage(world: Pick<World, 'page' | 'mode' | 'difficulty' | 'abilities'>): MechanicId[] {
+  const { page, mode, difficulty, abilities } = world;
+  const { kind, variants, sprinkles } = page.params;
+  const word = kind === 'blotling';
+  const plain = kind === 'drip' || kind === 'blotling';
+  const has: Record<MechanicId, boolean> = {
+    basics: true,
+    blotling: word,
+    // A run of keys only matters once there's a page behind you.
+    combo: page.index > 0 || page.chapter > 0,
+    mistakes: mistakeInk(difficulty, page.chapter, mode === 'apprentice') > 0,
+    recovery: page.index > 0 || page.chapter > 0,
+    crimson: plain && variants.crimson > 0,
+    violet: plain && variants.violet > 0,
+    ghost: plain && variants.ghost > 0,
+    spill: page.hasBoss,
+    runon: kind === 'runon' || sprinkles.runon > 0,
+    misprint: kind === 'misprint' || sprinkles.misprint > 0,
+    blotter: abilities.includes('blotter'),
+    eraser: abilities.includes('eraser'),
+    paperweight: abilities.includes('paperweight'),
+    highlighter: abilities.includes('highlighter'),
+    blottingPaper: abilities.includes('blottingPaper'),
+  };
+  return MECHANICS.filter((id) => has[id]);
+}
+
+/** Mechanics on this page the player hasn't been shown yet, a few at a time. */
+export function pendingBriefings(
+  world: Pick<World, 'page' | 'mode' | 'difficulty' | 'abilities'>,
+  seen: readonly string[],
+  max = MAX_BRIEFINGS,
+): MechanicId[] {
+  return mechanicsForPage(world)
+    .filter((id) => !seen.includes(id))
+    .slice(0, max);
+}
+
+/** How the first creature of a newly taught kind is spawned for its guided try, or null if there's nothing to spawn. */
+export function guidedSpawn(id: MechanicId): Partial<Target> | null {
+  switch (id) {
+    case 'blotling':
+      return { kind: 'blotling', lives: 1, ghost: false };
+    case 'crimson':
+      return { lives: 2, maxLives: 2, ghost: false };
+    case 'violet':
+      return { lives: 3, maxLives: 3, ghost: false };
+    case 'ghost':
+      return { lives: 1, ghost: true };
+    case 'runon':
+      return { kind: 'runon', lives: 1, ghost: false };
+    case 'misprint':
+      return { kind: 'misprint', lives: 1, ghost: false };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Set a page up to teach what was just explained: the first new creature gets
+ * a guided try, and each new ability is handed over ready to use once.
+ */
+export function applyBriefings(world: World, ids: readonly MechanicId[]): void {
+  const creature = ids.find((id) => guidedSpawn(id) !== null);
+  world.guide = creature ? { id: creature, targetId: null, spawned: false } : null;
+  for (const id of ids) {
+    if (id === 'eraser') world.eraser = true;
+    else if (id === 'blottingPaper') world.shield = true;
+    else if ((ABILITIES as readonly string[]).includes(id) && isActive(id as AbilityId)) {
+      const cost = abilityCost(id as 'blotter' | 'paperweight' | 'highlighter');
+      world.charges = Math.min(GAME_CONFIG.abilities.maxCharges, Math.max(world.charges, cost));
+    }
+  }
+}

@@ -4,14 +4,15 @@
  */
 import { Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { Difficulty } from '../core/config';
-import { APPRENTICE_CHAPTERS, newKeysFor, starText, starsForGrade } from '../core/campaign';
+import { APPRENTICE_CHAPTERS, newKeysFor, starsForGrade } from '../core/campaign';
 import { pageGrade, teacherNote, type Grade } from '../core/grade';
 import { US_QWERTY, findKey } from '../content/layouts/us-qwerty';
 import { accuracy, topMissedKeys, wpm, type Stats } from '../core/stats';
 import { WORLD_HEIGHT, WORLD_WIDTH, isLastPageOfChapter, type World } from '../core/world';
 import { formatNumber, t, type MessageKey } from '../i18n';
 import { handsArt } from './handsArt';
-import { COLORS, DISPLAY_FONT, TEXT_FONT, keyLabel } from './theme';
+import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, TEXT_FONT, keyLabel } from './theme';
+import { outBack, outCubic } from './tween';
 
 const CARD_WIDTH = 620;
 /** Drawn width of the hands-on-keyboard picture on a chapter's first card. */
@@ -30,6 +31,8 @@ export interface OverlayContent {
   title: string;
   /** Red-pen grade for a finished page (DESIGN §6). */
   grade?: Grade;
+  /** Stars earned on an Apprentice page, out of three. */
+  stars?: number;
   lines: string[];
   /** Keys drawn circled in red, the teacher's way of flagging them. */
   circled?: string[];
@@ -68,8 +71,16 @@ function summaryLine(stats: Stats): string {
   });
 }
 
+/** What mistakes cost and the best run of keys, for the graded page. */
+function mistakeLines(stats: Stats): string[] {
+  const lines: string[] = [];
+  if (stats.errors > 0) lines.push(t('overlay.mistakes', { count: stats.errors, points: formatNumber(stats.penalty) }));
+  if (stats.bestCombo >= 10) lines.push(t('overlay.bestCombo', { combo: stats.bestCombo }));
+  return lines;
+}
+
 function statLines(stats: Stats): string[] {
-  const lines = [summaryLine(stats)];
+  const lines = [summaryLine(stats), ...mistakeLines(stats)];
   const missed = topMissedKeys(stats);
   if (missed.length > 0) lines.push(t('overlay.missed', { keys: missed.map(keyLabel).join('  ') }));
   return lines;
@@ -91,14 +102,16 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
       const grade = pageGrade(stats, world.page.params.size);
       const note = teacherNote(stats, grade);
       const lines = [summaryLine(stats)];
-      if (world.mode === 'apprentice') lines.unshift(t('overlay.stars', { stars: starText(starsForGrade(grade)) }));
+      lines.push(...mistakeLines(stats));
       if (stats.leaks > 0) lines.push(t('overlay.leaks', { leaks: stats.leaks }));
       const lastPage = isLastPageOfChapter(world.page);
       if (lastPage && world.inkRefilled > 0) lines.push(t('overlay.chapterCleared.refill', { ink: world.inkRefilled }));
+      if (world.shieldEarned) lines.push(t('overlay.shieldEarned'));
       lines.push(...extra);
       return {
         title: lastPage ? t('overlay.chapterCleared.title', { chapter }) : t('overlay.pageCleared.title', { page }),
         grade,
+        ...(world.mode === 'apprentice' ? { stars: starsForGrade(grade) } : {}),
         lines,
         circled: topMissedKeys(stats),
         note: t(`note.${note.kind}` as MessageKey, { key: note.key ? keyLabel(note.key) : '' }),
@@ -150,9 +163,11 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
         lines: [t('overlay.complete.body'), ...statLines(world.stats).slice(0, 1), ...extra],
         prompt: t('overlay.complete.prompt'),
       };
+    // (The briefing is a DOM dialog, ui/briefingDialog.ts, so screen readers can read it.)
     case 'ready':
     case 'paused':
     case 'playing':
+    case 'briefing':
       return null;
   }
 }
@@ -166,6 +181,9 @@ export class Overlay {
   private readonly linksLayer = new Container();
   private readonly gradeText: Text;
   private readonly circledLayer = new Container();
+  /** Three stars under the title; the earned ones fill in one by one. */
+  private readonly starsLayer = new Container();
+  private starsEarned = 0;
   private readonly note: Text;
   /** The hands-on-keyboard picture, drawn from SVG once it has loaded. */
   private readonly hands = new Sprite();
@@ -174,12 +192,19 @@ export class Overlay {
   private handsKey = '';
   /** Rebuild only when what's shown changes. */
   private shownKey: string | null = null;
+  /** The card and everything on it, so it can pop in as one. */
+  private readonly panel = new Container();
+  /** Time since the card appeared, for its entrance and the grade stamp. */
+  private appearMs = 0;
 
-  constructor(private readonly actions: OverlayActions) {
+  constructor(
+    private readonly actions: OverlayActions,
+    private readonly reducedMotion = true,
+  ) {
     // The backdrop swallows clicks so they don't reach anything underneath.
     const backdrop = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill({ color: COLORS.desk, alpha: 0.35 });
     backdrop.eventMode = 'static';
-    this.title = new Text({ text: '', style: { fontFamily: DISPLAY_FONT, fontSize: 40, fontStyle: 'italic', fill: COLORS.ink } });
+    this.title = new Text({ text: '', style: { fontFamily: DISPLAY_FONT, padding: DISPLAY_PADDING, fontSize: 50, fontWeight: '700', fill: COLORS.ink } });
     this.body = new Text({
       text: '',
       style: {
@@ -200,20 +225,23 @@ export class Overlay {
     // The red-pen grade, scrawled at an angle in the card's corner.
     this.gradeText = new Text({
       text: '',
-      style: { fontFamily: DISPLAY_FONT, fontSize: 64, fontStyle: 'italic', fontWeight: '700', fill: COLORS.margin },
+      style: { fontFamily: DISPLAY_FONT, padding: DISPLAY_PADDING, fontSize: 80, fontWeight: '700', fill: COLORS.margin },
     });
     this.gradeText.anchor.set(0.5);
     this.gradeText.rotation = -0.18;
     this.note = new Text({
       text: '',
-      style: { fontFamily: DISPLAY_FONT, fontSize: 22, fontStyle: 'italic', fill: COLORS.margin },
+      style: { fontFamily: DISPLAY_FONT, padding: DISPLAY_PADDING, fontSize: 28, fontWeight: '700', fill: COLORS.margin },
     });
     this.note.anchor.set(0.5, 0);
-    this.root.addChild(
-      backdrop,
+    this.panel.pivot.set(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+    this.panel.position.set(WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+    this.root.addChild(backdrop, this.panel);
+    this.panel.addChild(
       this.card,
       this.title,
       this.gradeText,
+      this.starsLayer,
       this.body,
       this.circledLayer,
       this.hands,
@@ -224,8 +252,68 @@ export class Overlay {
     this.root.visible = false;
   }
 
-  update(world: World): void {
-    if (world.phase === 'playing' || world.phase === 'ready' || world.phase === 'paused') {
+  update(world: World, dtMs = 0): void {
+    const was = this.root.visible;
+    this.refresh(world);
+    if (!this.root.visible) return;
+    this.appearMs = was ? this.appearMs + dtMs : 0;
+    if (this.reducedMotion) {
+      this.panel.scale.set(1);
+      this.panel.alpha = 1;
+      this.gradeText.scale.set(1);
+      this.gradeText.alpha = 1;
+      this.animateStars(Infinity);
+      return;
+    }
+    // The card pops onto the page, then the red-pen grade is stamped on it.
+    this.panel.scale.set(0.9 + 0.1 * outBack(Math.min(1, this.appearMs / 260)));
+    this.panel.alpha = Math.min(1, this.appearMs / 140);
+    const stamp = Math.min(1, Math.max(0, (this.appearMs - 320) / 200));
+    this.gradeText.scale.set(1 + (1 - outCubic(stamp)) * 1.8);
+    this.gradeText.alpha = stamp > 0 ? 1 : 0;
+    this.animateStars(this.appearMs);
+  }
+
+  /** Earned stars fill in after the grade is stamped, each with a little bounce. */
+  private animateStars(sinceMs: number): void {
+    this.starsLayer.children.forEach((child, i) => {
+      const fill = child.children[1];
+      if (!fill) return;
+      const t = i < this.starsEarned ? Math.min(1, Math.max(0, (sinceMs - 560 - i * 200) / 260)) : 0;
+      fill.visible = t > 0;
+      fill.scale.set(outBack(t));
+    });
+  }
+
+  /** Lay out the row of stars. Returns the height used. */
+  private layoutStars(earned: number | undefined): number {
+    for (const child of this.starsLayer.removeChildren()) child.destroy({ children: true });
+    this.starsEarned = earned ?? 0;
+    if (earned === undefined) return 0;
+    const points = (r: number) => {
+      const out: number[] = [];
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5;
+        const rr = i % 2 === 0 ? r : r * 0.45;
+        out.push(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+      return out;
+    };
+    for (let i = 0; i < 3; i++) {
+      const star = new Container();
+      star.addChild(
+        new Graphics().poly(points(17)).stroke({ width: 2, color: COLORS.inkFaded, join: 'round' }),
+        new Graphics().poly(points(17)).fill(COLORS.highlighter).stroke({ width: 2, color: COLORS.ink, join: 'round' }),
+      );
+      star.position.set((i - 1) * 46, 20);
+      this.starsLayer.addChild(star);
+    }
+    this.animateStars(this.reducedMotion ? Infinity : 0);
+    return 44;
+  }
+
+  private refresh(world: World): void {
+    if (world.phase === 'playing' || world.phase === 'ready' || world.phase === 'paused' || world.phase === 'briefing') {
       this.root.visible = false;
       this.shownKey = null;
       return;
@@ -250,10 +338,12 @@ export class Overlay {
     const handsHeight = this.layoutHands(content.hands ?? []);
     this.gradeText.text = content.grade ?? '';
     this.gradeText.visible = Boolean(content.grade);
+    const starsHeight = this.layoutStars(content.stars);
     const height =
       PAD +
       this.title.height +
       14 +
+      starsHeight +
       this.body.height +
       16 +
       circledHeight +
@@ -276,7 +366,8 @@ export class Overlay {
       .stroke({ width: 2, color: COLORS.ink });
 
     this.title.position.set(cx, top + PAD);
-    this.body.position.set(cx, this.title.y + this.title.height + 14);
+    this.starsLayer.position.set(cx, this.title.y + this.title.height + 6);
+    this.body.position.set(cx, this.title.y + this.title.height + 14 + starsHeight);
 
     this.gradeText.position.set(left + CARD_WIDTH - 62, top + 52);
     this.circledLayer.position.set(cx, this.body.y + this.body.height + 12);

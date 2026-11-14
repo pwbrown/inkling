@@ -101,3 +101,9 @@
     animation: none;
   }
 }
+
+/* The in-game Motion setting, as well as the OS one. */
+:root[data-motion='reduced'] .ul-burst,
+:root[data-motion='reduced'] .ul-card {
+  animation: none;
+}

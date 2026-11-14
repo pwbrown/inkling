@@ -15,12 +15,15 @@ import {
   selectDifficulty,
   startApprentice,
   startPractice,
+  useAbility,
   useBlotter,
   togglePause,
   typeChar,
   type EditKey,
 } from './core/input';
 import { apprenticePreset, builtInPresets, matchingPreset, type Preset } from './core/keySelection';
+import { unlockedAbilities, type ActiveAbility } from './core/abilities';
+import { GAME_CONFIG } from './core/config';
 import { FixedStepLoop } from './core/loop';
 import { improvedKeys } from './core/mastery';
 import { accuracy, wpm } from './core/stats';
@@ -54,6 +57,7 @@ import { openBackend, SaveStore } from './storage/store';
 import { openSaveData } from './ui/saveData';
 import { openSettings } from './ui/settingsDialog';
 import { openTypeCase, presetName } from './ui/typeCase';
+import { openBriefingDialog } from './ui/briefingDialog';
 import { openUnlockDialog, type UnlockedItem } from './ui/unlockDialog';
 import { openWordLists } from './ui/wordLists';
 
@@ -77,6 +81,8 @@ async function main(): Promise<void> {
   const applyColors = () => {
     setTheme(settings.theme);
     document.documentElement.dataset.theme = settings.theme;
+    // Menus and dialogs follow the in-game motion setting, not only the OS one.
+    document.documentElement.dataset.motion = reducedMotion(settings, prefersReducedMotion()) ? 'reduced' : 'full';
     sfx.setVolume(settings.volume, settings.muted);
   };
   applyColors();
@@ -141,6 +147,7 @@ async function main(): Promise<void> {
     }, () => ({
       textScale: TEXT_SCALE[settings.textSize],
       reducedMotion: reducedMotion(settings, prefersReducedMotion()),
+      screenEffects: settings.screenEffects,
       cosmetics: store.data.profile.cosmetics,
     })),
   ]);
@@ -173,6 +180,28 @@ async function main(): Promise<void> {
     difficulty: store.data.difficulty,
     makeContent: contentFor,
   });
+  /**
+   * Abilities this player has earned: by Apprentice chapter reached (including
+   * the one being played) or by level.
+   */
+  const refreshAbilities = () => {
+    const reached = Math.max(store.data.apprentice.unlocked - 1, game.mode === 'apprentice' && game.phase !== 'ready' ? game.page.chapter : 0);
+    game.abilities = unlockedAbilities(reached, levelForInk(store.data.profile.ink));
+  };
+  refreshAbilities();
+  /** Whether this player wants tips, and which they've already had. */
+  const refreshTips = () => {
+    game.tips = store.data.tutorials.enabled;
+    game.seenMechanics = store.data.tutorials.seen;
+  };
+  refreshTips();
+
+  // Screen readers can't see the canvas, so in-game hints are also announced here.
+  const announcer = document.createElement('div');
+  announcer.className = 'visually-hidden';
+  announcer.setAttribute('role', 'status');
+  announcer.setAttribute('aria-live', 'polite');
+  document.body.append(announcer);
   /** Large text uses every other line so targets don't overlap. */
   const applyLayout = () => {
     game.targetScale = TEXT_SCALE[settings.textSize];
@@ -185,6 +214,8 @@ async function main(): Promise<void> {
   const applySave = () => {
     setContent(game, contentFor(store.data.keys));
     game.selectedDifficulty = store.data.difficulty;
+    refreshAbilities();
+    refreshTips();
     menu.refresh();
   };
 
@@ -281,7 +312,7 @@ async function main(): Promise<void> {
     openSettings(document.body, {
       settings,
       onChange: (next) => {
-        const redraw = next.theme !== settings.theme || next.textSize !== settings.textSize || next.motion !== settings.motion;
+        const redraw = next.theme !== settings.theme || next.textSize !== settings.textSize || next.motion !== settings.motion || next.screenEffects !== settings.screenEffects;
         settings = next;
         saveSettings(settings);
         applyColors();
@@ -291,6 +322,21 @@ async function main(): Promise<void> {
       onTestSound: () => {
         sfx.unlock();
         sfx.play('page');
+      },
+      tips: {
+        enabled: store.data.tutorials.enabled,
+        onToggle: (enabled) => {
+          store.update((save) => {
+            save.tutorials.enabled = enabled;
+          });
+          refreshTips();
+        },
+        onReset: () => {
+          store.update((save) => {
+            save.tutorials = { enabled: true, seen: [] };
+          });
+          refreshTips();
+        },
       },
       onClose: () => {
         dialogOpen = false;
@@ -609,12 +655,41 @@ async function main(): Promise<void> {
     renderer.rebuild();
   };
 
+  /** Explain what's new on the page about to start; closing the card starts the page. */
+  const showBriefing = () => {
+    if (dialogOpen) {
+      // Something else has the screen (it shouldn't): don't leave the game stuck on a hidden card.
+      confirm(game);
+      return;
+    }
+    dialogOpen = true;
+    openBriefingDialog(document.body, {
+      mechanics: game.briefing,
+      portrait: (id) => renderer.portrait(id),
+      onClose: (showTips) => {
+        dialogOpen = false;
+        confirm(game);
+        store.update((save) => {
+          save.tutorials.seen = [...game.seenMechanics];
+          if (!showTips) save.tutorials.enabled = false;
+        });
+        refreshTips();
+        loop.reset();
+        syncMenu();
+      },
+    });
+  };
+
   /** Phase before the latest change, to tell starting a page from resuming one. */
   let lastPhase: GamePhase = game.phase;
 
   /** Save progress when the game moves between screens (REQUIREMENTS §8). */
   const onPhase = (phase: GamePhase) => {
     switch (phase) {
+      case 'briefing':
+        if (lastPhase === 'ready') newBest = false;
+        showBriefing();
+        break;
       case 'playing':
         // A page is starting (not just resuming from pause): save the notebook
         // here, so Continue and Quit to menu always come back to this page.
@@ -667,7 +742,11 @@ async function main(): Promise<void> {
         break;
     }
     lastPhase = phase;
+    // A new chapter or level may have just unlocked an ability.
+    refreshAbilities();
   };
+
+  const ABILITY_DIGITS: Partial<Record<string, ActiveAbility>> = { '1': 'paperweight', '2': 'highlighter', '3': 'blotter' };
 
   const EDIT_KEYS: Partial<Record<SpecialKey, EditKey>> = {
     Backspace: 'backspace',
@@ -685,6 +764,11 @@ async function main(): Promise<void> {
       cycleLock(game);
       return true;
     }
+    // Up and Down fire abilities: they're never typed, whatever keys are in play.
+    if (key === 'ArrowUp' || key === 'ArrowDown') {
+      useAbility(game, key === 'ArrowUp' ? 'paperweight' : 'highlighter');
+      return true;
+    }
     const edit = EDIT_KEYS[key];
     if (edit) editKey(game, edit);
     // Swallow the rest too, so arrows never scroll the page mid-game.
@@ -699,6 +783,12 @@ async function main(): Promise<void> {
         if (game.phase === 'gameOver') {
           const lower = char.toLowerCase();
           if (lower === 'r' || lower === 'm') actions.onLink(lower === 'r' ? 'retry' : 'mainMenu');
+          return;
+        }
+        // 1, 2 and 3 also fire abilities, unless the player is practicing number keys.
+        const shortcut = ABILITY_DIGITS[char];
+        if (shortcut && game.phase === 'playing' && !game.keys.includes(char)) {
+          useAbility(game, shortcut);
           return;
         }
         typeChar(game, char);
@@ -739,7 +829,17 @@ async function main(): Promise<void> {
     hit: 'pop',
     error: 'error',
     marginHit: 'leak',
+    inkRestored: 'recover',
+    comboStep: 'comboUp',
+    comboBroken: 'comboBreak',
+    charged: 'charge',
+    passiveReady: 'charge',
+    eraserUsed: 'recover',
+    shieldUsed: 'pop',
+    boss: 'boss',
+    split: 'split',
   };
+  const phaseSound: Partial<Record<GamePhase, Sound>> = { pageCleared: 'page', gameOver: 'gameOver', notebookComplete: 'complete' };
 
   renderer.app.ticker.add((ticker) => {
     const alpha = loop.advance(ticker.deltaMS);
@@ -747,10 +847,20 @@ async function main(): Promise<void> {
     for (const event of game.events) {
       if (event.type === 'phase') {
         onPhase(event.phase);
-        if (event.phase === 'pageCleared') sfx.play('page');
+        const chime = phaseSound[event.phase];
+        if (chime) sfx.play(chime);
       }
+      // A heartbeat the moment the ink well drops into the danger zone.
+      if (event.type === 'marginHit' || event.type === 'error') {
+        const low = game.maxInk * GAME_CONFIG.lowInk;
+        const lost = 'inkLost' in event ? (event.inkLost ?? 0) : 0;
+        if (game.ink > 0 && game.ink < low && game.ink + lost >= low) sfx.play('lowInk');
+      }
+      if (event.type === 'guide') announcer.textContent = t(`tutorial.${event.id}.hint` as MessageKey);
       const sound = soundFor[event.type];
-      if (sound) sfx.play(sound);
+      // The pen scratch and combo chime rise in pitch with the run.
+      if (sound) sfx.play(sound, event.type === 'comboStep' ? event.multiplier : game.stats.combo);
+      if (event.type === 'ability') sfx.play(event.id === 'blotter' ? 'blotter' : 'ability');
     }
     renderer.sync(game, alpha, ticker.deltaMS);
     syncMenu();

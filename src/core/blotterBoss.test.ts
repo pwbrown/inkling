@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createContentSource } from '../content/contentSource';
+import { chargeKeys } from './abilities';
 import { GAME_CONFIG } from './config';
 import { confirm, startApprentice, typeChar, useBlotter } from './input';
 import { MARGIN_X, createPage, createWorld, spawnBoss, spawnTarget, stepWorld, type World } from './world';
@@ -13,29 +14,30 @@ function playingWorld(): World {
 describe('Blotter', () => {
   it('charges every 25 correct keys in a row, up to the maximum', () => {
     const world = playingWorld();
-    const { comboPerCharge, maxCharges } = GAME_CONFIG.blotter;
+    const comboPerCharge = chargeKeys(0);
+    const { maxCharges } = GAME_CONFIG.abilities;
     for (let i = 0; i < comboPerCharge * (maxCharges + 1); i++) {
       spawnTarget(world, { kind: 'drip', text: 'a', x: 500, prevX: 500, lane: 0 });
       typeChar(world, 'a');
     }
-    expect(world.blotter).toBe(maxCharges);
+    expect(world.charges).toBe(maxCharges);
   });
 
   it('is lost combo progress after a mistake', () => {
     const world = playingWorld();
-    for (let i = 0; i < GAME_CONFIG.blotter.comboPerCharge - 1; i++) {
+    for (let i = 0; i < chargeKeys(0) - 1; i++) {
       spawnTarget(world, { kind: 'drip', text: 'a', x: 500, prevX: 500, lane: 0 });
       typeChar(world, 'a');
     }
     typeChar(world, 'z');
     spawnTarget(world, { kind: 'drip', text: 'a', x: 500, prevX: 500, lane: 0 });
     typeChar(world, 'a');
-    expect(world.blotter).toBe(0);
+    expect(world.charges).toBe(0);
   });
 
   it('blots every creature on the page except a boss, for half points', () => {
     const world = playingWorld();
-    world.blotter = 1;
+    world.charges = GAME_CONFIG.abilities.blotter.cost;
     spawnTarget(world, { kind: 'blotling', text: 'ink', x: 400, prevX: 400, lane: 0 });
     spawnTarget(world, { kind: 'drip', text: 'a', x: 600, prevX: 600, lane: 1, lives: 3 });
     const boss = spawnTarget(world, { kind: 'blotling', text: 'spill', x: 800, prevX: 800, lane: 4, boss: true, lives: 3 })!;
@@ -43,7 +45,7 @@ describe('Blotter', () => {
     const offPage = spawnTarget(world, { kind: 'drip', text: 'b', lane: 6 })!;
 
     expect(useBlotter(world)).toBe(true);
-    expect(world.blotter).toBe(0);
+    expect(world.charges).toBe(0);
     expect(world.targets).toEqual([boss, offPage]);
     expect(world.stats.destroyed).toBe(2);
     expect(world.stats.score).toBeGreaterThan(0);
@@ -55,9 +57,9 @@ describe('Blotter', () => {
     spawnTarget(world, { kind: 'drip', text: 'a', x: 400, prevX: 400, lane: 0 });
     expect(useBlotter(world)).toBe(false);
     world.targets = [];
-    world.blotter = 1;
+    world.charges = GAME_CONFIG.abilities.blotter.cost;
     expect(useBlotter(world)).toBe(false);
-    expect(world.blotter).toBe(1);
+    expect(world.charges).toBe(GAME_CONFIG.abilities.blotter.cost);
   });
 });
 

@@ -2,7 +2,7 @@
 import './dialog.css';
 import { t, type MessageKey } from '../i18n';
 import { THEMES } from '../render/theme';
-import { MOTION_SETTINGS, TEXT_SIZES, type Settings } from '../settings';
+import { MOTION_SETTINGS, SCREEN_EFFECTS, TEXT_SIZES, type Settings } from '../settings';
 import { h, trapFocus } from './dom';
 
 export interface SettingsDialogOptions {
@@ -10,6 +10,8 @@ export interface SettingsDialogOptions {
   /** Called on every change, so the game can update immediately. */
   onChange(settings: Settings): void;
   onTestSound(): void;
+  /** Tutorial tips for the current player (they live in the save, not in Settings). */
+  tips?: { enabled: boolean; onToggle(enabled: boolean): void; onReset(): void };
   onClose(): void;
 }
 
@@ -37,6 +39,34 @@ function radioGroup<T extends string>(
       }),
     ),
     h('p', { className: 'st-help' }, [help]),
+  ]);
+}
+
+/** "Show tips" and "Show all tips again", for the current player. */
+function tipsGroup(tips: SettingsDialogOptions['tips']): HTMLElement | null {
+  if (!tips) return null;
+  const show = h('input', { type: 'checkbox', onChange: () => tips.onToggle(show.checked) });
+  show.checked = tips.enabled;
+  const status = h('p', { className: 'st-help', role: 'status', 'aria-live': 'polite' }, [t('settings.tips.help')]);
+  return h('fieldset', { className: 'st-group' }, [
+    h('legend', {}, [t('settings.tips')]),
+    h('div', { className: 'st-options' }, [
+      h('label', { className: 'st-option' }, [show, h('span', {}, [t('settings.tips.show')])]),
+      h(
+        'button',
+        {
+          type: 'button',
+          className: 'tc-secondary',
+          onClick: () => {
+            tips.onReset();
+            show.checked = true;
+            status.textContent = t('settings.tips.resetDone');
+          },
+        },
+        [t('settings.tips.reset')],
+      ),
+    ]),
+    status,
   ]);
 }
 
@@ -87,6 +117,15 @@ export function openSettings(host: HTMLElement, options: SettingsDialogOptions):
       (v) => t(`settings.motion.${v}` as MessageKey),
       (motion) => change({ motion }),
     ),
+    radioGroup(
+      t('settings.screenEffects'),
+      t('settings.screenEffects.help'),
+      SCREEN_EFFECTS,
+      settings.screenEffects,
+      (v) => t(`settings.screenEffects.${v}` as MessageKey),
+      (screenEffects) => change({ screenEffects }),
+    ),
+    tipsGroup(options.tips),
     h('fieldset', { className: 'st-group' }, [
       h('legend', {}, [t('settings.sound')]),
       h('div', { className: 'st-options' }, [

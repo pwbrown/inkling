@@ -88,8 +88,11 @@ export const TEXT_FONT = '"Atkinson Hyperlegible Next", system-ui, -apple-system
 /** Fixed-width text, so the Misprint caret lines up between letters. */
 export const MONO_FONT = '"Atkinson Hyperlegible Mono", ui-monospace, Menlo, Consolas, monospace';
 
-/** Decorative headings. A bundled handwriting font replaces this later. */
-export const DISPLAY_FONT = 'Georgia, "Times New Roman", serif';
+/** Handwritten headings, grades and notes (Caveat, see src/fonts.ts). Never used for text the player types. */
+export const DISPLAY_FONT = 'Caveat, "Segoe Print", "Bradley Hand", Georgia, serif';
+
+/** Handwriting strokes run past their measured width; this much padding keeps them from being clipped. */
+export const DISPLAY_PADDING = 8;
 
 /** The OS "reduce motion" setting (REQUIREMENTS §10). Settings can override it. */
 export function prefersReducedMotion(): boolean {

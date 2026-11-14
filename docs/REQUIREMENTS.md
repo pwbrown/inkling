@@ -28,7 +28,8 @@ This is an arcade typing game inspired by *Typer Shark*. The player sits on the 
 | **Player** | A character or object fixed on the left edge. It has health or lives (decided in design). |
 | **Targets** | They spawn off-screen on the right, move left, and each carries a text payload. |
 | **Targeting** | Typing the first character locks onto the closest target that starts with it. Later keystrokes go to the locked target until it is destroyed. Esc releases the lock (optional). |
-| **Mistakes** | A wrong key counts as an error. It lowers accuracy and the score multiplier but does **not** cost health. The penalty is tunable. |
+| **Mistakes** | A wrong key counts as an error. It lowers accuracy, resets the score multiplier and costs points. It also costs a little ink (health), except on Relaxed and in the first Apprentice chapters, after which the cost ramps in; a mistake never takes the last of the ink. Tuned in `GAME_CONFIG.mistakes`. |
+| **Recovery** | A long run of correct keys restores a little ink, and when the well is low an ink bottle may cross the page: type it to refill. Both get stingier in later chapters (`GAME_CONFIG.recovery`). |
 | **Collision** | A target that reaches the player deals damage and is removed. |
 | **Structure** | Campaign → Levels → Waves. **Each wave contains a single target type.** |
 | **Summaries** | A short summary screen appears between waves and levels, showing WPM, accuracy, score and the most-missed keys. |
@@ -264,6 +265,8 @@ Inkling is **open source** and will be **publicly hosted** as a static web app.
 | 11 | **Creatures** | Animated creatures with faces and moods; crimson/violet/ghost variants |
 | 12 | **Campaign** | Apprentice course (10 chapters of new keys), stars, Contents page, notebook finish; Practice mode |
 | 13 | **Rewards** | Ink (XP), levels and ranks, cosmetic unlocks on the Desk, the Blotter power, the Spill boss |
+| 14 | **Players and looks** | Several players per browser, picture tiles on the Desk, distinct crimson/violet shapes; later a per-player word filter, the hands guide and the typewriter Type Case |
+| 15 | **Character and teaching** | Game feel (Nib face, screen shake, damage flash, animated HUD, more sounds); mistakes cost points and ink; ink recovery; five powers unlocked over the course; briefings and guided first tries for every new mechanic (save version 7) |
 
 ## 14. Open Questions / TODO
 

@@ -18,6 +18,7 @@ import {
   DEFAULT_KEYS,
   DIFFICULTY_PROFILES,
   GAME_CONFIG,
+  bottleParams,
   chapterPlan,
   pageParams,
   sprinkleChances,
@@ -25,6 +26,8 @@ import {
   type PageParams,
   type TargetKind,
 } from './config';
+import { ABILITIES, type AbilityId, type ActiveAbility } from './abilities';
+import { guidedSpawn, pendingBriefings, type MechanicId } from './mechanics';
 import { createStats, type Stats } from './stats';
 
 /** Logical play-field size. The renderer scales this to fit the window. */
@@ -70,6 +73,8 @@ export interface Target {
   maxLives?: number;
   /** The Spill: a chapter's boss. */
   boss?: boolean;
+  /** An ink bottle: typing it restores ink, and it costs nothing if it gets away. */
+  bottle?: boolean;
   /** Current position (left edge of the target body). */
   x: number;
   y: number;
@@ -82,9 +87,10 @@ export interface Target {
 
 /**
  * - ready: on the menus. intro: an Apprentice chapter's "new keys" card.
+ * - briefing: a card explaining mechanics that are new on the page about to start.
  * - notebookComplete: the last Apprentice chapter is done.
  */
-export type GamePhase = 'ready' | 'intro' | 'playing' | 'paused' | 'pageCleared' | 'gameOver' | 'notebookComplete';
+export type GamePhase = 'ready' | 'intro' | 'briefing' | 'playing' | 'paused' | 'pageCleared' | 'gameOver' | 'notebookComplete';
 
 /** Things that happened this frame, for the renderer to animate. */
 export type GameEvent =
@@ -99,12 +105,31 @@ export type GameEvent =
   | { type: 'boss'; target: Target }
   /** The Spill was blotted and split into smaller creatures. */
   | { type: 'split'; target: Target }
-  /** The Blotter gained a charge. */
-  | { type: 'blotterCharged'; charges: number }
-  /** The Blotter was used. */
-  | { type: 'blotter' }
+  /** A clean run of keys earned an ability charge. */
+  | { type: 'charged'; charges: number }
+  /** An active ability was fired. */
+  | { type: 'ability'; id: ActiveAbility }
+  /** A timed ability (Paperweight, Highlighter) wore off. */
+  | { type: 'abilityEnded'; id: ActiveAbility }
+  /** A passive ability is ready: the Eraser re-armed, or Blotting paper was earned. */
+  | { type: 'passiveReady'; id: 'eraser' | 'blottingPaper' }
+  /** A newly taught creature arrived for its guided first try. */
+  | { type: 'guide'; id: MechanicId; target: Target }
+  /** The Eraser forgave a wrong key. */
+  | { type: 'eraserUsed'; key: string; targetId: number | null }
+  /** Blotting paper soaked up a creature at the margin. */
+  | { type: 'shieldUsed'; target: Target }
   | { type: 'marginHit'; target: Target; inkLost: number }
-  | { type: 'error'; key: string; targetId: number | null }
+  /** A wrong key, and what it cost. */
+  | { type: 'error'; key: string; targetId: number | null; pointsLost: number; inkLost: number }
+  /** Ink came back: from a clean run of keys, or from an ink bottle. */
+  | { type: 'inkRestored'; amount: number; source: 'streak' | 'bottle'; target?: Target }
+  /** An ink bottle got away. */
+  | { type: 'bottleMissed'; target: Target }
+  /** The score multiplier went up a step. */
+  | { type: 'comboStep'; multiplier: number }
+  /** A run long enough to have raised the multiplier was broken. `was`: its length. */
+  | { type: 'comboBroken'; was: number }
   | { type: 'phase'; phase: GamePhase }
   /** The page was restarted or abandoned: clear effects and stains. */
   | { type: 'reset' };
@@ -115,6 +140,10 @@ export interface StartSnapshot {
   pageIndex: number;
   ink: number;
   stats: Stats;
+  /** Ability charges and held passives at that moment. */
+  charges: number;
+  eraser: boolean;
+  shield: boolean;
 }
 
 export interface PageState {
@@ -131,6 +160,8 @@ export interface PageState {
   spawned: number;
   /** Run-ons and Misprints sprinkled into this page so far. */
   sprinkled: number;
+  /** An ink bottle has crossed this page (at most one per page). */
+  bottleSpawned: boolean;
   /** Counts down to the next spawn. */
   spawnTimerMs: number;
 }
@@ -175,8 +206,36 @@ export interface World {
    * The Apprentice campaign uses it to switch keys between chapters.
    */
   makeContent: (keys: readonly string[], focus: readonly string[]) => ContentSource;
-  /** Blotter charges ready to use (see GAME_CONFIG.blotter). */
-  blotter: number;
+  /** Show a briefing before a page that has something new (off unless the app turns it on). */
+  tips: boolean;
+  /** Mechanics this player has already been shown. */
+  seenMechanics: readonly string[];
+  /** While in the briefing phase: what the card explains. */
+  briefing: MechanicId[];
+  /**
+   * Guided first try: the newly taught creature is sent alone and slowed, and
+   * nothing else spawns until it has been dealt with.
+   */
+  guide: { id: MechanicId; targetId: number | null; spawned: boolean } | null;
+  /** Correct keys since the last mistake, leak or streak refill (GAME_CONFIG.recovery.streak). */
+  cleanRun: number;
+  /** Abilities this player has unlocked (see abilities.ts). Everything, unless the app says otherwise. */
+  abilities: readonly AbilityId[];
+  /** Ability charges ready to spend (GAME_CONFIG.abilities). */
+  charges: number;
+  /** Correct keys in a row toward the next charge. */
+  chargeRun: number;
+  /** The Eraser is armed: the next wrong key is forgiven. */
+  eraser: boolean;
+  /** Correct keys in a row toward re-arming the Eraser. */
+  eraserRun: number;
+  /** Blotting paper is held: the next creature to reach the margin is soaked up. */
+  shield: boolean;
+  /** Blotting paper was earned on the page just cleared (shown on the graded page). */
+  shieldEarned: boolean;
+  /** Time left on the Paperweight (creatures crawl) and the Highlighter (ghosts shown, double points). */
+  slowMs: number;
+  highlightMs: number;
   /** Use every `laneStep`-th ruled line (2 for large text). */
   laneStep: number;
   /** Size of targets on screen, for spacing them (matches the text-size setting). */
@@ -240,6 +299,7 @@ export function createPage(
     params,
     spawned: 0,
     sprinkled: 0,
+    bottleSpawned: false,
     // Spawn the first target right away.
     spawnTimerMs: 0,
   };
@@ -257,6 +317,8 @@ export interface WorldOptions {
   content?: ContentSource;
   difficulty?: Difficulty;
   makeContent?: (keys: readonly string[], focus: readonly string[]) => ContentSource;
+  /** Abilities unlocked (default: all of them). */
+  abilities?: readonly AbilityId[];
 }
 
 export function createWorld(options: WorldOptions = {}): World {
@@ -275,14 +337,27 @@ export function createWorld(options: WorldOptions = {}): World {
     inkRefilled: 0,
     stats: createStats(),
     pageStats: createStats(),
-    pageStart: { pageIndex: 0, ink: GAME_CONFIG.maxInk, stats: createStats() },
-    chapterStart: { pageIndex: 0, ink: GAME_CONFIG.maxInk, stats: createStats() },
+    pageStart: { pageIndex: 0, ink: GAME_CONFIG.maxInk, stats: createStats(), charges: 0, eraser: false, shield: false },
+    chapterStart: { pageIndex: 0, ink: GAME_CONFIG.maxInk, stats: createStats(), charges: 0, eraser: false, shield: false },
     events: [],
     keys: content.keys,
     content,
     mode: 'practice',
     makeContent: options.makeContent ?? ((keys) => createContentSource({ keys })),
-    blotter: 0,
+    tips: false,
+    seenMechanics: [],
+    briefing: [],
+    guide: null,
+    cleanRun: 0,
+    abilities: options.abilities ?? ABILITIES,
+    charges: 0,
+    chargeRun: 0,
+    eraser: false,
+    eraserRun: 0,
+    shield: false,
+    shieldEarned: false,
+    slowMs: 0,
+    highlightMs: 0,
     laneStep: 1,
     targetScale: 1,
     nextId: 1,
@@ -311,7 +386,14 @@ export function setContent(world: World, content: ContentSource): void {
  * on a chapter's first page, so the chapter can be retried).
  */
 export function markPageStart(world: World): void {
-  const snapshot = { pageIndex: world.page.index, ink: world.ink, stats: structuredClone(world.stats) };
+  const snapshot: StartSnapshot = {
+    pageIndex: world.page.index,
+    ink: world.ink,
+    stats: structuredClone(world.stats),
+    charges: world.charges,
+    eraser: world.eraser,
+    shield: world.shield,
+  };
   world.pageStart = snapshot;
   if (world.page.index === 0) world.chapterStart = structuredClone(snapshot);
 }
@@ -322,13 +404,31 @@ export function setPhase(world: World, phase: GamePhase): void {
   world.events.push({ type: 'phase', phase });
 }
 
+/**
+ * Begin the page that's set up: first a briefing if it holds anything the
+ * player hasn't been shown, otherwise straight into play.
+ */
+export function beginPage(world: World): void {
+  world.guide = null;
+  world.briefing = world.tips ? pendingBriefings(world, world.seenMechanics) : [];
+  setPhase(world, world.briefing.length > 0 ? 'briefing' : 'playing');
+}
+
 /** Start a fresh notebook, keeping the same object (and its key set). */
 export function resetWorld(world: World, difficulty: Difficulty = world.difficulty): void {
-  const fresh = createWorld({ random: world.random, content: world.content, difficulty, makeContent: world.makeContent });
+  const fresh = createWorld({
+    random: world.random,
+    content: world.content,
+    difficulty,
+    makeContent: world.makeContent,
+    abilities: world.abilities,
+  });
   fresh.nextId = world.nextId;
   fresh.mode = world.mode;
   fresh.laneStep = world.laneStep;
   fresh.targetScale = world.targetScale;
+  fresh.tips = world.tips;
+  fresh.seenMechanics = world.seenMechanics;
   Object.assign(world, fresh);
 }
 
@@ -357,6 +457,9 @@ function freeLanes(world: World): number[] {
 /** Ghost text shows once the creature crosses an x somewhere in this range. */
 export const GHOST_REVEAL_MIN_X = WORLD_WIDTH * GAME_CONFIG.variants.revealAt.min;
 export const GHOST_REVEAL_MAX_X = WORLD_WIDTH * GAME_CONFIG.variants.revealAt.max;
+
+/** A reveal point off the right edge: the ghost's text shows from the start. */
+export const REVEALED_X = SPAWN_X + 10_000;
 
 /** Where a ghost's text appears: `roll` in [0, 1) picks a point in the reveal range. */
 export function ghostRevealX(roll: number): number {
@@ -431,7 +534,8 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
   const lives = roll < violet ? 3 : roll < violet + crimson ? 2 : 1;
   const startLives = overrides.lives ?? lives;
   const isGhost = world.random() < ghost;
-  const revealX = isGhost ? ghostRevealX(world.random()) : undefined;
+  // While the Highlighter is on, ghosts arrive already showing.
+  const revealX = isGhost ? (world.highlightMs > 0 ? REVEALED_X : ghostRevealX(world.random())) : undefined;
   // Never faster than the target ahead in the same lane, so they can't overlap.
   const leaderSpeed = Math.min(...world.targets.filter((t) => t.lane === lane).map((t) => t.speed));
   const target: Target = {
@@ -480,6 +584,23 @@ function updateSpawner(world: World, stepMs: number): void {
     return;
   }
   const { size, spawnIntervalMs, maxOnScreen } = page.params;
+  // A guided first try: the new creature comes alone, and the page waits for it.
+  const guide = world.guide;
+  if (guide) {
+    if (!guide.spawned) {
+      const target = spawnTarget(world, { ...guidedSpawn(guide.id) });
+      if (!target) return;
+      target.speed *= GAME_CONFIG.guideSpeedFactor;
+      guide.spawned = true;
+      guide.targetId = target.id;
+      page.spawned++;
+      page.spawnTimerMs = spawnIntervalMs;
+      world.events.push({ type: 'guide', id: guide.id, target });
+      return;
+    }
+    if (world.targets.some((t) => t.id === guide.targetId)) return;
+    world.guide = null;
+  }
   page.spawnTimerMs -= stepMs;
 
   if (page.spawnTimerMs > 0 || page.spawned >= size || world.targets.length >= maxOnScreen) return;
@@ -488,7 +609,39 @@ function updateSpawner(world: World, stepMs: number): void {
   if (spawnTarget(world)) {
     page.spawned++;
     page.spawnTimerMs = spawnIntervalMs;
+    maybeSpawnBottle(world);
   }
+}
+
+/**
+ * When the ink well is low, an ordinary spawn may bring an ink bottle along
+ * (GAME_CONFIG.recovery.bottle): at most one per page, and not on top of the Spill.
+ */
+function maybeSpawnBottle(world: World): void {
+  const page = world.page;
+  const b = GAME_CONFIG.recovery.bottle;
+  if (page.bottleSpawned || world.ink >= world.maxInk * b.belowInk) return;
+  if (page.spawned < page.params.size * b.afterSpawned || world.targets.some((t) => t.boss)) return;
+  const { chance, speedFactor } = bottleParams(page.chapter);
+  if (world.random() >= chance) return;
+  if (spawnBottle(world, speedFactor)) page.bottleSpawned = true;
+}
+
+/** Send an ink bottle across the page: a single plain target carrying a key or a word. */
+export function spawnBottle(world: World, speedFactor = 1): Target | null {
+  const kind: TargetKind = world.page.params.kind === 'drip' || !world.content.supports('blotling') ? 'drip' : 'blotling';
+  const base = world.page.params.speed * (kind === world.page.params.kind ? 1 : GAME_CONFIG.base[kind].speed / GAME_CONFIG.base[world.page.params.kind].speed);
+  if (freeLanes(world).length === 0) return null;
+  return spawnTarget(world, { kind, lives: 1, ghost: false, bottle: true, speed: base * speedFactor });
+}
+
+/** Put ink back in the well. Returns how much actually went in. */
+export function restoreInk(world: World, amount: number, source: 'streak' | 'bottle', target?: Target): number {
+  const before = world.ink;
+  world.ink = Math.min(world.maxInk, world.ink + amount);
+  const restored = world.ink - before;
+  if (restored > 0) world.events.push({ type: 'inkRestored', amount: restored, source, ...(target ? { target } : {}) });
+  return restored;
 }
 
 /**
@@ -567,20 +720,48 @@ export function stepWorld(world: World, stepMs: number): void {
   world.pageStats.playMs += stepMs;
   updateSpawner(world, stepMs);
 
+  // Timed abilities run down; the Paperweight makes everything crawl meanwhile.
+  const slow = world.slowMs > 0 ? GAME_CONFIG.abilities.paperweight.speedFactor : 1;
+  for (const [timer, id] of [
+    ['slowMs', 'paperweight'],
+    ['highlightMs', 'highlighter'],
+  ] as const) {
+    if (world[timer] <= 0) continue;
+    world[timer] = Math.max(0, world[timer] - stepMs);
+    if (world[timer] === 0) world.events.push({ type: 'abilityEnded', id });
+  }
+
   const dt = stepMs / 1000;
   const survivors: Target[] = [];
 
   for (const target of world.targets) {
     target.prevX = target.x;
-    target.x -= target.speed * dt;
+    target.x -= target.speed * slow * dt;
 
     if (target.x > MARGIN_X) {
       survivors.push(target);
       continue;
     }
 
+    if (target.bottle) {
+      // A missed bottle just rolls off the page: no leak, no ink lost.
+      if (world.lockedId === target.id) world.lockedId = null;
+      world.events.push({ type: 'bottleMissed', target });
+      continue;
+    }
+    if (world.shield) {
+      // Blotting paper soaks it up: no ink lost, and the run of keys carries on.
+      world.shield = false;
+      if (world.lockedId === target.id) world.lockedId = null;
+      world.events.push({ type: 'shieldUsed', target });
+      continue;
+    }
     const inkLost = inkLossFor(world, target);
     world.ink = Math.max(0, world.ink - inkLost);
+    world.cleanRun = 0;
+    world.chargeRun = 0;
+    world.eraserRun = 0;
+    if (world.stats.combo >= GAME_CONFIG.combo.step) world.events.push({ type: 'comboBroken', was: world.stats.combo });
     world.stats.combo = 0;
     world.pageStats.combo = 0;
     world.stats.leaks++;
@@ -605,6 +786,15 @@ export function stepWorld(world: World, stepMs: number): void {
       world.ink = Math.min(world.maxInk, world.ink + Math.round(world.maxInk * GAME_CONFIG.chapterInkRefill));
       world.inkRefilled = world.ink - before;
     }
+    // A page with nothing reaching the margin earns a sheet of Blotting paper.
+    world.shieldEarned = false;
+    if (world.abilities.includes('blottingPaper') && !world.shield && world.pageStats.leaks === 0) {
+      world.shield = true;
+      world.shieldEarned = true;
+      world.events.push({ type: 'passiveReady', id: 'blottingPaper' });
+    }
+    world.slowMs = 0;
+    world.highlightMs = 0;
     setPhase(world, 'pageCleared');
   }
 }

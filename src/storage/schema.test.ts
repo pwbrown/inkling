@@ -71,6 +71,32 @@ describe('save schema', () => {
     expect(migrate({ version: 6, contentLevel: 'anything' }).contentLevel).toBe('family');
   });
 
+  it('upgrades version 6 saves with tips on, crediting mechanics the player has already met', () => {
+    const fresh = migrate({ version: 6, keys: ['a'] });
+    expect(fresh.tutorials).toEqual({ enabled: true, seen: [] });
+
+    // Seven chapters opened means six finished: everything up to crimson (chapter 5), not yet the Spill.
+    const veteran = migrate({ version: 6, apprentice: { unlocked: 7, stars: {}, completed: false } });
+    expect(veteran.tutorials.seen.sort()).toEqual(['basics', 'blotling', 'blotter', 'combo', 'crimson']);
+    expect(veteran.tutorials.seen).not.toContain('mistakes');
+
+    const done = migrate({ version: 6, apprentice: { unlocked: 27, stars: {}, completed: true } });
+    expect(done.tutorials.seen).toEqual(expect.arrayContaining(['spill', 'ghost', 'runon', 'misprint', 'violet']));
+    expect(done.tutorials.seen).not.toContain('eraser');
+  });
+
+  it('gives version 6 notebooks no ability charges, and keeps valid ones later', () => {
+    const old = migrate({ version: 6, notebook: { mode: 'practice', difficulty: 'normal', chapter: 1, page: 0, ink: 60 } });
+    expect(old.notebook).toMatchObject({ charges: 0, eraser: false, shield: false });
+    const now = migrate({ version: 7, notebook: { mode: 'practice', difficulty: 'normal', chapter: 1, page: 0, ink: 60, charges: 2, eraser: true, shield: 'yes' } });
+    expect(now.notebook).toMatchObject({ charges: 2, eraser: true, shield: false });
+  });
+
+  it('drops unknown tutorial ids and keeps the tips choice', () => {
+    const save = migrate({ version: 7, tutorials: { enabled: false, seen: ['basics', 'nonsense', 'basics', 4] } });
+    expect(save.tutorials).toEqual({ enabled: false, seen: ['basics'] });
+  });
+
   it('keeps valid word lists and drops bad ones', () => {
     const save = migrate({
       version: 2,

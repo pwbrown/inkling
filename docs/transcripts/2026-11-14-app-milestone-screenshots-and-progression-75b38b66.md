@@ -1,6 +1,6 @@
 # App milestone screenshots and progression
 
-Claude Code session started 2026-11-14. 3 prompts.
+Claude Code session started 2026-11-14. 5 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -584,12 +584,96 @@ I rebuilt Inkling at every milestone from its own commit (M1 through M14, plus t
 
 > Commit the working tree changes with a sensible message.
 
-<details><summary>1 tool call</summary>
+<details><summary>2 tool calls</summary>
 
 - **Shell:** Export session transcripts
 
   ```bash
   npm run transcript 2>&1 | tail -5; git status --short docs/transcripts
   ```
+- **Shell:** Scan transcript changes for private details
+
+  ```bash
+  git diff docs/transcripts | grep '^+' > <temp file> cat docs/transcripts/2026-11-14-*.md >> <temp file> grep -n -i -E '[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|/Users/|[removed]|token|api[_-]?key|secret|password|sk-[a-z0-9]' <temp file> | grep -v 'noreply@anthropic.com' | head -20
+  … (34 more characters)
+  ```
 
 </details>
+
+### 🤖 Claude
+
+The transcripts are clean: usernames are already redacted, and there are no emails, tokens or codes. Committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit the gallery on the branch
+
+  ```bash
+  git add CLAUDE.md README.md package.json scripts/snapshots.ts docs/progression docs/transcripts && git commit -q -F - <<'EOF'
+  Progression gallery: screenshots of every milestone
+
+  - docs/progression/README.md: each milestone (M1-M14 and latest) built
+    from its own commit and screenshotted, with the same screens side by
+    side (creatures, font, first screen, Type Case, end of page, chapter
+    card, settings and pause) and notes on what each milestone changed
+  - Staged "lineup" shots put one of every creature kind and variant on the
+    page so creature looks can be compared across versions
+  - npm ru
+  … (354 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I committed everything as `dc358f4` ("Progression gallery: screenshots of every milestone") on `chore/progression-gallery`. The working tree is clean.
+
+The commit has:
+- the gallery page and its screenshots in `docs/progression/`
+- `scripts/snapshots.ts` and the `npm run snapshots` command
+- the new milestone step in `CLAUDE.md` and the gallery link in `README.md`
+- the transcript export
+
+I checked the transcript export before committing: your username is already removed from file paths, and there are no emails, tokens or codes in it.
+
+It isn't merged into `main` yet.
+
+## 🧑 Prompt
+
+> Merge to main
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Fast-forward main and delete the branch
+
+  ```bash
+  git switch -q main && git merge --ff-only chore/progression-gallery && git branch -d chore/progression-gallery && git log --oneline -2 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I fast-forwarded `main` to `dc358f4` with the progression gallery and deleted `chore/progression-gallery`.
+
+`main` is one commit ahead of `origin` and hasn't been pushed. Pushing to `main` deploys to GitHub Pages, so I left that for you.
+
+## 🧑 Prompt
+
+> push it
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main to origin
+
+  ```bash
+  git push origin main 2>&1 | tail -3 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` to GitHub (`114804b..dc358f4`), and `main` now matches `origin`. That push also starts the GitHub Pages deploy. The game code didn't change, so the live game should look the same.
+
+The gallery is at [docs/progression/README.md](https://github.com/pwbrown/inkling/blob/main/docs/progression/README.md) on GitHub. The custom-domain changes are still in your stash, as before.

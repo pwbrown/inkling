@@ -7,10 +7,11 @@
  */
 import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
 import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from '../core/config';
+import { isMechanic } from '../core/mechanics';
 import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 import { DEFAULT_CONTENT_LEVEL, isContentLevel, type ContentLevel } from '../content/contentFilter';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -40,6 +41,10 @@ export interface SavedNotebook {
   destroyed: number;
   bestCombo: number;
   playMs: number;
+  /** Ability charges and held passives when the page began (added in version 7). */
+  charges: number;
+  eraser: boolean;
+  shield: boolean;
   /** ISO timestamp. */
   savedAt: string;
 }
@@ -94,6 +99,15 @@ export interface SaveData {
   profile: Progression;
   /** How much the word list leaves out for this player (added in version 6). */
   contentLevel: ContentLevel;
+  /** Which mechanics this player has been shown, and whether to show more (added in version 7). */
+  tutorials: Tutorials;
+}
+
+export interface Tutorials {
+  /** Show a briefing before a page that has something new. */
+  enabled: boolean;
+  /** Mechanic ids (core/mechanics.ts) already explained. */
+  seen: string[];
 }
 
 /** File format for export/import. */
@@ -127,6 +141,7 @@ export function defaultSave(): SaveData {
     apprentice: { unlocked: 1, stars: {}, completed: false },
     profile: { ink: 0, cosmetics: { ...DEFAULT_COSMETICS } },
     contentLevel: DEFAULT_CONTENT_LEVEL,
+    tutorials: { enabled: true, seen: [] },
   };
 }
 
@@ -166,6 +181,9 @@ function sanitizeNotebook(v: unknown): SavedNotebook | null {
     destroyed: count(v.destroyed),
     bestCombo: count(v.bestCombo),
     playMs: count(v.playMs),
+    charges: count(v.charges),
+    eraser: v.eraser === true,
+    shield: v.shield === true,
     savedAt: typeof v.savedAt === 'string' ? v.savedAt : new Date(0).toISOString(),
   };
 }
@@ -247,7 +265,41 @@ function sanitize(v: Json): SaveData {
     apprentice: sanitizeApprentice(v.apprentice),
     profile: sanitizeProfile(v.profile),
     contentLevel: isContentLevel(v.contentLevel) ? v.contentLevel : DEFAULT_CONTENT_LEVEL,
+    tutorials: sanitizeTutorials(v.tutorials),
   };
+}
+
+function sanitizeTutorials(v: unknown): Tutorials {
+  if (!isObject(v)) return { enabled: true, seen: [] };
+  const seen = Array.isArray(v.seen) ? [...new Set(v.seen.filter(isMechanic))] : [];
+  return { enabled: v.enabled !== false, seen };
+}
+
+/**
+ * Mechanics that existed before version 7, with the first Apprentice chapter
+ * (0-based) each appeared in. A player who had already finished that chapter
+ * has met it, so the new briefings skip it.
+ */
+const MECHANICS_BEFORE_V7: Record<string, number> = {
+  basics: 0,
+  blotling: 0,
+  combo: 0,
+  blotter: 0,
+  crimson: 4,
+  spill: 6,
+  ghost: 8,
+  runon: 10,
+  misprint: 15,
+  violet: 16,
+};
+
+function seenBeforeV7(save: Json): string[] {
+  const unlocked = isObject(save.apprentice) ? count(save.apprentice.unlocked) : 1;
+  // Chapters finished: one fewer than the chapters opened.
+  const finished = Math.max(0, unlocked - 1);
+  return Object.entries(MECHANICS_BEFORE_V7)
+    .filter(([, chapter]) => finished > chapter)
+    .map(([id]) => id);
 }
 
 /** Upgrade steps: MIGRATIONS[n] turns a version-n save into version n+1. */
@@ -273,6 +325,14 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
   }),
   // v6 added the word filter, starting at the strictest level.
   5: (save) => ({ ...save, version: 6, contentLevel: DEFAULT_CONTENT_LEVEL }),
+  // v7 added tutorials (players keep credit for what they'd already met) and
+  // ability charges on a saved notebook.
+  6: (save) => ({
+    ...save,
+    version: 7,
+    tutorials: { enabled: true, seen: seenBeforeV7(save) },
+    notebook: isObject(save.notebook) ? { ...save.notebook, charges: 0, eraser: false, shield: false } : null,
+  }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

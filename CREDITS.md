@@ -29,6 +29,12 @@ Third-party content bundled with Inkling, with its source and license (REQUIREME
 - **License:** SIL Open Font License 1.1. The full texts are in [`licenses/AtkinsonHyperlegibleNext-OFL.txt`](licenses/AtkinsonHyperlegibleNext-OFL.txt) and [`licenses/AtkinsonHyperlegibleMono-OFL.txt`](licenses/AtkinsonHyperlegibleMono-OFL.txt).
 - **Why:** it was designed so look-alike characters (l I 1 |, 0 O) are easy to tell apart.
 
+## Caveat font
+
+- **What:** Caveat Bold, Latin subset, for handwritten headings, grades, teacher's notes and banners. Never used for text the player has to type. Bundled via `src/fonts.ts`.
+- **Source:** the [Caveat Project Authors](https://github.com/googlefonts/caveat), via the [`@fontsource/caveat`](https://fontsource.org/fonts/caveat) npm package.
+- **License:** SIL Open Font License 1.1. The full text is in [`licenses/Caveat-OFL.txt`](licenses/Caveat-OFL.txt).
+
 ## GitHub mark
 
 - **What:** the GitHub logo (the "Invertocat" mark) beside the source-code link on the About screen, drawn inline in `src/ui/menu.ts`.

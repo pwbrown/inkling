@@ -86,13 +86,16 @@ const TOUR: Step[] = [
   { click: 'How to play' }, { eval: SCROLL_TOP }, { shot: 'how-to-play' }, { key: 'Escape' },
   { click: 'Practice' }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },
-  { click: 'Start writing' }, { wait: 4000 }, { eval: LINEUP }, { wait: 700 }, { shot: 'lineup' },
+  // A fresh player gets the "New on this page" briefing before their first page.
+  { click: 'Start writing' }, { wait: 800 }, { shot: 'briefing' }, { key: 'Enter' },
+  { wait: 4000 }, { eval: LINEUP }, { wait: 700 }, { shot: 'lineup' },
   { key: 'Escape' }, { click: 'Quit to menu' },
   { click: 'Apprentice' }, { shot: 'contents' },
   { click: 'Chapter 1' }, { shot: 'chapter-intro' }, { key: 'Enter' },
   { play: 8000, maxX: 700 }, { shot: 'play' },
   { key: 'Escape' }, { shot: 'pause' }, { key: 'Escape' },
-  { play: 60000, maxX: 1000 }, { shot: 'page-done' },
+  // Let the grade stamp and the stars fill in before the shot.
+  { play: 60000, maxX: 1000 }, { wait: 1500 }, { shot: 'page-done' },
 ];
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));

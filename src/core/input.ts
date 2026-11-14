@@ -7,18 +7,23 @@
  * - Buffer mode, for Run-ons and Misprints: keys edit a buffer with a cursor,
  *   so mistakes stay until fixed with Backspace, Delete and the arrow keys.
  */
+import { abilityCost, chargeKeys, eraserKeys, type ActiveAbility } from './abilities';
 import { APPRENTICE_CHAPTERS } from './campaign';
-import { DIFFICULTIES, GAME_CONFIG, type Difficulty } from './config';
+import { DIFFICULTIES, GAME_CONFIG, mistakeInk, streakKeys, type Difficulty } from './config';
 import { applyEdit, correctPrefix, editDistance, isTextEdit, type EditAction } from './editing';
+import { applyBriefings } from './mechanics';
 import { createStats, type Stats } from './stats';
 import {
+  REVEALED_X,
   WORLD_WIDTH,
+  beginPage,
   createPage,
   isBufferKind,
   isLastPageOfChapter,
   isRevealed,
   markPageStart,
   nextLife,
+  restoreInk,
   splitBoss,
   resetWorld,
   setPhase,
@@ -57,12 +62,36 @@ function registerError(world: World, key: string, target: Target | undefined, ex
   const intended = target ?? mostUrgent(visibleTargets(world));
   const expected = expectedChar === undefined ? intended?.text[intended.typed] : (expectedChar ?? undefined);
 
+  // An armed Eraser rubs the slip out: no cost, and the run carries on. The
+  // key is still noted, so practice keeps focusing on it.
+  if (world.eraser) {
+    world.eraser = false;
+    world.eraserRun = 0;
+    if (expected !== undefined) bothStats(world, (s) => (s.missedKeys[expected] = (s.missedKeys[expected] ?? 0) + 1));
+    world.events.push({ type: 'eraserUsed', key, targetId: target?.id ?? null });
+    return;
+  }
+
+  const run = world.stats.combo;
+  if (run >= GAME_CONFIG.combo.step) world.events.push({ type: 'comboBroken', was: run });
+  // What it costs (GAME_CONFIG.mistakes): points, and later on a little ink.
+  const m = GAME_CONFIG.mistakes;
+  const pointsLost = Math.min(world.stats.score, m.points);
+  const inkCost = mistakeInk(world.difficulty, world.page.chapter, world.mode === 'apprentice');
+  const inkLost = Math.max(0, Math.min(inkCost, world.ink - m.minInk));
+  world.ink -= inkLost;
+  world.cleanRun = 0;
+  world.chargeRun = 0;
+  world.eraserRun = 0;
   bothStats(world, (s) => {
     s.errors++;
     s.combo = 0;
+    const lost = Math.min(s.score, m.points);
+    s.score -= lost;
+    s.penalty += lost;
     if (expected !== undefined) s.missedKeys[expected] = (s.missedKeys[expected] ?? 0) + 1;
   });
-  world.events.push({ type: 'error', key, targetId: target?.id ?? null });
+  world.events.push({ type: 'error', key, targetId: target?.id ?? null, pointsLost, inkLost });
 }
 
 /** Credit a correct keystroke. */
@@ -72,40 +101,91 @@ function registerHit(world: World, key: string): void {
     s.hitKeys[key] = (s.hitKeys[key] ?? 0) + 1;
     s.combo++;
     s.bestCombo = Math.max(s.bestCombo, s.combo);
-    s.score += GAME_CONFIG.points.perChar * multiplier(s.combo);
+    s.score += GAME_CONFIG.points.perChar * multiplier(s.combo) * pointsFactor(world);
   });
-  // A long run of correct keys charges the Blotter.
-  const { comboPerCharge, maxCharges } = GAME_CONFIG.blotter;
-  if (world.stats.combo % comboPerCharge === 0 && world.blotter < maxCharges) {
-    world.blotter++;
-    world.events.push({ type: 'blotterCharged', charges: world.blotter });
+  // A clean run of keys wins a little ink back.
+  world.cleanRun++;
+  if (world.cleanRun >= streakKeys(world.page.chapter)) {
+    world.cleanRun = 0;
+    restoreInk(world, GAME_CONFIG.recovery.streak.ink, 'streak');
+  }
+  const mult = multiplier(world.stats.combo);
+  if (mult > multiplier(world.stats.combo - 1)) world.events.push({ type: 'comboStep', multiplier: mult });
+  // A long clean run earns an ability charge; the run needed grows with the chapter.
+  const { abilities, page } = world;
+  if (abilities.some((id) => id === 'blotter' || id === 'paperweight' || id === 'highlighter')) {
+    world.chargeRun++;
+    if (world.chargeRun >= chargeKeys(page.chapter)) {
+      world.chargeRun = 0;
+      if (world.charges < GAME_CONFIG.abilities.maxCharges) {
+        world.charges++;
+        world.events.push({ type: 'charged', charges: world.charges });
+      }
+    }
+  }
+  // …and re-arms the Eraser.
+  if (abilities.includes('eraser') && !world.eraser) {
+    world.eraserRun++;
+    if (world.eraserRun >= eraserKeys(page.chapter)) {
+      world.eraserRun = 0;
+      world.eraser = true;
+      world.events.push({ type: 'passiveReady', id: 'eraser' });
+    }
   }
 }
 
-/**
- * Enter while playing: spend a Blotter charge to blot every creature on the
- * page except the Spill, for a share of their points. Returns whether it fired.
- */
-export function useBlotter(world: World): boolean {
-  if (world.phase !== 'playing' || world.blotter <= 0) return false;
-  const victims = visibleTargets(world).filter((t) => !t.boss);
-  if (victims.length === 0) return false;
+/** Points are doubled while the Highlighter is on. */
+function pointsFactor(world: World): number {
+  return world.highlightMs > 0 ? GAME_CONFIG.abilities.highlighter.pointsFactor : 1;
+}
 
-  world.blotter--;
-  world.events.push({ type: 'blotter' });
-  const { pointsShare } = GAME_CONFIG.blotter;
-  const { perChar, perTarget } = GAME_CONFIG.points;
-  for (const target of victims) {
-    const points = Math.round((perTarget + perChar * [...target.text].length) * pointsShare);
-    bothStats(world, (s) => {
-      s.score += points;
-      s.destroyed++;
-    });
-    world.events.push({ type: 'destroyed', target, points, blotted: true });
+/**
+ * Fire an active ability, if it's unlocked and there are charges to pay for
+ * it. Returns whether it fired.
+ * - Blotter: blot every creature on the page except the Spill (and ink
+ *   bottles), for a share of their points.
+ * - Paperweight: everything crawls for a few seconds.
+ * - Highlighter: ghost text shows and points are doubled for a few seconds.
+ */
+export function useAbility(world: World, id: ActiveAbility): boolean {
+  if (world.phase !== 'playing' || !world.abilities.includes(id)) return false;
+  const cost = abilityCost(id);
+  if (world.charges < cost) return false;
+  const config = GAME_CONFIG.abilities;
+
+  if (id === 'paperweight') {
+    if (world.slowMs > 0) return false;
+    world.slowMs = config.paperweight.durationMs;
+  } else if (id === 'highlighter') {
+    if (world.highlightMs > 0) return false;
+    world.highlightMs = config.highlighter.durationMs;
+    for (const target of world.targets) if (target.ghost) target.revealX = REVEALED_X;
+  } else {
+    const victims = visibleTargets(world).filter((t) => !t.boss && !t.bottle);
+    if (victims.length === 0) return false;
+    world.charges -= cost;
+    world.events.push({ type: 'ability', id });
+    const { perChar, perTarget } = GAME_CONFIG.points;
+    for (const target of victims) {
+      const points = Math.round((perTarget + perChar * [...target.text].length) * config.blotter.pointsShare);
+      bothStats(world, (s) => {
+        s.score += points;
+        s.destroyed++;
+      });
+      world.events.push({ type: 'destroyed', target, points, blotted: true });
+    }
+    world.targets = world.targets.filter((t) => !victims.includes(t));
+    if (!world.targets.some((t) => t.id === world.lockedId)) world.lockedId = null;
+    return true;
   }
-  world.targets = world.targets.filter((t) => !victims.includes(t));
-  if (!world.targets.some((t) => t.id === world.lockedId)) world.lockedId = null;
+  world.charges -= cost;
+  world.events.push({ type: 'ability', id });
   return true;
+}
+
+/** Enter while playing: the Blotter. */
+export function useBlotter(world: World): boolean {
+  return useAbility(world, 'blotter');
 }
 
 /**
@@ -115,7 +195,7 @@ export function useBlotter(world: World): boolean {
  */
 function destroyTarget(world: World, target: Target, scoreBefore: number): void {
   bothStats(world, (s) => {
-    s.score += GAME_CONFIG.points.perTarget * multiplier(s.combo);
+    s.score += GAME_CONFIG.points.perTarget * multiplier(s.combo) * pointsFactor(world);
   });
   if (target.lives > 1) {
     nextLife(world, target);
@@ -131,6 +211,7 @@ function destroyTarget(world: World, target: Target, scoreBefore: number): void 
     s.destroyed++;
   });
   if (target.boss) splitBoss(world, target);
+  if (target.bottle) restoreInk(world, GAME_CONFIG.recovery.bottle.ink, 'bottle', target);
   // Points from the finishing keystroke plus the completion bonus.
   world.events.push({ type: 'destroyed', target, points: world.stats.score - scoreBefore });
 }
@@ -191,7 +272,7 @@ function editBuffer(world: World, target: Target, action: EditAction): void {
     if (char) registerHit(world, char);
     else
       bothStats(world, (s) => {
-        s.score += GAME_CONFIG.points.perChar * multiplier(s.combo);
+        s.score += GAME_CONFIG.points.perChar * multiplier(s.combo) * pointsFactor(world);
       });
   } else if (action.type === 'insert' || target.kind === 'misprint') {
     registerError(world, char ?? action.type, target, expected);
@@ -305,6 +386,7 @@ function turnPage(world: World): void {
     : createPage(world.difficulty, chapter, index + 1, world.content, world.mode);
   world.pageStats = createStats();
   world.inkRefilled = 0;
+  world.shieldEarned = false;
 }
 
 /** True when the page just cleared was the last page of the last Apprentice chapter. */
@@ -333,7 +415,7 @@ export function startPractice(world: World, difficulty: Difficulty = world.selec
   resetWorld(world, difficulty);
   world.mode = 'practice';
   markPageStart(world);
-  setPhase(world, 'playing');
+  beginPage(world);
 }
 
 /** Enter: start a notebook, turn the page, or go back to the new-notebook screen. */
@@ -343,6 +425,13 @@ export function confirm(world: World): void {
       startPractice(world);
       break;
     case 'intro':
+      beginPage(world);
+      break;
+    case 'briefing':
+      // The card has been read: set up the guided try and start the page.
+      applyBriefings(world, world.briefing);
+      world.seenMechanics = [...new Set([...world.seenMechanics, ...world.briefing])];
+      world.briefing = [];
       setPhase(world, 'playing');
       break;
     case 'pageCleared':
@@ -353,7 +442,8 @@ export function confirm(world: World): void {
       turnPage(world);
       markPageStart(world);
       // Each Apprentice chapter opens with its new-keys card.
-      setPhase(world, world.mode === 'apprentice' && world.page.index === 0 ? 'intro' : 'playing');
+      if (world.mode === 'apprentice' && world.page.index === 0) setPhase(world, 'intro');
+      else beginPage(world);
       break;
     case 'gameOver':
       retryChapter(world);
@@ -369,9 +459,18 @@ function restoreTo(world: World, snapshot: StartSnapshot): void {
   world.targets = [];
   world.lockedId = null;
   world.ink = Math.max(1, snapshot.ink);
+  world.cleanRun = 0;
+  world.charges = snapshot.charges;
+  world.eraser = snapshot.eraser;
+  world.shield = snapshot.shield;
+  world.chargeRun = 0;
+  world.eraserRun = 0;
+  world.slowMs = 0;
+  world.highlightMs = 0;
   world.inkRefilled = 0;
   world.stats = structuredClone(snapshot.stats);
   world.pageStats = createStats();
+  world.guide = null;
   world.events.push({ type: 'reset' });
   markPageStart(world);
   setPhase(world, 'playing');

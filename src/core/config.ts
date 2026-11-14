@@ -79,6 +79,10 @@ interface KindLimits {
 export const GAME_CONFIG = {
   /** Size of the ink reservoir (the player's health). */
   maxInk: 100,
+  /** A newly taught creature's guided first try moves at this share of its usual speed. */
+  guideSpeedFactor: 0.6,
+  /** Below this share of the ink well, the game warns that ink is running low. */
+  lowInk: 0.3,
   /** Ink refilled when a chapter is completed, as a fraction of maxInk. */
   chapterInkRefill: 0.3,
 
@@ -222,11 +226,66 @@ export const GAME_CONFIG = {
   },
 
   /**
-   * The Blotter: a power charged by long runs of correct keys. Press Enter
-   * while playing to blot every creature on the page (except a boss) for a
-   * share of their points.
+   * What a wrong key costs. Points always; ink only once the player has found
+   * their feet (never on Relaxed, and not in the first Apprentice chapters,
+   * after which it ramps in). A mistake never takes the last of the ink: only
+   * a creature reaching the margin can end a run.
    */
-  blotter: { comboPerCharge: 25, maxCharges: 2, pointsShare: 0.5 },
+  mistakes: {
+    points: 15,
+    ink: { relaxed: 0, normal: 1, hard: 2, expert: 3 } as Record<Difficulty, number>,
+    /** First Apprentice chapter (0-based) where mistakes cost ink. */
+    fromApprenticeChapter: 4,
+    /** Apprentice chapters over which the ink cost grows to its full amount. */
+    rampChapters: 6,
+    minInk: 1,
+  },
+
+  /**
+   * Winning ink back mid-page. A clean run of keys trickles ink in, and when
+   * the well is low an ink bottle may cross the page: type its word to drink
+   * it. Both get stingier as chapters go by.
+   */
+  recovery: {
+    streak: { keys: 30, keysPerChapter: 1, maxKeys: 60, ink: 3 },
+    bottle: {
+      /** Only appears while the ink well is below this share. */
+      belowInk: 0.6,
+      /** Not before this share of the page has spawned. */
+      afterSpawned: 0.25,
+      /** Chance per ordinary spawn, falling each chapter down to `minChance`. */
+      chance: 0.45,
+      chancePerChapter: 0.015,
+      minChance: 0.12,
+      ink: 20,
+      /** How much faster than the page's creatures it moves, growing each chapter. */
+      speedFactor: 1.1,
+      speedPerChapter: 0.02,
+      maxSpeedFactor: 1.6,
+    },
+  },
+
+  /**
+   * Abilities. A clean run of keys earns a charge (an ink drop in the HUD);
+   * the run needed grows with the chapter, so charges get harder to earn.
+   * Active abilities spend charges; passive ones are held and used up
+   * automatically. Each unlocks at an Apprentice chapter (0-based, further
+   * apart each time) or at a player level, whichever comes first.
+   */
+  abilities: {
+    maxCharges: 3,
+    chargeKeys: { base: 25, perChapter: 1, max: 50 },
+    /** Enter: blot every creature on the page (except a boss) for a share of their points. */
+    blotter: { cost: 2, pointsShare: 0.5, fromChapter: 1, fromLevel: 2 },
+    /** Passive: forgives the next wrong key. Re-arms after a clean run that grows with the chapter. */
+    eraser: { keys: 40, keysPerChapter: 1, maxKeys: 70, fromChapter: 3, fromLevel: 3 },
+    /** Pins the page down: every creature crawls for a few seconds. */
+    paperweight: { cost: 1, durationMs: 5000, speedFactor: 0.35, fromChapter: 6, fromLevel: 5 },
+    /** Shows ghost text and doubles points for a few seconds. */
+    highlighter: { cost: 1, durationMs: 6000, pointsFactor: 2, fromChapter: 10, fromLevel: 8 },
+    /** Passive: soaks up the next creature to reach the margin. Earned by a page with no leaks. */
+    blottingPaper: { fromChapter: 15, fromLevel: 12 },
+  },
 
   /**
    * The Spill: a boss on the last page of every Apprentice chapter. A big,
@@ -395,5 +454,30 @@ export function pageParams(
     inkLoss: Math.round(base.inkLoss * profile.inkLoss),
     variants: variantChances(kind, chapter, difficulty),
     sprinkles: sprinkleChances(kind, chapter, false, canUse),
+  };
+}
+
+/** Ink a wrong key costs on this page (GAME_CONFIG.mistakes). `chapter` is 0-based. */
+export function mistakeInk(difficulty: Difficulty, chapter: number, apprentice: boolean): number {
+  const m = GAME_CONFIG.mistakes;
+  const full = m.ink[difficulty];
+  if (!apprentice || full === 0) return full;
+  if (chapter < m.fromApprenticeChapter) return 0;
+  const ramp = Math.min(1, (chapter - m.fromApprenticeChapter + 1) / m.rampChapters);
+  return Math.ceil(full * ramp);
+}
+
+/** Correct keys in a row needed to win a little ink back, growing with the chapter. */
+export function streakKeys(chapter: number): number {
+  const s = GAME_CONFIG.recovery.streak;
+  return Math.min(s.maxKeys, s.keys + s.keysPerChapter * chapter);
+}
+
+/** Chance that an ordinary spawn also sends an ink bottle, and how fast it moves. */
+export function bottleParams(chapter: number): { chance: number; speedFactor: number } {
+  const b = GAME_CONFIG.recovery.bottle;
+  return {
+    chance: Math.max(b.minChance, b.chance - b.chancePerChapter * chapter),
+    speedFactor: Math.min(b.maxSpeedFactor, b.speedFactor + b.speedPerChapter * chapter),
   };
 }
