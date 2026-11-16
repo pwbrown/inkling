@@ -1,7 +1,7 @@
 name: Deploy
 
 # Publishes the game to GitHub Pages on every push to main (REQUIREMENTS §12),
-# at https://pwbrown.github.io/inkling/. It can also be run by hand from the
+# at https://pwbrown.github.io/inky-keys/. It can also be run by hand from the
 # Actions tab ("Run workflow").
 # One-time setup: repo Settings → Pages → Source: "GitHub Actions".
 

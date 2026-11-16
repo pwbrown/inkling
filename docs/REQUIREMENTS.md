@@ -221,7 +221,7 @@ Inky Keys is **open source** and will be **publicly hosted** as a static web app
 ### Hosting
 - A static host with free HTTPS: **GitHub Pages** (default), Cloudflare Pages or Netlify.
 - HTTPS is required for the service worker and PWA install.
-- Vite's `base` setting must match the deploy path (e.g. `/inkling/` on GitHub Pages).
+- Vite's `base` setting must match the deploy path (e.g. `/inky-keys/` on GitHub Pages).
 - The host must not inject analytics or third-party scripts.
 - The same build must also work fully offline after first load, and locally through `vite preview`.
 

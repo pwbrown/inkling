@@ -1,6 +1,6 @@
 # Game name change feasibility
 
-Claude Code session started 2026-11-16. 16 prompts.
+Claude Code session started 2026-11-16. 20 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -839,12 +839,222 @@ The game is now **Inky Keys** on the `chore/rename` branch, nothing is committed
 
 > Commit the working tree changes with a sensible message.
 
-<details><summary>1 tool call</summary>
+<details><summary>3 tool calls</summary>
 
 - **Shell:** Export the session transcripts into the docs
 
   ```bash
   npm run transcript 2>&1 | tail -5 && git status --short docs/transcripts | head
+  ```
+- **Shell:** Scan the new transcript for private details
+
+  ```bash
+  git diff --stat docs/transcripts; F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; wc -c $F; grep -n -i -E "@[a-z0-9.-]+\.(com|org|net)|[removed]|/Users/|/private/tmp|token|api[_-]?key|secret|password|ghp_|sk-[a-z0-9]" $F | cut -c1-200 | head -30; echo "--- other changed transcript:"; git diff docs/transcripts/2026-11-14-add-two-new-keyboard-layouts-491092a5.md | grep "^[+-]" | grep -i -E "@|/Users/|token|secret|password" | head
+  ```
+- **Shell:** Check the transcript for names and local paths
+
+  ```bash
+  F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; grep -n -i -o -E ".{30}(philip|[removed]|claude-501|scratchpad|tool-results).{30}" $F | head; grep -c "pwbrown" $F
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The transcript is clean: home paths are already removed, and there are no emails or tokens. The only username is in the public GitHub URL.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Stage everything and commit the rename
+
+  ```bash
+  git add -A && git status --short | wc -l && git commit -q -F - <<'EOF'
+  Rename the game to Inky Keys and Blotlings to Scrawlers
+
+  - Rename Inkling to Inky Keys everywhere players see it: page title, PWA
+    manifest, menu logo (widened to fit), About, How to play, tutorials, save
+    messages and the top rank (now "Master of Keys")
+  - Rename Blotlings to Scrawlers, and the Spill's split pieces to Inkmites
+  - Name save exports inky-keys-save-<date>.json
+  - Rename the INKLING_BASE build variable to INKY_KEYS_BASE, the package to
+    inky-keys and the dev launch config to inky-keys-dev
+  - Keep the internal `
+  … (561 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I committed the rename on `chore/rename` as `c140cbd`. It covers 47 files, and the working tree is now clean.
+
+Before committing I ran `npm run transcript` and checked the new transcript for private details. Home folder paths were already removed, and there are no emails or tokens. The only username in it is the public GitHub URL.
+
+The branch isn't merged into `main` or pushed yet. Merging it would be a fast-forward, then I'd delete the branch with `git branch -d`, as CLAUDE.md asks.
+
+## 🧑 Prompt
+
+> Merge to main
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Fast-forward main to the rename branch and delete it
+
+  ```bash
+  git switch -q main && git merge --ff-only chore/rename && git branch -d chore/rename && git log --oneline -2 && git status -sb | head -1
+  ```
+- **Shell:** Note in memory that the rename is merged
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && perl -pi -e 's/were made on the `chore\/rename` branch and were uncommitted at the end of that session\./were merged into `main` as c140cbd (not pushed as of 2026-11-15)./; s/^description: .*$/description: Rename to Inky Keys (enemies Scrawlers\/Inkmites) merged to main 2026-11-15; repo\/Pages URL rename still open/' rename-pending.md && perl -pi -e 's/Inky Keys rename on chore\/rename;/Inky Keys rename merged to main;/' MEMORY.md && grep -n "merged" rename-pending.md MEMORY.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The rename is now on `main`. It was a fast-forward to `c140cbd`, and I deleted the `chore/rename` branch.
+
+`main` is one commit ahead of `origin` and hasn't been pushed. Pushing is safe: the deploy will put the new name on the current site at pwbrown.github.io/inkling, and the address stays the same. The repo rename and the move to inkykeys.com can come later, together.
+
+## 🧑 Prompt
+
+> push it
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main and show the deploy run it started
+
+  ```bash
+  git push origin main 2>&1 | tail -3 && sleep 5 && gh run list --workflow deploy.yml --limit 1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Pushed, and the deploy is running. I'll wait for it to finish, then check the live site.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Wait for the deploy run to finish
+
+  ```bash
+  gh run watch 43813488019 --exit-status >/dev/null 2>&1; gh run view 43813488019 --json conclusion,status -q '.status+" "+.conclusion'
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"https://pwbrown.github.io/inkling/?v=c140cbd","tabId":"tab-1"}},{"name":"computer","input":{"action":"wait","duration":3,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"({title: document.title, log
+… (237 more characters)`
+- **Shell:** Note in memory that the rename is live
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && perl -pi -e 's/\(not pushed as of 2026-11-15\)/and pushed; it is live at pwbrown.github.io\/inkling/' rename-pending.md && grep -c "pushed; it is live" rename-pending.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The rename is pushed and live. The deploy succeeded, and **https://pwbrown.github.io/inkling/** now shows Inky Keys in the page title, the menu logo and the app manifest, with no console errors.
+
+Players who already have the game should pick up the new version automatically. The page updates itself, though an installed app may take a launch or two to show the new name.
+
+Still to do, best done together: rename the GitHub repo and move the site to inkykeys.com, so players only change address once. When your DNS is ready, I'll set it up for inkykeys.com.
+
+## 🧑 Prompt
+
+> rename the github repo to inky-keys
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Rename the GitHub repo to inky-keys
+
+  ```bash
+  gh repo rename inky-keys --repo pwbrown/inkling --yes 2>&1; gh repo view pwbrown/inky-keys --json name,url -q '.name+" "+.url'
+  ```
+- **Shell:** Point the local remote at the renamed repo
+
+  ```bash
+  git remote set-url origin https://github.com/pwbrown/inky-keys.git && git remote -v | head -1 && git fetch -q origin && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The repo is renamed. The live site was built for the `/inkling/` path, so I'm redeploying it to build for `/inky-keys/`.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Trigger the deploy workflow and wait for it
+
+  ```bash
+  gh workflow run deploy.yml --repo pwbrown/inky-keys --ref main && sleep 6 && RID=$(gh run list --repo pwbrown/inky-keys --workflow deploy.yml --limit 1 --json databaseId -q '.[0].databaseId') && echo run $RID && gh run watch $RID --repo pwbrown/inky-keys --exit-status >/dev/null 2>&1; gh run view $RID --repo pwbrown/inky-keys --json status,conclusion,event -q '.event+" "+.status+" "+.conclusion'; gh api repos/pwbrown/inky-keys/pages -q .html_url
+  ```
+- **Shell:** Check the new and old site and repo URLs
+
+  ```bash
+  for u in https://pwbrown.github.io/inky-keys/ https://pwbrown.github.io/inky-keys/manifest.webmanifest https://pwbrown.github.io/inkling/ https://github.com/pwbrown/inkling; do printf "%s -> " $u; curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" $u; done; curl -s https://pwbrown.github.io/inky-keys/ | grep -o 'src="[^"]*index[^"]*"' | head -2
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"https://pwbrown.github.io/inky-keys/","tabId":"tab-1"}},{"name":"computer","input":{"action":"wait","duration":3,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"({title: document.title, logo: docum
+… (245 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The new site works, and its service worker is registered at `/inky-keys/`. Now updating the links in the code and docs.
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Create a branch and find old repo and site URLs
+
+  ```bash
+  git switch -q -c chore/repo-url && git grep -n -E "pwbrown/inkling|pwbrown\.github\.io/inkling|/inkling/" -- . ':!docs/transcripts' ':!docs/progression/*.png'
+  ```
+- **Shell:** Point links at the renamed repo and site
+
+  ```bash
+  git grep -lz -E "pwbrown/inkling|pwbrown\.github\.io/inkling|/inkling/" -- .github README.md docs/REQUIREMENTS.md src/ui/menu.ts | xargs -0 perl -pi -e 's#pwbrown\.github\.io/inkling/#pwbrown.github.io/inky-keys/#g; s#github\.com/pwbrown/inkling\b#github.com/pwbrown/inky-keys#g; s#INKY_KEYS_BASE=/inkling/#INKY_KEYS_BASE=/inky-keys/#g; s#\(e\.g\. `/inkling/` on GitHub Pages\)#(e.g. `/inky-keys/` on GitHub Pages)#' && git diff --stat | tail -1 && git grep -n -E "pwbrown/inkling|github\.io/inkling|/inkling/" -- . ':!docs/transcripts' || echo "none left"
+  ```
+- **Shell:** Run checks and build, and show the link changes
+
+  ```bash
+  npm run check 2>&1 | grep -E "Tests |error" ; npm run build 2>&1 | grep -E "error|built in" ; git diff src/ui/menu.ts .github
+  ```
+- **Wrote** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory/rename-pending.md`
+- **Shell:** Update the memory index and the domain note
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && perl -pi -e 's/^- \[Rename pending\].*$/- [Rename pending](rename-pending.md) — repo now pwbrown\/inky-keys, site at \/inky-keys\/; link fixes on chore\/repo-url/' MEMORY.md && perl -pi -e 's/pushing a `\/` base before the domain resolves breaks the current site at pwbrown.github.io\/inkling, because the asset paths change from `\/inkling\/` to `\/`\./pushing a `\/` base before the domain resolves breaks the current site at pwbrown.github.io\/inky-keys, because the asset paths change from `\/inky-keys\/` to `\
+  … (160 more characters)
+  ```
+- **Read** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory/rename-pending.md`
+- **Wrote** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory/rename-pending.md`
+
+</details>
+
+### 🤖 Claude
+
+The repo is now **github.com/pwbrown/inky-keys**, and the game is live at **https://pwbrown.github.io/inky-keys/**. Your local copy now pushes to the new address.
+
+**What happened to the site:**
+- The deployed build only worked at the old path, so I re-ran the deploy workflow by hand to build it for `/inky-keys/`. The new address loads with no errors, and offline play is set up there.
+- The old address **https://pwbrown.github.io/inkling/ now shows a 404 page**, because GitHub doesn't forward old site addresses. Old links to the repo itself do still forward to the new one.
+- **I was wrong earlier about saves.** Players' saves are kept per website, and both addresses are on the same one (pwbrown.github.io). So anyone who opens the new address finds their saves and settings there. The move to inkykeys.com is different: that is a new website, so players would have to export their saves and import them there.
+- Someone who installed the game from the old address will still have the old version cached, but it won't get updates. Making the old address forward to the new one would mean creating a new repo called `inkling`, and that would stop GitHub forwarding the old repo address, so I haven't done it.
+
+**The link updates aren't committed yet.** They're on a new `chore/repo-url` branch: the in-game source and bug-report links, the README, the issue template, the deploy workflow comment, and REQUIREMENTS. Checks and the build pass. The in-game links still work meanwhile, because GitHub forwards the old repo address. Say if you'd like me to commit, merge and push them.
+
+## 🧑 Prompt
+
+> commit, merge and push the link updates
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export the transcript and scan it for private details
+
+  ```bash
+  npm run transcript 2>&1 | grep -c Wrote; git status --short; F=$(git status --short docs/transcripts | awk '{print $2}' | grep -v README); echo "$F"; grep -n -i -o -E ".{20}([a-z0-9._%+-]+@[a-z0-9.-]+\.(com|org|net)|/Users/[a-z]+|philip|[removed]|claude-501|ghp_|sk-[a-z0-9]{10}).{20}" $F | head
   ```
 
 </details>

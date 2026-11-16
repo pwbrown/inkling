@@ -16,7 +16,7 @@ import { h } from './dom';
 export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk' | 'players' | 'playerEdit' | 'about';
 
 /** Inky Keys' source code and issue forms. */
-export const REPO_URL = 'https://github.com/pwbrown/inkling';
+export const REPO_URL = 'https://github.com/pwbrown/inky-keys';
 export const ISSUES_URL = `${REPO_URL}/issues/new/choose`;
 
 export interface PlayerEntry {
