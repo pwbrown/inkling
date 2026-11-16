@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
@@ -6,8 +7,14 @@ import { defineConfig } from 'vitest/config';
 // the live site at inkykeys.com and local builds use `/`.
 const base = process.env.INKY_KEYS_BASE ?? '/';
 
+// The game shows its version on the About page (src/version.ts).
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+
 export default defineConfig({
   base,
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+  },
   build: {
     target: 'es2022',
     sourcemap: true,

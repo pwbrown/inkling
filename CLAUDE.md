@@ -8,6 +8,7 @@ Inky Keys is an offline-first, open-source browser typing game (TypeScript + Vit
 - Merge into `main` with a fast-forward merge (`git merge --ff-only <branch>`).
 - **Once a branch is merged, delete it locally** (`git branch -d <branch>`). Use `-d`, not `-D`, so git refuses to delete anything unmerged.
 - Commit only when asked.
+- Releases: see `docs/RELEASING.md`. Anything a player will notice gets a release entry in `src/core/releases.ts` (short player-facing notes; everything else is "bug fixes") and a version bump in `package.json`. Tag with `npm run release:tag` on `main` after merging; push tags only when asked.
 - When committing, also run `npm run transcript` and include the updated `docs/transcripts/` so the build history stays public. Scan the export for private details (emails, tokens, codes, personal paths) before committing. Commit messages: a short summary line, then bullet points of what changed.
 
 ## Before calling work done

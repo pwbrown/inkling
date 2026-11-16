@@ -73,6 +73,12 @@
   color: var(--tc-ink-light);
 }
 
+.menu-version {
+  margin: -10px 0 0;
+  font-weight: 700;
+  color: var(--tc-ink-light);
+}
+
 .menu-list {
   display: grid;
   gap: 8px;

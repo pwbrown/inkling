@@ -61,6 +61,9 @@ import { openTypeCase, presetName } from './ui/typeCase';
 import { openBriefingDialog } from './ui/briefingDialog';
 import { openUnlockDialog, type UnlockedItem } from './ui/unlockDialog';
 import { openWordLists } from './ui/wordLists';
+import { openWhatsNewDialog } from './ui/whatsNewDialog';
+import { RELEASES, compareVersions, releasesToAnnounce, MAX_NEW_RELEASES_SHOWN, type Release } from './core/releases';
+import { APP_VERSION, loadSeenVersion, saveSeenVersion } from './version';
 
 async function main(): Promise<void> {
   const host = document.getElementById('app');
@@ -467,6 +470,20 @@ async function main(): Promise<void> {
     menu.show('title');
   };
 
+  /** Release notes: after an update, or from the About page. */
+  const openWhatsNew = (releases: readonly Release[], earlier: readonly Release[], afterUpdate: boolean) => {
+    if (dialogOpen || (game.phase !== 'ready' && game.phase !== 'paused')) return;
+    dialogOpen = true;
+    openWhatsNewDialog(document.body, {
+      releases,
+      earlier,
+      afterUpdate,
+      onClose: () => {
+        dialogOpen = false;
+      },
+    });
+  };
+
   const savePlayer = async (id: string | null, name: string, badge: Player['badge'], contentLevel: ContentLevel) => {
     if (!cleanName(name)) return false;
     let target = id;
@@ -617,6 +634,11 @@ async function main(): Promise<void> {
     onChoosePlayer: (id) => void switchPlayer(id),
     onSavePlayer: savePlayer,
     onDeletePlayer: (id) => void deletePlayer(id),
+    appVersion: () => APP_VERSION,
+    onWhatsNew: () => {
+      const released = RELEASES.filter((r) => compareVersions(r.version, APP_VERSION) <= 0);
+      openWhatsNew(released.slice(0, 1), released.slice(1), false);
+    },
   });
   // With more than one player, ask who's writing first.
   if (players.list.players.length > 1) menu.show('players');
@@ -887,6 +909,16 @@ async function main(): Promise<void> {
     syncMenu();
   });
   syncMenu();
+
+  // After an update, say what's new, once. Only remember the version if it
+  // stuck, or blocked storage would show the notes on every visit.
+  {
+    const returning = store.data.profile.ink > 0 || players.list.players.length > 1;
+    const fresh = releasesToAnnounce(loadSeenVersion(), APP_VERSION, returning);
+    if (saveSeenVersion(APP_VERSION) && fresh.length > 0) {
+      openWhatsNew(fresh.slice(0, MAX_NEW_RELEASES_SHOWN), fresh.slice(MAX_NEW_RELEASES_SHOWN), true);
+    }
+  }
 
   if (import.meta.env.DEV) {
     // Handy for poking at state from the console during development. Still

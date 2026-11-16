@@ -1,6 +1,6 @@
 # Game name change feasibility
 
-Claude Code session started 2026-11-16. 28 prompts.
+Claude Code session started 2026-11-16. 29 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1924,3 +1924,179 @@ All 7 sessions and the memory folder moved to `~/.claude/projects/-Users-[remove
   ```
 
 </details>
+
+### 🤖 Claude
+
+Transcripts are clean. Committing.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Commit, merge into main and delete the branch
+
+  ```bash
+  git add -A && git status --short | grep -c private-words; git commit -q -F - <<'EOF'
+  New app icons for Inky Keys, and transcript export fixes
+
+  - Redraw the app icons and favicon as a keyboard key with the smiling ink
+    drop from the menu logo on it, still on notebook paper with the red margin
+  - Note the local folder's new name (~/projects/inky-keys) in REQUIREMENTS
+  - Transcript export: shorten file paths that use the old folder name too, so
+    older transcripts stay unchanged after the folder rename
+  - Transcript export: also remove words listed in a git-ignored .private-words
+    file, for accoun
+  … (264 more characters)
+  ```
+- **Shell:** Push, wait for the deploy and compare the live icons
+
+  ```bash
+  git push -q origin main && sleep 6; RID=$(gh run list --workflow deploy.yml --limit 1 --json databaseId -q '.[0].databaseId'); gh run watch $RID --exit-status >/dev/null 2>&1; gh run view $RID --json headSha,conclusion -q '.headSha[0:7]+" "+.conclusion'; curl -s https://inkykeys.com/favicon.svg | grep -c 'fill="#fffdf7"'; curl -s -o /dev/null -w "icon %{http_code}\n" https://inkykeys.com/icons/icon-512.png; curl -s https://inkykeys.com/icons/icon-512.png | shasum | cut -c1-12; shasum public/icons/icon-512.png | cut -c1-12; git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The new icons are live at inkykeys.com. I committed them as `28508af`, merged it into `main`, deleted the branch and pushed. The deploy succeeded, and the live icon file matches the one in the repo exactly.
+
+Before committing I re-exported the transcripts. None of the words in `.private-words` appear in them, and neither do any email addresses or home folder paths. Git ignores `.private-words`, so it wasn't committed.
+
+Devices that already installed the game may keep showing the old icon for a while, because phones and browsers cache app icons. It updates on its own eventually, or straight away if you remove the app and install it again from inkykeys.com.
+
+## 🧑 Prompt
+
+> delete the old symlinks
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Confirm both are links, then delete them
+
+  ```bash
+  ls -ld ~/projects/inkling ~/.claude/projects/-Users-[removed]-projects-inkling; test -L ~/projects/inkling && rm ~/projects/inkling && echo "removed project link"; test -L ~/.claude/projects/-Users-[removed]-projects-inkling && rm ~/.claude/projects/-Users-[removed]-projects-inkling && echo "removed sessions link"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Both links are gone. Checking that this session isn't recreating the old sessions folder as it writes its log.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check which session folders exist and that the log is current
+
+  ```bash
+  ls -la ~/.claude/projects/ | grep -i ink; ls ~/projects | grep -i ink; stat -f "%Sm" ~/.claude/projects/-Users-[removed]-projects-inky-keys/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl; date
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Both old paths have come back as real folders, and the app has moved this session's working folder back to `~/projects/inkling`. I'll look at what's inside them before touching anything.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** List what is inside the recreated old folders
+
+  ```bash
+  ls -la /Users/[removed]/projects/inkling; find /Users/[removed]/projects/inkling -maxdepth 3 | head -20; echo; find ~/.claude/projects/-Users-[removed]-projects-inkling -maxdepth 2 -exec ls -ld {} \; | head
+  ```
+- **preview_stop** `{"serverId":"2921e6b3-6010-4259-8c44-f60e9e693da0"}`
+- **Shell:** Compare the split session logs
+
+  ```bash
+  O=~/.claude/projects/-Users-[removed]-projects-inkling/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl; N=~/.claude/projects/-Users-[removed]-projects-inky-keys/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl; wc -l $O $N; python3 -I -c "
+  import json,sys
+  def info(p):
+    L=[json.loads(l) for l in open(p)]
+    return [(x.get('timestamp'),x.get('uuid','')[:8],x.get('type')) for x in L]
+  o=info('$O'); n=info('$N')
+  print('old first/last', o[0], o[-1]); print('new last', n[-1])
+  nu={u for _,u,_ in n}; print('old uuids already in new:', sum(1 for _,u,_ in o if u in nu), 'of', len(o))
+  "
+  ```
+- **Shell:** Back up the main log, then add the split-off lines to it
+
+  ```bash
+  cd ~/.claude/projects && O=-Users-[removed]-projects-inkling/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl; N=-Users-[removed]-projects-inky-keys/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl; cp -p -- "$N" "<temp file>" && python3 -I - "$O" "$N" <<'EOF'
+  import sys
+  old, new = sys.argv[1], sys.argv[2]
+  have = set(open(new).read().splitlines())
+  add = [l for l in open(old).read().splitlines() if l and l not in have]
+  with open(new, 'a') as f:
+      for l in add: f.write(l + '\n')
+  print('
+  … (57 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The old log keeps growing while we talk, so I'll swap the link in first and then copy across anything written in between.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Put the sessions link back and copy the remaining lines
+
+  ```bash
+  cd ~/.claude/projects && S=<temp file> && mv -- -Users-[removed]-projects-inkling "$S" && ln -s -- -Users-[removed]-projects-inky-keys -Users-[removed]-projects-inkling && python3 -I - "$S/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl" -Users-[removed]-projects-inky-keys/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl <<'EOF'
+  import sys
+  old, new = sys.argv[1], sys.argv[2]
+  have = set(open(new).read().splitlines())
+  add = [l for l in open(old).read().splitlines() if l and l not in have
+  … (147 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Sessions link restored with the log in one piece. Now the project folder: it holds only Vite's cache, which Vite rebuilds when it needs it.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Remove the stray Vite cache and put the folder link back
+
+  ```bash
+  cd /Users/[removed]/projects && find inkling -type f | sed 's/^/  /'; test -z "$(find inkling -type f ! -path 'inkling/.vite/*')" && rm -r inkling/.vite && rmdir inkling && ln -s inky-keys inkling && ls -ld inkling inky-keys && cd /Users/[removed]/projects/inkling && git log --oneline -1
+  ```
+- **Shell:** Check the merged log parses and the repo is clean
+
+  ```bash
+  python3 -I -c "
+  import json,os
+  p=os.path.expanduser('~/.claude/projects/-Users-[removed]-projects-inky-keys/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl')
+  n=0
+  for l in open(p): json.loads(l); n+=1
+  print('log lines OK:', n)"; git status --short | head -3; echo "status lines: $(git status --short | wc -l)"
+  ```
+- **Shell:** Note in memory when the links can go
+
+  ```bash
+  cd ~/.claude/projects/-Users-[removed]-projects-inky-keys/memory && perl -0pi -e 's/They can be deleted once no session is open on the old path\./They can only be deleted once the session that did the move (26b363a8) is closed. Deleting them while it was open (tried 2026-11-16) made the app recreate both old folders and split that session\x27s log, so the links were put back./' rename-pending.md && grep -c "put back" rename-pending.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I deleted both links, but had to put them back. They can only go once this session is closed.
+
+**What happened:** this session is still tied to the old paths, which I said earlier was why the links existed. Once they were gone:
+- The app moved this session back into `~/projects/inkling` and recreated that folder. The dev server, which had been started from the old path, also put its Vite cache there.
+- This session started writing its log to a new file at the old sessions path, splitting it in two.
+
+**What I did:**
+- Stopped the dev server.
+- Merged the split-off log lines back into the main log, skipping duplicates. The merged log parses cleanly, and I kept a backup of it in my scratchpad first.
+- Deleted the stray Vite cache, which Vite rebuilds when it needs it.
+- Put both links back. The repo is clean and nothing was lost.
+
+**To remove them for good:** close this session, then run this from a normal terminal (not a Claude session opened in `~/projects/inkling`):
+
+```bash
+rm ~/projects/inkling ~/.claude/projects/-Users-[removed]-projects-inkling
+```
+
+The command only deletes the two links, never what they point to. I've also noted in memory that they're safe to remove after this session ends.

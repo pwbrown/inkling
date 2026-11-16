@@ -1,0 +1,53 @@
+/* "What's new" release notes (whatsNewDialog.ts). Shares tokens with dialog.css. */
+
+.wn-panel {
+  width: min(560px, 100%);
+  text-align: left;
+}
+
+.wn-panel h2 {
+  text-align: center;
+}
+
+.wn-body {
+  display: grid;
+  gap: 16px;
+  line-height: 1.45;
+}
+
+.wn-release h3,
+.wn-release h4 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--tc-ink);
+}
+
+.wn-date {
+  font-weight: 400;
+  color: var(--tc-ink-light);
+}
+
+.wn-notes {
+  margin: 0;
+  padding-left: 1.3em;
+  display: grid;
+  gap: 4px;
+}
+
+.wn-earlier {
+  border-top: 2px dashed var(--tc-rule);
+  padding-top: 12px;
+}
+
+.wn-earlier summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--tc-ink-light);
+  border-radius: 6px;
+}
+
+.wn-earlier > .wn-release {
+  margin-top: 12px;
+}

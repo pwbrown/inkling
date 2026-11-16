@@ -1,6 +1,6 @@
 {
   "name": "inky-keys",
-  "version": "0.1.0",
+  "version": "2.6.0",
   "private": true,
   "description": "An offline-first, open-source typing game where you choose which keys to practice.",
   "license": "MIT",
@@ -20,7 +20,8 @@
     "words:build": "node scripts/build-words.ts",
     "icons": "python3 scripts/make-icons.py",
     "transcript": "node scripts/export-transcript.ts",
-    "snapshots": "node scripts/snapshots.ts"
+    "snapshots": "node scripts/snapshots.ts",
+    "release:tag": "node scripts/tag-release.ts"
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible-mono": "^5.3.0",

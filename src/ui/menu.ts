@@ -94,6 +94,10 @@ export interface MenuHooks {
   /** Add (`id` null) or edit a player. Resolves false if the name is unusable. */
   onSavePlayer(id: string | null, name: string, badge: Badge, contentLevel: ContentLevel): Promise<boolean>;
   onDeletePlayer(id: string): void;
+  /** e.g. "2.6.0". */
+  appVersion(): string;
+  /** Open the release notes. */
+  onWhatsNew(): void;
 }
 
 /** The GitHub mark, for the About page's link to the source. */
@@ -753,10 +757,12 @@ export class Menu {
       ]);
     return [
       h('h2', { id: 'menu-title' }, [t('about.title')]),
+      h('p', { className: 'menu-version' }, [t('about.version', { version: this.hooks.appVersion() })]),
       h('p', { className: 'tc-intro' }, [t('about.what')]),
       h('p', { className: 'tc-intro' }, [t('about.why')]),
       h('p', { className: 'tc-intro' }, [t('about.private')]),
       h('nav', { className: 'menu-list' }, [
+        this.button('whats-new', t('about.whatsNew'), () => this.hooks.onWhatsNew(), { detail: t('about.whatsNewDetail'), key: 'n' }),
         link('source', REPO_URL, t('about.source'), t('about.sourceDetail'), GITHUB_SVG),
         link('suggest', ISSUES_URL, t('about.suggest'), t('about.suggestDetail'), null),
       ]),
