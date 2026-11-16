@@ -59,7 +59,7 @@ export function mechanicsForPage(world: PageWorld): MechanicId[] {
   const has: Record<MechanicId, boolean> = {
     basics: true,
     // A drip showing ␣, or a Run-on phrase with spaces in it.
-    space: hasSpace && (kind === 'drip' || kind === 'runon' || sprinkles.runon > 0),
+    space: hasSpace && ((kind === 'drip' && page.params.pool !== 'symbols') || kind === 'runon' || sprinkles.runon > 0),
     blotling: word,
     // A run of keys only matters once there's a page behind you.
     combo: page.index > 0 || page.chapter > 0,
@@ -121,7 +121,7 @@ export function applyBriefings(world: World, ids: readonly MechanicId[]): void {
     if (id === 'eraser') world.eraser = true;
     else if (id === 'blottingPaper') world.shield = true;
     else if ((ABILITIES as readonly string[]).includes(id) && isActive(id as AbilityId)) {
-      const cost = abilityCost(id as 'blotter' | 'paperweight' | 'highlighter');
+      const cost = abilityCost(id as 'blotter' | 'paperweight' | 'highlighter', world.difficulty);
       world.charges = Math.min(GAME_CONFIG.abilities.maxCharges, Math.max(world.charges, cost));
     }
   }

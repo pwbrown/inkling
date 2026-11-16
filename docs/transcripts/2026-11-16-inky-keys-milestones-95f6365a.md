@@ -1,6 +1,6 @@
 # Inky Keys milestones
 
-Claude Code session started 2026-11-16. 3 prompts.
+Claude Code session started 2026-11-16. 4 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1316,6 +1316,710 @@ When you're ready, ask me to commit and merge, or to start M18 (waves and pacing
 
   ```bash
   timeout 120 npm run transcript 2>&1 | tail -5; git status --short docs/transcripts | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now I'll scan the export for private details, using generic patterns only.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Scan transcript export for private details
+
+  ```bash
+  f="docs/transcripts/2026-11-16-inky-keys-milestones-95f6365a.md docs/transcripts/2026-11-16-game-release-system-with-versioning-e31c68db.md"; grep -nEo "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $f | sort -u | head; grep -nEo "/(Users|private|home)/[^ )\`\"']*" $f | sort -u | head; grep -nEoi "(api[_-]?key|token|secret|password|bearer)[^ ]{0,40}" $f | sort -u | head; grep -nEo "\b[A-Za-z0-9_-]{32,}\b" $f | sort -u | head
+  ```
+- **Shell:** Scan transcript export for private details
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys/docs/transcripts && for f in 2026-11-16-inky-keys-milestones-95f6365a.md 2026-11-16-game-release-system-with-versioning-e31c68db.md; do echo "== $f"; grep -nEo "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | sort -u | head; grep -nEo "/(Users|private|home)/[^ )\`\"']*" "$f" | sort -u | head -5; grep -nEoi "(api[_-]?key|secret|password|bearer)[^ ]{0,30}" "$f" | sort -u | head -5; grep -nEo "[A-Za-z0-9_-]{32,}" "$f" | sort -u | head -5; done
+  ```
+- **Shell:** Check for unredacted local paths or names
+
+  ```bash
+  grep -c "private/tmp\|[removed]\|[removed]" 2026-11-16-inky-keys-milestones-95f6365a.md; grep -n "private/tmp" 2026-11-16-inky-keys-milestones-95f6365a.md | head -3 | cut -c1-160
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The transcript is clean: paths are redacted, and there are no emails or secrets. Committing now.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Commit, fast-forward merge and delete branch
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git add -A && git commit -q -F - <<'EOF'
+  Milestone 17: First impressions (2.7.0)
+
+  - Practice is now Free Write, first on the main menu (F) and in the pause menu
+  - New players start on a new "Letters + capitals + space" preset
+  - Misprints removed: creature, briefing, config, content and arrow-key editing
+  - Page-complete card gets a Main menu (M) link
+  - Fix rings added by arriving ink drops being orphaned on the ink bar; HUD rings now hold, then fade
+  - Spacebar briefing and guided space drip the first time a page can show the space mark
+  - How to play h
+  … (481 more characters)
+  ```
+- **Shell:** Tag v2.7.0 and branch for M18
+
+  ```bash
+  npm run release:tag 2>&1 | tail -3 && git tag --list "v2.7*" && git checkout -q -b feat/m18-waves && git log --oneline -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M17 is merged to `main` and tagged `v2.7.0` (not pushed). Before starting M18 I'll check whether RELEASING.md keeps a history table I should have updated.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Read release history table
+
+  ```bash
+  grep -n "^| 2\.\|^| Version\|^## " docs/RELEASING.md | tail -12
+  ```
+- **Shell:** Fill in release history rows
+
+  ```bash
+  git rev-parse --short v2.6.0 2>/dev/null; python3 - <<'EOF'
+  import subprocess
+  p='docs/RELEASING.md'; s=open(p).read()
+  try: h=subprocess.check_output(['git','rev-parse','--short','v2.6.0^{commit}']).decode().strip()
+  except Exception: h=subprocess.check_output(['git','rev-parse','--short','47fe7f2']).decode().strip()
+  a="| 2.6.0 | | Inky Keys name, domain and icons; What's new and version on About |"
+  assert a in s
+  s=s.replace(a,f"| 2.6.0 | `{h}` | Inky Keys name, domain and icons; What's new and version on About |\n| 2.7.0 | `974e8bb` | M17 First impressions: Free Write first, no more Misprints |
+  … (53 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The history table now has 2.6.0 and 2.7.0 (this goes into the M18 commit). On to M18, starting with the zoom-in entry.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Read lane and width helpers
+
+  ```bash
+  sed -n 440,480p src/core/world.ts; grep -n "export function stepWorld" src/core/world.ts
+  ```
+- **Shell:** Read stepWorld movement and Target type
+
+  ```bash
+  sed -n 715,760p src/core/world.ts; sed -n 40,90p src/core/world.ts; grep -n "speedJitter\|laneGapPx\|guideSpeedFactor" src/core/config.ts
+  ```
+- **Shell:** Read nearby config entries
+
+  ```bash
+  sed -n 84,92p src/core/config.ts; sed -n 338,348p src/core/config.ts
+  ```
+- **Shell:** Implement zoom-in entry and run tests
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/config.ts',[("""  /** Empty space to keep behind the last target in a lane before spawning another. */
+    laneGapPx: 100,
+  };""","""  /** Empty space to keep behind the last target in a lane before spawning another. */
+    laneGapPx: 100,
+    /**
+     * New targets rush in from the right until their whole word is on the page,
+     * then settle to their own speed, so a long word never makes you wait.
+     */
+    entry: {
+      /** Top speed whi
+  … (2643 more characters)
+  ```
+- **Shell:** Read failing movement test
+
+  ```bash
+  grep -rn "moves targets left at their speed" src | cut -d: -f1,2; f=$(grep -rln "moves targets left at their speed" src); n=$(grep -n "moves targets left at their speed" $f | cut -d: -f1); sed -n "$((n)),$((n+14))p" $f
+  ```
+
+</details>
+
+### 🤖 Claude
+
+That test expects the old slide-in, so I'll make it opt out of the entry and add tests for the new behavior.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Update movement test and add entry tests
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/world.test.ts'; s=open(p).read()
+  a="""    const target = spawnTarget(world, { speed: 100 })!;
+      world.page.spawned = world.page.params.size; // stop the spawner
+      stepWorld(world, 500);
+      expect(target.x).toBeCloseTo(SPAWN_X - 50);
+      expect(target.prevX).toBeCloseTo(SPAWN_X);
+      expect(renderX(target, 0.5)).toBeCloseTo(SPAWN_X - 25);
+    });
+  """
+  b="""    const target = spawnTarget(world, { speed: 100, entering: false })!;
+      world.page.spawned = world.page.params.size; // stop the spawner
+      stepWorld(world, 500);
+      expect(target.x).toBeCloseTo(SPAWN_X 
+  … (1720 more characters)
+  ```
+- **Shell:** Read world test imports
+
+  ```bash
+  sed -n 4,25p src/core/world.test.ts
+  ```
+- **Shell:** Fix imports and run tests
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/world.test.ts'; s=open(p).read()
+  s=s.replace("  WORLD_HEIGHT,\n  createPage,","  WORLD_HEIGHT,\n  WORLD_WIDTH,\n  createPage,",1).replace("  createWorld,\n  laneCount,","  createWorld,\n  estimateWidth,\n  laneCount,",1)
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit && timeout 100 npx vitest run 2>&1 | grep -E "×|Tests |AssertionError" | head -20
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Zoom-in works and is tested. Next are the wave changes (Scrawlers first, numbers and symbols on their own pages), which both touch the chapter plans, so I'll read that code.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Read chapter plans and page creation
+
+  ```bash
+  sed -n 355,480p src/core/config.ts; sed -n 270,330p src/core/world.ts; sed -n 40,75p src/core/campaign.ts
+  ```
+- **Shell:** Find weight setup in content source
+
+  ```bash
+  grep -n "totalWeight\|weights\b\|const weights\|unique =\|export function createContentSource\|export interface ContentSource\|keys: readonly\|wordCount" src/content/contentSource.ts | head -20; grep -n "isLetter" src/core/keySelection.ts | head -3
+  ```
+- **Shell:** Read content source interface and nextChar
+
+  ```bash
+  sed -n 20,40p src/content/contentSource.ts; sed -n 104,120p src/content/contentSource.ts; sed -n 160,176p src/content/contentSource.ts
+  ```
+- **Shell:** Find nextChar and supports callers
+
+  ```bash
+  grep -rn "nextChar\b\|nextChar(" src | grep -v "^src/content/contentSource.ts" | head; grep -rn "supports(" src | grep -v test | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the content source changes: a character pool for drips, and a count of keys per pool.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Add character pools to content source
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/content/contentSource.ts',[
+  ("""export interface ContentSource {""","""/**
+   * Which keys a drip page draws from: letters (either case) and space, or
+   * digits and symbols. They get separate pages so the two never mix.
+   */
+  export type CharPool = 'all' | 'letters' | 'symbols';
+
+  /** The pool a single key belongs to. */
+  export function poolOf(ch: string): Exclude<CharPool, 'all'> {
+    return ch === ' ' || /^\\p{L}$/u.test(ch) ? 'letters' 
+  … (1752 more characters)
+  ```
+- **Shell:** Find chapter plan and page count users
+
+  ```bash
+  grep -rn "chapterPlan\|GAME_CONFIG.chapters\|pageCount" src --include=*.ts | grep -v "^src/core/config.ts" | cut -c1-170
+  ```
+- **Shell:** Find chapter plan and page count users
+
+  ```bash
+  grep -rn "chapterPlan\|GAME_CONFIG.chapters\|pageCount" src | grep -v "^src/core/config.ts:" | cut -c1-170
+  ```
+- **Shell:** Add symbol pages and drip pools to page plans
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/config.ts',[
+  ("""export const TARGET_KINDS: readonly TargetKind[] = ['drip', 'blotling', 'runon'];""","""export const TARGET_KINDS: readonly TargetKind[] = ['drip', 'blotling', 'runon'];
+
+  /**
+   * A page in a chapter plan: a target type, or `symbols`, a drip page of only
+   * digits and symbols (kept apart from letters; see GAME_CONFIG.symbolPages).
+   */
+  export type PageKind = TargetKind | 'symbols';
+
+  /** Which keys a drip page draws
+  … (4079 more characters)
+  ```
+- **Shell:** Read affected config tests and key-count cap
+
+  ```bash
+  sed -n 1,25p src/core/config.test.ts; sed -n 80,90p src/core/config.test.ts; grep -n "const keyCount" -A4 src/core/world.ts
+  ```
+- **Shell:** Update tests and per-pool on-screen cap
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/config.test.ts',[
+  ("""    const plan = chapterPlan(0);
+      plan.forEach((kind, page) => expect(pageParams('normal', 0, page).kind).toBe(kind));
+    });""","""    const plan = chapterPlan(0);
+      plan.forEach((kind, page) => expect(pageParams('normal', 0, page).kind).toBe(kind === 'symbols' ? 'drip' : kind));
+    });
+
+    it('keeps letters and symbols on separate drip pages', () => {
+      expect(pageParams('normal', 0, 0, () => true, ['
+  … (1552 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Zoom-in is done. I'm now on Scrawlers as the main wave and the separate number/symbol pages. Nine tests assume the old chapter layout, so I'm updating them.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Read failing progression tests
+
+  ```bash
+  grep -n "gets slightly harder page by page" -A12 src/core/config.test.ts; grep -n "gets harder chapter by chapter" -A10 src/core/config.test.ts
+  ```
+- **Shell:** Pin test plans and rerun
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/config.test.ts',[
+  ("""    // Pages 0 and 1 of chapter 1 are both drips.
+      const a = pageParams('normal', 0, 0);
+      const b = pageParams('normal', 0, 1);""","""    // Two drip pages in a row.
+      const drips = ['drip', 'drip'] as const;
+      const a = pageParams('normal', 0, 0, () => true, drips);
+      const b = pageParams('normal', 0, 1, () => true, drips);"""),
+  ("    expect(b.speed / a.speed).toBeLessThan(pageParams('normal', 
+  … (722 more characters)
+  ```
+- **Shell:** Make later Apprentice chapters word-heavy; add pool tests
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/campaign.ts',[
+  ("""  if (chapter < SPACE_CHAPTER + 6) return ['drip', 'blotling', 'drip', 'blotling'];
+    return ['drip', 'blotling', 'blotling', 'drip', 'blotling'];""","""  if (chapter < SPACE_CHAPTER + 6) return ['drip', 'blotling', 'drip', 'blotling'];
+    // With plenty of keys, words are the main wave: one drip page to warm up
+    // on the new key, then Scrawlers. (Five pages, as before, so stars line up.)
+    return ['drip', 'b
+  … (1365 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Waves are done. Two small things before the Eraser: the spacebar briefing shouldn't fire on symbol pages, and I'll look at the Eraser and Blotter code.
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Read eraser and charge code
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/mechanics.ts'; s=open(p).read()
+  a="    space: hasSpace && (kind === 'drip' || kind === 'runon' || sprinkles.runon > 0),"
+  b="    space: hasSpace && ((kind === 'drip' && page.params.pool !== 'symbols') || kind === 'runon' || sprinkles.runon > 0),"
+  assert a in s; s=s.replace(a,b); open(p,'w').write(s)
+  EOF
+  sed -n 40,60p src/core/abilities.ts; sed -n 60,140p src/core/input.ts; grep -n "eraser\|blotter" src/core/config.ts | head; grep -n "eraser" src/core/world.ts | head -20
+  ```
+- **Shell:** Find ability cost and charge users
+
+  ```bash
+  grep -rn "abilityCost\|chargeKeys(" src | grep -v "^src/core/abilities.ts" | cut -c1-160; sed -n 1,40p src/core/abilities.ts; sed -n 285,300p src/core/config.ts
+  ```
+- **Shell:** Make Blotter cost and charge runs depend on difficulty
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/config.ts',[
+  ("""    maxCharges: 3,
+      chargeKeys: { base: 25, perChapter: 1, max: 50 },
+      /** Enter: blot every creature on the page (except a boss) for a share of their points. */
+      blotter: { cost: 2, pointsShare: 0.5, fromChapter: 1, fromLevel: 2 },
+      /** Passive: forgives the next wrong key. Re-arms after a clean run that grows with the chapter. */
+      eraser: { keys: 40, keysPerChapter: 1, maxKeys: 70, fromChapter: 
+  … (2930 more characters)
+  ```
+- **Shell:** Default charge runs to Normal; read test lines
+
+  ```bash
+  sed -i '' "s/export function chargeKeys(chapter: number, difficulty: Difficulty = 'relaxed'): number {/export function chargeKeys(chapter: number, difficulty: Difficulty = 'normal'): number {/" src/core/abilities.ts && sed -n 36,42p src/core/blotterBoss.test.ts; sed -n 58,62p src/core/blotterBoss.test.ts; sed -n 140,144p src/core/consequences.test.ts
+  ```
+- **Shell:** Use difficulty-aware cost in tests and rerun
+
+  ```bash
+  for f in src/core/blotterBoss.test.ts src/core/consequences.test.ts; do sed -i '' 's/GAME_CONFIG\.abilities\.blotter\.cost/abilityCost("blotter", world.difficulty)/g' $f; grep -q "abilityCost" <(head -12 $f) || sed -i '' "1a\\
+  import { abilityCost } from './abilities';
+  " $f; done; head -5 src/core/consequences.test.ts; npx tsc --noEmit 2>&1 | head; npx eslint src/core/consequences.test.ts src/core/blotterBoss.test.ts 2>&1 | tail -5; timeout 100 npx vitest run 2>&1 | grep -E "×|Tests " | head -20
+  ```
+- **Shell:** Read the two failing tests
+
+  ```bash
+  sed -i '' "s/abilityCost(\"blotter\", world.difficulty)/abilityCost('blotter', world.difficulty)/g" src/core/blotterBoss.test.ts src/core/consequences.test.ts; grep -n "import.*abilities" src/core/blotterBoss.test.ts; sed -n 40,70p src/core/abilities.test.ts; grep -n "hand over a new ability ready to try" -A12 src/core/mechanics.test.ts
+  ```
+- **Shell:** Update ability tests for difficulty scaling
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/blotterBoss.test.ts',[("import { abilityCost } from './abilities';\n",""),("import { chargeKeys } from './abilities';","import { abilityCost, chargeKeys } from './abilities';")])
+  sub('src/core/abilities.test.ts',[("""    expect(chargeKeys(0)).toBe(A.chargeKeys.base);
+      expect(chargeKeys(10)).toBeGreaterThan(chargeKeys(0));
+      expect(chargeKeys(999)).toBe(A.chargeKeys.max);""","""    expect(chargeKeys(0, 'relaxed')).toBe(A.cha
+  … (1245 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The Blotter is now harder to earn on higher difficulties. I'm finishing its tests, then the Eraser grace.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Fix import and rerun tests
+
+  ```bash
+  sed -i '' "s/^import { ABILITIES, abilityUnlockedAt, chargeKeys, eraserKeys, unlockedAbilities } from '.\/abilities';/import { ABILITIES, abilityCost, abilityUnlockedAt, chargeKeys, eraserKeys, unlockedAbilities } from '.\/abilities';/" src/core/abilities.test.ts && npx tsc --noEmit 2>&1 | head -5; timeout 100 npx vitest run 2>&1 | grep -E "×|Tests " | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the eraser grace.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Read world eraser fields and error entry
+
+  ```bash
+  sed -n 232,240p src/core/world.ts; sed -n 370,378p src/core/world.ts; grep -n "export function beginPage" -A8 src/core/world.ts; grep -n "^export function registerError\|^function registerError" -A4 src/core/input.ts
+  ```
+- **Shell:** Add a 1-second grace after the Eraser
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/world.ts',[
+  ("""  /** Correct keys in a row toward re-arming the Eraser. */
+    eraserRun: number;
+  ""","""  /** Correct keys in a row toward re-arming the Eraser. */
+    eraserRun: number;
+    /** Time left after the Eraser was used in which wrong keys are quietly ignored (ms). */
+    eraserGraceMs: number;
+  """),
+  ("""    eraser: false,
+      eraserRun: 0,
+      shield: false,
+      shieldEarned: false,""","""    eraser: false,
+      eraserRun: 
+  … (1851 more characters)
+  ```
+- **Shell:** Read existing Eraser tests
+
+  ```bash
+  sed -n 150,190p src/core/abilities.test.ts; grep -n "^function playingWorld\|^const run" -A8 src/core/abilities.test.ts | head -20
+  ```
+- **Shell:** Test the eraser grace
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/abilities.test.ts'; s=open(p).read()
+  a="""    // The next slip counts as usual.
+      typeChar(fresh, 'z');
+      expect(fresh.stats.errors).toBe(1);
+      expect(fresh.stats.combo).toBe(0);
+    });
+  });"""
+  b="""    // More slips in the next second are quietly ignored…
+      typeChar(fresh, 'z');
+      typeChar(fresh, 'x');
+      expect(fresh.stats.errors).toBe(0);
+      expect(fresh.stats.combo).toBe(combo);
+      expect(fresh.ink).toBe(ink);
+      expect(fresh.stats.missedKeys).toEqual({});
+
+      // …and once the grace is over, the next slip counts as usual.
+      fresh.page.spawned = 
+  … (331 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Eraser grace is tested. Now the strings and docs that describe charges and page mix.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Find text about charges and page mix
+
+  ```bash
+  grep -n "two charges\|mostly drips\|Pages are mostly\|25 \|charge" src/i18n/en.ts README.md docs/DESIGN.md | cut -c1-260
+  ```
+- **Shell:** Read README gameplay and powers sections
+
+  ```bash
+  sed -n 26,34p README.md | cut -c1-400; sed -n 60,80p README.md | cut -c1-300
+  ```
+- **Shell:** Update player-facing and README text
+
+  ```bash
+  python3 - <<'EOF'
+  import re
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/i18n/en.ts',[
+  ("With two charges, press Enter to blot every creature on the page. You have two charges now to try it.","With two charges (three on Hard and Expert), press Enter to blot every creature on the page. You have enough now to try it."),
+  ("'how.mix': 'Pages are mostly drips or mostly Scrawlers. Later on, a Run-on sneaks onto a word page now and then.'","'how.mix': 'Most pages are Scrawlers, with a page of drips in 
+  … (1888 more characters)
+  ```
+- **Shell:** Fix README default keys line
+
+  ```bash
+  sed -i '' 's/New players start on the home row (`a s d f g h j k l ;`)\./New players start on all letters, capitals and space (the **Letters + capitals + space** preset)./' README.md && grep -c "Letters + capitals + space\*\* preset" README.md; grep -n "Apprentice" README.md | sed -n 1,3p | cut -c1-80; grep -n "What appears when" README.md | cut -c1-60
+  ```
+- **Shell:** Add 2.8.0 release, check and build
+
+  ```bash
+  python3 - <<'EOF'
+  p='README.md'; s=open(p).read()
+  a="Once space is learned, an occasional phrase (Run-on) joins the word pages."
+  assert a in s
+  s=s.replace(a,a+" From six chapters after space, each chapter is one drip page for the new key and then four Scrawler pages.",1)
+  open(p,'w').write(s)
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/releases.ts',[("""export const RELEASES: readonly Release[] = [
+  ""","""export const RELEASES: readonly Release[] = [
+    {
+      version: '2.8.0',
+      date: '202
+  … (837 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Check and build pass for 2.8.0. Now I'm checking it in the browser: words zooming in, the wave mix, a symbols page, and the Blotter cost.
+
+<details><summary>7 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); 'ok'"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 1500));\ndocument.querySelector('.wn-panel [data-id], dialog button')?.click?.();\nconst s = window.inkling.store;\n({ player: document.querySelector('.menu-player-name')?.textContent, keys: s.data.keys.length })"}`
+- **computer** `{"action":"screenshot","scale":0.5}`
+- **javascript_tool** `{"action":"javascript_exec","text":"document.querySelector('[data-id=\"back\"]')?.click();\nconst { store } = window.inkling;\nstore.update((s) => { s.keys = [...'abcdefghijklmnopqrstuvwxyz', ' ', ...'0123456789', '!', '?']; s.notebook = null; });\nstore.flush?.();\nlocation.reload();\n'ok'"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":2}},{"name":"computer","input":{"action":"key","text":"f","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"key","text":"4","action_summary":"Picks Expert difficulty"}},{"name":"computer","input":{"action":"
+… (27 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[566,418],"action_summary":"Closes the player picker"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"screenshot","scale":0.5}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"f","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"key","text":"4","action_summary":"Picks Expert difficulty"}},{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Starts writing"}},{"
+… (122 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+"Page 1 of 4" means the symbols page is in this chapter. I'll close the briefing, then check the charges handed over on Expert and each page's pool.
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"document.querySelector('.bf-panel [data-id=\"start\"]')?.click();\nawait new Promise(r => setTimeout(r, 300));\nconst w = window.inkling.world;\n({ difficulty: w.difficulty, charges: w.charges, page: w.page.index, kind: w.page.params.kind, pool: w.page.params.pool
+… (34 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Expert hands over 3 charges, enough for one Blotter. Next I'll autoplay the chapter and record what each page spawns.
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const w = window.inkling.world;\nconst pages = [];\nlet cur = null;\nawait new Promise((resolve) => {\n  const id = setInterval(() => {\n    if (w.phase === 'briefing') { document.querySelector('.bf-panel [data-id=\"start\"]')?.click(); return; }\n    if (w.phase 
+… (1076 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The pane is hidden, so timers run slowly and my script timed out while still running. I'll record its progress into a page variable and check back.
+
+<details><summary>4 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const w = window.inkling.world;\nwindow.__pages = window.__pages || [];\nif (!window.__observer) {\n  window.__observer = setInterval(() => {\n    if (w.phase !== 'playing') return;\n    const key = w.page.chapter + ':' + w.page.index;\n    let cur = window.__page
+… (364 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 4000));\nconst w = window.inkling.world;\n({ phase: w.phase, page: w.page.index, pages: window.__pages.map(p => ({ key: p.key, kind: p.kind, pool: p.pool, texts: p.texts.slice(0, 20).join(' ') })) })"}`
+- **computer** `{"action":"screenshot","scale":0.6}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const w = window.inkling.world;\nfor (let i = 0; i < 40 && w.phase !== 'pageCleared'; i++) await new Promise(r => setTimeout(r, 1000));\nclearInterval(window.__observer);\n({ phase: w.phase, page: w.page.index, chapter: w.page.chapter })"}`
+
+</details>
+
+### 🤖 Claude
+
+The chapter is cleared. I'll turn to chapter 2 (a word page) and screenshot it without typing, to see words arriving whole.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Turns to the next chapter"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"screenshot","scale":0.5}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[550,435],"action_summary":"Closes the unlock card"}},{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Turns to the next chapter"}},{"name":"computer","input":{"action":"wait","duration":2}},{"name
+… (59 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[580,383],"action_summary":"Closes the briefing and starts the page"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"screenshot","scale":0.6}},{"name":"computer","input":{"ac
+… (66 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+One second after the page starts, the word "dowel?" is already fully on the page on the right. Last, I'll sample drip characters from each pool in the live game.
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const c = window.inkling.world.content;\n({ letters: Array.from({ length: 30 }, () => c.nextChar(Math.random, 'letters')).join(''), symbols: Array.from({ length: 30 }, () => c.nextChar(Math.random, 'symbols')).join('') })"}`
+
+</details>
+
+### 🤖 Claude
+
+The pools stay separate in the live game. Next I'll run the M18 snapshots.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Capture m18 and latest snapshots
+
+  ```bash
+  (timeout 300 npm run snapshots -- m18 && timeout 300 npm run snapshots -- latest) > <temp file> 2>&1; echo EXIT $?; grep -i "skipped\|error" <temp file>
+  ```
+- **Read** `docs/progression/m18/play.png`
+- **Read** `docs/progression/m18/lineup.png`
+- **Shell:** Add M18 progression entry and tidy shots
+
+  ```bash
+  rm -rf docs/progression/m18 && git clean -q -f docs/progression/latest/ && python3 - <<'EOF'
+  p='docs/progression/README.md'; s=open(p).read()
+  a="## Keeping this up to date"
+  b="""### M18: Waves and pacing
+
+  No new screens this time: everything changed is in motion and in which pages come up, so there are no new shots.
+
+  **New:**
+  - **Zoom-in:** new creatures rush in from the right (up to 900 px/s), braking smoothly until their whole word is on the page, then crawl at their own pace. They never get closer than a small gap to the creature ahead in their lane.
+  - **Numbers and symbols get their own dr
+  … (1098 more characters)
+  ```
+- **Shell:** Drop unchanged screenshot churn and recheck
+
+  ```bash
+  git checkout -- docs/progression/latest && timeout 100 npm run check 2>&1 | grep -E "Tests |error"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M17 is committed, merged into `main` with a fast-forward, tagged `v2.7.0`, and its branch is deleted. Nothing is pushed: run `git push origin v2.7.0` to publish the tag. The build transcript is included in the commit, and I checked it for private details first: only redacted paths, no emails or secrets.
+
+M18 is built on `feat/m18-waves` as release 2.8.0, but not committed yet. `npm run check` (345 tests) and `npm run build` pass, and I checked each change in the browser.
+
+- **Zoom-in:** new creatures rush in until their whole word is on the page, then slow to their own speed. Fifteen frames after a page started, the word "dowel?" was already fully visible. They never run into the creature ahead in their lane; if there isn't room yet, they follow it in.
+- **Scrawlers are the main wave:**
+  - Free Write chapters are now mostly word pages, with one letter-drip page, and every chapter ends on words.
+  - Later Apprentice chapters are one drip page for the new key, then four word pages. They're still five pages long, so stars stay the same.
+- **Numbers and symbols:**
+  - In Free Write they get their own drip page when the keys include at least three of them. Sampling the live game, letter drips gave only letters and space, and symbol drips gave only digits, `!` and `?`.
+  - With just one or two, like the home row's `;`, they stay mixed in. Apprentice keeps teaching `;` with its home row, as before.
+- **Eraser grace:** for one second after the Eraser forgives a slip, more wrong keys are ignored. They cost no ink and don't break the combo or count as misses. In a Run-on, the wrong letter isn't even typed.
+- **Blotter:** this differs from the approved plan. Charges are shared by all three active powers and the Blotter costs 2, so capping Expert at 1 charge would have made it unusable. Instead:
+  - On Hard and Expert the Blotter costs 3 charges (still 2 on Relaxed and Normal).
+  - Every charge takes a longer run: ×1.15 on Normal, ×1.35 on Hard, ×1.6 on Expert.
+  - On Expert the game correctly handed over 3 charges for the briefing.
+
+I didn't retune page sizes or spawn timing, because a page of words already lasts about as long as a page of drips did.
+
+The M18 progression entry is text only, because the standard snapshots mostly show Apprentice screens and capture none of these changes. RELEASING.md's history table now lists 2.6.0 and 2.7.0. The "Test" player in the browser pane now has custom keys and the quill equipped, and can be deleted.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  timeout 120 npm run transcript 2>&1 | tail -2; cd docs/transcripts && f=2026-11-16-inky-keys-milestones-95f6365a.md; grep -nEo "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $f | sort -u | head; grep -c "private/tmp\|[removed]\|[removed]" $f; grep -nEo "/(Users|home)/[^ )\`\"']*" $f | grep -v "\[removed\]" | head -3; grep -nEoi "(api[_-]?key|secret|password|bearer)[^ ]{0,30}" $f | head -3; git status --short .
   ```
 
 </details>

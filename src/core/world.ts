@@ -85,6 +85,8 @@ export interface Target {
   prevX: number;
   /** Horizontal speed in logical pixels per second. */
   speed: number;
+  /** Still rushing in from the right edge (GAME_CONFIG.entry); cleared once fully on the page. */
+  entering?: boolean;
 }
 
 /**
@@ -233,6 +235,8 @@ export interface World {
   eraser: boolean;
   /** Correct keys in a row toward re-arming the Eraser. */
   eraserRun: number;
+  /** Time left after the Eraser was used in which wrong keys are quietly ignored (ms). */
+  eraserGraceMs: number;
   /** Blotting paper is held: the next creature to reach the margin is soaked up. */
   shield: boolean;
   /** Blotting paper was earned on the page just cleared (shown on the graded page). */
@@ -271,11 +275,19 @@ export function createPage(
   difficulty: Difficulty,
   chapter: number,
   index: number,
-  content?: Pick<ContentSource, 'supports'> & Partial<Pick<ContentSource, 'keys'>>,
+  content?: Pick<ContentSource, 'supports'> & Partial<Pick<ContentSource, 'keys' | 'poolSize'>>,
   mode: GameMode = 'practice',
 ): PageState {
   const apprentice = mode === 'apprentice';
-  const plan = apprentice ? apprenticePlan(chapter) : chapterPlan(chapter);
+  // Digits and symbols get their own Free Write pages when there are enough
+  // of them (GAME_CONFIG.symbolPages); otherwise drips use every key.
+  const separate =
+    !apprentice &&
+    content?.poolSize !== undefined &&
+    content.poolSize('letters') > 0 &&
+    content.poolSize('symbols') >= GAME_CONFIG.symbolPages.minKeys;
+  const fullPlan = apprentice ? apprenticePlan(chapter) : chapterPlan(chapter);
+  const plan = separate ? fullPlan : fullPlan.filter((kind) => kind !== 'symbols');
   const canUse = content ? (kind: TargetKind) => content.supports(kind) : undefined;
   let params: PageParams;
   if (apprentice) {
@@ -288,8 +300,9 @@ export function createPage(
   } else {
     params = pageParams(difficulty, chapter, index, canUse, plan);
   }
+  if (!separate) params.pool = 'all';
   // Never more targets than keys to tell them apart by their first letter.
-  const keyCount = content?.keys?.length;
+  const keyCount = params.pool === 'all' ? content?.keys?.length : content?.poolSize?.(params.pool);
   if ((params.kind === 'drip' || params.kind === 'blotling') && keyCount) {
     const { keysMinus, min } = GAME_CONFIG.targetsPerKeys;
     params.maxOnScreen = Math.min(params.maxOnScreen, Math.max(min, keyCount - keysMinus));
@@ -361,6 +374,7 @@ export function createWorld(options: WorldOptions = {}): World {
     chargeRun: 0,
     eraser: false,
     eraserRun: 0,
+    eraserGraceMs: 0,
     shield: false,
     shieldEarned: false,
     slowMs: 0,
@@ -417,6 +431,7 @@ export function setPhase(world: World, phase: GamePhase): void {
  */
 export function beginPage(world: World): void {
   world.guide = null;
+  world.eraserGraceMs = 0;
   world.briefing = world.tips ? pendingBriefings(world, world.seenMechanics) : [];
   setPhase(world, world.briefing.length > 0 ? 'briefing' : 'playing');
 }
@@ -448,6 +463,30 @@ export function estimateWidth(target: Pick<Target, 'kind' | 'text' | 'buffer'>, 
   if (target.kind === 'drip') return 58 * scale;
   const length = Math.max([...target.text].length, [...(target.buffer ?? '')].length);
   return (36 + 17 * length) * scale;
+}
+
+/**
+ * One step of a target rushing in (GAME_CONFIG.entry): fast while far from
+ * where its whole text shows, braking smoothly as it gets there, and never
+ * closer than `gapPx` behind the target ahead in its lane (it follows that
+ * one in if there isn't room yet). The Paperweight doesn't slow this part.
+ */
+function enter(world: World, target: Target, dt: number): void {
+  const { speed, brakePerSec, marginPx, gapPx } = GAME_CONFIG.entry;
+  const visibleX = WORLD_WIDTH - marginPx - estimateWidth(target, world.targetScale);
+  if (target.x <= visibleX + 0.5) {
+    target.entering = false;
+    target.x -= target.speed * dt;
+    return;
+  }
+  let leaderX = -Infinity;
+  for (const other of world.targets) {
+    if (other === target || other.lane !== target.lane || other.x >= target.x) continue;
+    leaderX = Math.max(leaderX, other.x + estimateWidth(other, world.targetScale) + gapPx);
+  }
+  const goal = Math.max(visibleX, leaderX);
+  const v = Math.min(speed, Math.max(target.speed, (target.x - goal) * brakePerSec));
+  target.x = Math.min(target.x, Math.max(goal, target.x - v * dt));
 }
 
 /** Lanes whose most recent target has moved far enough in to make room. */
@@ -504,7 +543,7 @@ function payloadFor(world: World, kind: TargetKind, maxLives = 1): Pick<Target, 
   const taken = new Set(world.targets.map((t) => t.text[t.typed]));
   const next = () =>
     kind === 'drip'
-      ? content.nextChar(random)
+      ? content.nextChar(random, world.page.params.pool)
       : kind === 'runon'
         ? content.nextPhrase(complexity, random)
         : content.nextWord(complexity, random);
@@ -554,6 +593,8 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
     ghost: isGhost,
     ...(revealX === undefined ? {} : { revealX }),
     ...(startLives > 1 ? { maxLives: startLives } : {}),
+    // Targets placed somewhere specific (tests, set pieces) start already in place.
+    ...(overrides.x === undefined ? { entering: true } : {}),
     ...overrides,
   };
   if (sprinkled) world.page.sprinkled++;
@@ -721,6 +762,7 @@ export function stepWorld(world: World, stepMs: number): void {
 
   // Timed abilities run down; the Paperweight makes everything crawl meanwhile.
   const slow = world.slowMs > 0 ? GAME_CONFIG.abilities.paperweight.speedFactor : 1;
+  world.eraserGraceMs = Math.max(0, world.eraserGraceMs - stepMs);
   for (const [timer, id] of [
     ['slowMs', 'paperweight'],
     ['highlightMs', 'highlighter'],
@@ -735,7 +777,8 @@ export function stepWorld(world: World, stepMs: number): void {
 
   for (const target of world.targets) {
     target.prevX = target.x;
-    target.x -= target.speed * slow * dt;
+    if (target.entering) enter(world, target, dt);
+    else target.x -= target.speed * slow * dt;
 
     if (target.x > MARGIN_X) {
       survivors.push(target);

@@ -57,6 +57,9 @@ function bothStats(world: World, fn: (s: Stats) => void): void {
 }
 
 function registerError(world: World, key: string, target: Target | undefined, expectedChar?: string | null): void {
+  // Just after the Eraser rubbed a slip out, the next few wrong keys (typed
+  // before the player noticed) are ignored: no cost, nothing counted.
+  if (world.eraserGraceMs > 0) return;
   // Which character the player *should* have typed: given by the caller, or
   // the locked target's next character, or the most urgent target's.
   const intended = target ?? mostUrgent(visibleTargets(world));
@@ -67,6 +70,7 @@ function registerError(world: World, key: string, target: Target | undefined, ex
   if (world.eraser) {
     world.eraser = false;
     world.eraserRun = 0;
+    world.eraserGraceMs = GAME_CONFIG.abilities.eraser.graceMs;
     if (expected !== undefined) bothStats(world, (s) => (s.missedKeys[expected] = (s.missedKeys[expected] ?? 0) + 1));
     world.events.push({ type: 'eraserUsed', key, targetId: target?.id ?? null });
     return;
@@ -115,7 +119,7 @@ function registerHit(world: World, key: string): void {
   const { abilities, page } = world;
   if (abilities.some((id) => id === 'blotter' || id === 'paperweight' || id === 'highlighter')) {
     world.chargeRun++;
-    if (world.chargeRun >= chargeKeys(page.chapter)) {
+    if (world.chargeRun >= chargeKeys(page.chapter, world.difficulty)) {
       world.chargeRun = 0;
       if (world.charges < GAME_CONFIG.abilities.maxCharges) {
         world.charges++;
@@ -149,7 +153,7 @@ function pointsFactor(world: World): number {
  */
 export function useAbility(world: World, id: ActiveAbility): boolean {
   if (world.phase !== 'playing' || !world.abilities.includes(id)) return false;
-  const cost = abilityCost(id);
+  const cost = abilityCost(id, world.difficulty);
   if (world.charges < cost) return false;
   const config = GAME_CONFIG.abilities;
 
@@ -242,6 +246,11 @@ function editBuffer(world: World, target: Target, action: EditAction): void {
   if (target.kind === 'runon' && !isTextEdit(action)) return;
   if (target.kind === 'runon' && action.type === 'delete') return;
 
+  // During the Eraser's grace a wrong letter isn't even written into the Run-on.
+  if (world.eraserGraceMs > 0 && action.type === 'insert') {
+    const prefix = correctPrefix(before, target.text);
+    if (prefix !== [...before].length || [...target.text][prefix] !== action.char) return;
+  }
   const next = applyEdit({ buffer: before, cursor: target.cursor ?? [...before].length }, action);
   target.buffer = next.buffer;
   target.cursor = next.cursor;

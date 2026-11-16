@@ -33,6 +33,15 @@ export type TargetKind = 'drip' | 'blotling' | 'runon';
 
 export const TARGET_KINDS: readonly TargetKind[] = ['drip', 'blotling', 'runon'];
 
+/**
+ * A page in a chapter plan: a target type, or `symbols`, a drip page of only
+ * digits and symbols (kept apart from letters; see GAME_CONFIG.symbolPages).
+ */
+export type PageKind = TargetKind | 'symbols';
+
+/** Which keys a drip page draws from (see CharPool in contentSource.ts). */
+export type PagePool = 'all' | 'letters' | 'symbols';
+
 export type Difficulty = 'relaxed' | 'normal' | 'hard' | 'expert';
 
 /** In menu order. */
@@ -134,17 +143,25 @@ export const GAME_CONFIG = {
   },
 
   /**
-   * Page types in each chapter. Pages are drips or Scrawlers; later on,
-   * Run-ons are sprinkled into Scrawler pages (`sprinkles`).
-   * Chapters past the end of this list reuse the last entry.
+   * Free Write pages in each chapter. Scrawlers (words) are the main wave,
+   * with one page of letter drips; `symbols` pages only appear when the
+   * keys include enough digits or symbols (`symbolPages`). Later on, Run-ons
+   * are sprinkled into Scrawler pages (`sprinkles`). Chapters past the end
+   * of this list reuse the last entry.
    */
   chapters: [
-    ['drip', 'drip', 'blotling'],
-    ['drip', 'blotling', 'drip', 'blotling'],
-    ['blotling', 'drip', 'blotling', 'drip', 'blotling'],
-    ['drip', 'blotling', 'drip', 'blotling'],
-    ['drip', 'blotling', 'blotling', 'drip', 'blotling'],
-  ] as TargetKind[][],
+    ['drip', 'blotling', 'symbols', 'blotling'],
+    ['blotling', 'drip', 'blotling', 'symbols', 'blotling'],
+    ['blotling', 'blotling', 'drip', 'blotling', 'symbols', 'blotling'],
+    ['blotling', 'drip', 'blotling', 'blotling', 'symbols', 'blotling', 'blotling'],
+  ] as PageKind[][],
+
+  /**
+   * Digits and symbols get drip pages of their own in Free Write, so they
+   * never mix with letters. With fewer than `minKeys` of them selected (say,
+   * just the home row's ;), they stay mixed in instead.
+   */
+  symbolPages: { minKeys: 3 },
 
   /**
    * Occasional Run-ons on Scrawler pages, for variety without
@@ -276,10 +293,24 @@ export const GAME_CONFIG = {
   abilities: {
     maxCharges: 3,
     chargeKeys: { base: 25, perChapter: 1, max: 50 },
-    /** Enter: blot every creature on the page (except a boss) for a share of their points. */
-    blotter: { cost: 2, pointsShare: 0.5, fromChapter: 1, fromLevel: 2 },
-    /** Passive: forgives the next wrong key. Re-arms after a clean run that grows with the chapter. */
-    eraser: { keys: 40, keysPerChapter: 1, maxKeys: 70, fromChapter: 3, fromLevel: 3 },
+    /** Harder difficulties need longer runs per charge (the run above times this). */
+    chargeKeysFactor: { relaxed: 1, normal: 1.15, hard: 1.35, expert: 1.6 } satisfies Record<Difficulty, number>,
+    /**
+     * Enter: blot every creature on the page (except a boss) for a share of
+     * their points. Costs more charges on Hard and Expert, so it stays rare.
+     */
+    blotter: {
+      cost: { relaxed: 2, normal: 2, hard: 3, expert: 3 } satisfies Record<Difficulty, number>,
+      pointsShare: 0.5,
+      fromChapter: 1,
+      fromLevel: 2,
+    },
+    /**
+     * Passive: forgives the next wrong key. Re-arms after a clean run that
+     * grows with the chapter. For `graceMs` after it's used, more wrong keys
+     * are quietly ignored: fast typists often hit a few before they notice.
+     */
+    eraser: { keys: 40, keysPerChapter: 1, maxKeys: 70, fromChapter: 3, fromLevel: 3, graceMs: 1000 },
     /** Pins the page down: every creature crawls for a few seconds. */
     paperweight: { cost: 1, durationMs: 5000, speedFactor: 0.35, fromChapter: 6, fromLevel: 5 },
     /** Shows ghost text and doubles points for a few seconds. */
@@ -343,16 +374,32 @@ export const GAME_CONFIG = {
   speedJitter: 0.15,
   /** Empty space to keep behind the last target in a lane before spawning another. */
   laneGapPx: 100,
+  /**
+   * New targets rush in from the right until their whole word is on the page,
+   * then settle to their own speed, so a long word never makes you wait.
+   */
+  entry: {
+    /** Top speed while entering, px/s. */
+    speed: 900,
+    /** Slows down near the stopping point: speed is at most this × the distance left, per second. */
+    brakePerSec: 6,
+    /** Entering ends when the right edge is this far inside the page. */
+    marginPx: 24,
+    /** Never closer than this behind the target ahead in the same lane. */
+    gapPx: 40,
+  },
 };
 
 /** Page types for chapter `chapter` (0-based). */
-export function chapterPlan(chapter: number): readonly TargetKind[] {
+export function chapterPlan(chapter: number): readonly PageKind[] {
   const chapters = GAME_CONFIG.chapters;
   return chapters[Math.min(chapter, chapters.length - 1)] ?? ['drip'];
 }
 
 export interface PageParams {
   kind: TargetKind;
+  /** Drip pages: which keys the drips carry. */
+  pool: PagePool;
   size: number;
   spawnIntervalMs: number;
   maxOnScreen: number;
@@ -425,10 +472,12 @@ export function pageParams(
   page: number,
   canUse: (kind: TargetKind) => boolean = () => true,
   /** Page types for this chapter (the Apprentice campaign has its own). */
-  plan: readonly TargetKind[] = chapterPlan(chapter),
+  plan: readonly PageKind[] = chapterPlan(chapter),
 ): PageParams {
-  const planned = plan[page % plan.length] ?? 'drip';
+  const entry = plan[page % plan.length] ?? 'drip';
+  const planned: TargetKind = entry === 'symbols' ? 'drip' : entry;
   const kind = canUse(planned) ? planned : 'blotling';
+  const pool: PagePool = kind !== 'drip' ? 'all' : entry === 'symbols' ? 'symbols' : 'letters';
   const base = GAME_CONFIG.base[kind];
   const limits = GAME_CONFIG.limits[kind];
   const profile = DIFFICULTY_PROFILES[difficulty];
@@ -438,6 +487,7 @@ export function pageParams(
 
   return {
     kind,
+    pool,
     size: Math.round(clamp(base.size * (1 + p.sizeStep * chapter), 1, limits.maxSize)),
     spawnIntervalMs: clamp((base.spawnIntervalMs * profile.spawnInterval) / growth, limits.minSpawnIntervalMs, Infinity),
     maxOnScreen: clamp(

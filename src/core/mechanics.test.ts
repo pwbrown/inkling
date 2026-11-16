@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { US_QWERTY } from '../content/layouts/us-qwerty';
 import { apprenticeKeys } from './campaign';
+import { abilityCost } from './abilities';
 import { GAME_CONFIG } from './config';
 import { confirm, startApprentice, startPractice } from './input';
 import { MAX_BRIEFINGS, MECHANICS, guidedSpawn, mechanicsForPage, pendingBriefings } from './mechanics';
@@ -115,7 +116,7 @@ describe('briefings', () => {
     startPractice(world);
     expect(world.briefing).toEqual(['blotter', 'eraser']);
     confirm(world);
-    expect(world.charges).toBe(GAME_CONFIG.abilities.blotter.cost);
+    expect(world.charges).toBe(abilityCost('blotter', world.difficulty));
     expect(world.eraser).toBe(true);
   });
 });

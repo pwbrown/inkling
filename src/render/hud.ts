@@ -163,7 +163,7 @@ export class Hud {
     const g = this.timers.clear();
     for (const slot of this.slots) {
       const { id, text } = slot;
-      const ready = isActive(id) ? world.charges >= abilityCost(id) : id === 'eraser' ? world.eraser : world.shield;
+      const ready = isActive(id) ? world.charges >= abilityCost(id, world.difficulty) : id === 'eraser' ? world.eraser : world.shield;
       text.alpha = ready ? 1 : 0.35;
       const k = reducedMotion ? 0 : slot.pulse.update(dtMs);
       text.scale.set(1 + 0.18 * k * Math.abs(Math.sin(k * 9)));

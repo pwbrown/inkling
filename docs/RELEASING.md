@@ -65,4 +65,5 @@ Tagged after the fact on 2026-11-16.
 | 2.3.0 | `114804b` | Word filter, Scrawlers from chapter 1, hands guide, typewriter Type Case |
 | 2.4.0 | `c34334c` | M15 Character and teaching |
 | 2.5.0 | `f88d488` | M16 Keyboard layouts |
-| 2.6.0 | | Inky Keys name, domain and icons; What's new and version on About |
+| 2.6.0 | `47fe7f2` | Inky Keys name, domain and icons; What's new and version on About |
+| 2.7.0 | `974e8bb` | M17 First impressions: Free Write first, no more Misprints |

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { abilityCost } from './abilities';
 import { GAME_CONFIG, bottleParams, mistakeInk, streakKeys } from './config';
 import { typeChar, useBlotter } from './input';
 import { MARGIN_X, createPage, createWorld, spawnBottle, spawnTarget, stepWorld, type World } from './world';
@@ -139,7 +140,7 @@ describe('ink bottle', () => {
     const bottle = spawnBottle(world)!;
     bottle.x = 600;
     drip(world);
-    world.charges = GAME_CONFIG.abilities.blotter.cost;
+    world.charges = abilityCost('blotter', world.difficulty);
     expect(useBlotter(world)).toBe(true);
     expect(world.targets).toEqual([bottle]);
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createContentSource } from '../content/contentSource';
-import { chargeKeys } from './abilities';
+import { abilityCost, chargeKeys } from './abilities';
 import { GAME_CONFIG } from './config';
 import { confirm, startApprentice, typeChar, useBlotter } from './input';
 import { MARGIN_X, createPage, createWorld, spawnBoss, spawnTarget, stepWorld, type World } from './world';
@@ -37,7 +37,7 @@ describe('Blotter', () => {
 
   it('blots every creature on the page except a boss, for half points', () => {
     const world = playingWorld();
-    world.charges = GAME_CONFIG.abilities.blotter.cost;
+    world.charges = abilityCost('blotter', world.difficulty);
     spawnTarget(world, { kind: 'blotling', text: 'ink', x: 400, prevX: 400, lane: 0 });
     spawnTarget(world, { kind: 'drip', text: 'a', x: 600, prevX: 600, lane: 1, lives: 3 });
     const boss = spawnTarget(world, { kind: 'blotling', text: 'spill', x: 800, prevX: 800, lane: 4, boss: true, lives: 3 })!;
@@ -57,9 +57,9 @@ describe('Blotter', () => {
     spawnTarget(world, { kind: 'drip', text: 'a', x: 400, prevX: 400, lane: 0 });
     expect(useBlotter(world)).toBe(false);
     world.targets = [];
-    world.charges = GAME_CONFIG.abilities.blotter.cost;
+    world.charges = abilityCost('blotter', world.difficulty);
     expect(useBlotter(world)).toBe(false);
-    expect(world.charges).toBe(GAME_CONFIG.abilities.blotter.cost);
+    expect(world.charges).toBe(abilityCost('blotter', world.difficulty));
   });
 });
 

@@ -12,12 +12,19 @@ describe('chapterPlan', () => {
 describe('pageParams', () => {
   it('takes the page type from the chapter plan', () => {
     const plan = chapterPlan(0);
-    plan.forEach((kind, page) => expect(pageParams('normal', 0, page).kind).toBe(kind));
+    plan.forEach((kind, page) => expect(pageParams('normal', 0, page).kind).toBe(kind === 'symbols' ? 'drip' : kind));
+  });
+
+  it('keeps letters and symbols on separate drip pages', () => {
+    expect(pageParams('normal', 0, 0, () => true, ['drip']).pool).toBe('letters');
+    const symbols = pageParams('normal', 0, 0, () => true, ['symbols']);
+    expect(symbols).toMatchObject({ kind: 'drip', pool: 'symbols' });
+    expect(pageParams('normal', 0, 0, () => true, ['blotling']).pool).toBe('all');
   });
 
   it('starts at the base settings on Normal, chapter 1, page 1', () => {
     const kind = chapterPlan(0)[0]!;
-    const base = GAME_CONFIG.base[kind];
+    const base = GAME_CONFIG.base[kind === 'symbols' ? 'drip' : kind];
     const p = pageParams('normal', 0, 0);
     expect(p.speed).toBe(base.speed);
     expect(p.spawnIntervalMs).toBe(base.spawnIntervalMs);
@@ -27,21 +34,22 @@ describe('pageParams', () => {
   });
 
   it('gets slightly harder page by page within a chapter', () => {
-    // Pages 0 and 1 of chapter 1 are both drips.
-    const a = pageParams('normal', 0, 0);
-    const b = pageParams('normal', 0, 1);
+    // Two drip pages in a row.
+    const drips = ['drip', 'drip'] as const;
+    const a = pageParams('normal', 0, 0, () => true, drips);
+    const b = pageParams('normal', 0, 1, () => true, drips);
     expect(b.kind).toBe(a.kind);
     expect(b.speed).toBeGreaterThan(a.speed);
     expect(b.spawnIntervalMs).toBeLessThan(a.spawnIntervalMs);
     expect(b.complexity).toBeGreaterThan(a.complexity);
     // "Slightly": a page step is smaller than a chapter step.
-    expect(b.speed / a.speed).toBeLessThan(pageParams('normal', 1, 0).speed / a.speed);
+    expect(b.speed / a.speed).toBeLessThan(pageParams('normal', 1, 0, () => true, drips).speed / a.speed);
   });
 
   it('gets harder chapter by chapter', () => {
-    // Both are the first page of their chapter, and both drips.
-    const a = pageParams('normal', 0, 0);
-    const b = pageParams('normal', 1, 0);
+    // The first page of each chapter, both drips.
+    const a = pageParams('normal', 0, 0, () => true, ['drip']);
+    const b = pageParams('normal', 1, 0, () => true, ['drip']);
     expect(b.kind).toBe(a.kind);
     expect(b.speed).toBeGreaterThan(a.speed);
     expect(b.size).toBeGreaterThan(a.size);
@@ -82,9 +90,13 @@ describe('pageParams', () => {
     expect(pageParams('normal', 3, 0, (k) => k !== 'runon', ['runon']).kind).toBe('blotling');
   });
 
-  it('only plans drip and Scrawler pages', () => {
+  it('only plans drip, symbol and Scrawler pages, mostly Scrawlers', () => {
     for (let chapter = 0; chapter < GAME_CONFIG.chapters.length + 2; chapter++) {
-      expect(chapterPlan(chapter).every((k) => k === 'drip' || k === 'blotling')).toBe(true);
+      const plan = chapterPlan(chapter);
+      expect(plan.every((k) => k === 'drip' || k === 'symbols' || k === 'blotling')).toBe(true);
+      // Scrawlers outnumber letter drips, and every chapter ends on words.
+      expect(plan.filter((k) => k === 'blotling').length).toBeGreaterThan(plan.filter((k) => k === 'drip').length);
+      expect(plan.at(-1)).toBe('blotling');
     }
   });
 

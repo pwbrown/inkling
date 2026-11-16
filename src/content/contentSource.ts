@@ -20,14 +20,27 @@ const PUNCTUATION_CHANCE = 0.2;
 /** Punctuation that reads naturally at the end of a word. */
 const TRAILING_PUNCTUATION = [',', '.', ';', ':', '!', '?'];
 
+/**
+ * Which keys a drip page draws from: letters (either case) and space, or
+ * digits and symbols. They get separate pages so the two never mix.
+ */
+export type CharPool = 'all' | 'letters' | 'symbols';
+
+/** The pool a single key belongs to. */
+export function poolOf(ch: string): Exclude<CharPool, 'all'> {
+  return ch === ' ' || /^\p{L}$/u.test(ch) ? 'letters' : 'symbols';
+}
+
 export interface ContentSource {
   readonly keys: readonly string[];
   /** Number of real words typeable with the keys. */
   readonly wordCount: number;
   /** Number of downloaded topic words typeable with the keys. */
   readonly topicWordCount: number;
-  /** A single character for a Drip (T2). */
-  nextChar(random: () => number): string;
+  /** A single character for a Drip (T2), from `pool` (all keys if the pool has none). */
+  nextChar(random: () => number, pool?: CharPool): string;
+  /** How many distinct keys fall in `pool`. */
+  poolSize(pool: CharPool): number;
   /** A word, or a generated string, for a Scrawler (T1). */
   nextWord(difficulty: number, random: () => number): string;
   /** Several words separated by spaces, for a Run-on (T3). Needs the space key. */
@@ -114,7 +127,6 @@ export function createContentSource({
   const keySet = new Set(unique);
   const punctuation = TRAILING_PUNCTUATION.filter((p) => keySet.has(p));
   const weights = unique.map((k) => Math.max(0, keyWeights[k] ?? 1));
-  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
   let pool: RankedWord[] = buildWordPool(words, wordLetters(unique));
   if (!trustedWords) pool = pool.filter((w) => !blocklist.blocksWord(w.word));
@@ -162,14 +174,23 @@ export function createContentSource({
         keySet.has(first.toUpperCase()) && keySet.has(first) && random() < 0.5 ? first.toUpperCase() + phrase.slice(1) : phrase;
       return withPunctuation(capitalized, 0.6, random);
     },
-    nextChar(random) {
-      if (totalWeight <= 0) return unique[Math.floor(random() * unique.length)] as string;
-      let roll = random() * totalWeight;
-      for (let i = 0; i < unique.length; i++) {
+    poolSize(pool) {
+      return pool === 'all' ? unique.length : unique.filter((k) => poolOf(k) === pool).length;
+    },
+    nextChar(random, pool = 'all') {
+      let indices = unique.map((_, i) => i);
+      if (pool !== 'all') {
+        const inPool = indices.filter((i) => poolOf(unique[i]!) === pool);
+        if (inPool.length > 0) indices = inPool;
+      }
+      const total = indices.reduce((sum, i) => sum + weights[i]!, 0);
+      if (total <= 0) return unique[indices[Math.floor(random() * indices.length)]!]!;
+      let roll = random() * total;
+      for (const i of indices) {
         roll -= weights[i]!;
         if (roll < 0) return unique[i]!;
       }
-      return unique[unique.length - 1]!;
+      return unique[indices[indices.length - 1]!]!;
     },
     nextWord(difficulty, random) {
       return withPunctuation(baseWord(difficulty, random), PUNCTUATION_CHANCE, random);

@@ -55,7 +55,9 @@ export function apprenticePlan(chapter: number): TargetKind[] {
   const keys = apprenticeKeys(US_QWERTY, chapter).length;
   if (keys <= 8) return ['drip', 'drip', 'blotling'];
   if (chapter < SPACE_CHAPTER + 6) return ['drip', 'blotling', 'drip', 'blotling'];
-  return ['drip', 'blotling', 'blotling', 'drip', 'blotling'];
+  // With plenty of keys, words are the main wave: one drip page to warm up
+  // on the new key, then Scrawlers. (Five pages, as before, so stars line up.)
+  return ['drip', 'blotling', 'blotling', 'blotling', 'blotling'];
 }
 
 /** Chapter (0-based) where space is learned. */

@@ -9,7 +9,7 @@ const ALL = [...'abcdefghijklmnopqrstuvwxyz '];
 /** A Scrawler page with the given sprinkle chances. */
 function blotlingWorld(sprinkles: { runon: number }, random: () => number = () => 0.5): World {
   const world = createWorld({ random, content: createContentSource({ keys: ALL }) });
-  world.page = createPage('normal', 6, 1, world.content);
+  world.page = createPage('normal', 6, 0, world.content);
   expect(world.page.params.kind).toBe('blotling');
   world.page.params.sprinkles = sprinkles;
   world.page.params.variants = { crimson: 0, violet: 0, ghost: 0 };

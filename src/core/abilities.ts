@@ -2,7 +2,7 @@
  * Abilities (GAME_CONFIG.abilities): which exist, when each unlocks, and how
  * hard they are to earn on a given chapter. Using them lives in input.ts.
  */
-import { GAME_CONFIG } from './config';
+import { GAME_CONFIG, type Difficulty } from './config';
 
 export type AbilityId = 'blotter' | 'eraser' | 'paperweight' | 'highlighter' | 'blottingPaper';
 
@@ -17,9 +17,10 @@ export function isActive(id: AbilityId): id is ActiveAbility {
   return (ACTIVE_ABILITIES as readonly string[]).includes(id);
 }
 
-/** Charges an active ability costs. */
-export function abilityCost(id: ActiveAbility): number {
-  return GAME_CONFIG.abilities[id].cost;
+/** Charges an active ability costs on this difficulty. */
+export function abilityCost(id: ActiveAbility, difficulty: Difficulty = 'normal'): number {
+  const cost: number | Record<Difficulty, number> = GAME_CONFIG.abilities[id].cost;
+  return typeof cost === 'number' ? cost : cost[difficulty];
 }
 
 /**
@@ -39,10 +40,10 @@ export function abilityUnlockedAt(chapter: number): AbilityId | null {
   return ABILITIES.find((id) => GAME_CONFIG.abilities[id].fromChapter === chapter) ?? null;
 }
 
-/** Correct keys in a row that earn one charge on this chapter (0-based). */
-export function chargeKeys(chapter: number): number {
-  const c = GAME_CONFIG.abilities.chargeKeys;
-  return Math.min(c.max, c.base + c.perChapter * chapter);
+/** Correct keys in a row that earn one charge on this chapter (0-based) and difficulty. */
+export function chargeKeys(chapter: number, difficulty: Difficulty = 'normal'): number {
+  const { chargeKeys: c, chargeKeysFactor } = GAME_CONFIG.abilities;
+  return Math.ceil(Math.min(c.max, c.base + c.perChapter * chapter) * chargeKeysFactor[difficulty]);
 }
 
 /** Correct keys in a row that re-arm the Eraser on this chapter (0-based). */

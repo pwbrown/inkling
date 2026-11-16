@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ABILITIES, abilityUnlockedAt, chargeKeys, eraserKeys, unlockedAbilities } from './abilities';
+import { ABILITIES, abilityCost, abilityUnlockedAt, chargeKeys, eraserKeys, unlockedAbilities } from './abilities';
 import { GAME_CONFIG } from './config';
 import { restartPage, typeChar, useAbility } from './input';
 import { MARGIN_X, WORLD_WIDTH, createWorld, isRevealed, markPageStart, spawnTarget, stepWorld, type World } from './world';
@@ -44,11 +44,24 @@ describe('unlocking', () => {
 
 describe('charges', () => {
   it('get harder to earn in later chapters, up to a cap', () => {
-    expect(chargeKeys(0)).toBe(A.chargeKeys.base);
+    expect(chargeKeys(0, 'relaxed')).toBe(A.chargeKeys.base);
     expect(chargeKeys(10)).toBeGreaterThan(chargeKeys(0));
-    expect(chargeKeys(999)).toBe(A.chargeKeys.max);
+    expect(chargeKeys(999, 'relaxed')).toBe(A.chargeKeys.max);
     expect(eraserKeys(10)).toBeGreaterThan(eraserKeys(0));
     expect(eraserKeys(999)).toBe(A.eraser.maxKeys);
+  });
+
+  it('take longer runs, and the Blotter more of them, on harder difficulties', () => {
+    for (const [easier, harder] of [
+      ['relaxed', 'normal'],
+      ['normal', 'hard'],
+      ['hard', 'expert'],
+    ] as const) {
+      expect(chargeKeys(5, harder)).toBeGreaterThan(chargeKeys(5, easier));
+    }
+    expect(abilityCost('blotter', 'normal')).toBe(2);
+    expect(abilityCost('blotter', 'expert')).toBe(3);
+    expect(abilityCost('paperweight', 'expert')).toBe(1);
   });
 
   it('use the current chapter', () => {
@@ -156,7 +169,18 @@ describe('Eraser', () => {
     expect(fresh.ink).toBe(ink);
     expect(fresh.events.some((e) => e.type === 'eraserUsed')).toBe(true);
 
-    // The next slip counts as usual.
+    // More slips in the next second are quietly ignored…
+    typeChar(fresh, 'z');
+    typeChar(fresh, 'x');
+    expect(fresh.stats.errors).toBe(0);
+    expect(fresh.stats.combo).toBe(combo);
+    expect(fresh.ink).toBe(ink);
+    expect(fresh.stats.missedKeys).toEqual({});
+
+    // …and once the grace is over, the next slip counts as usual.
+    fresh.page.spawned = fresh.page.params.size;
+    drip(fresh);
+    stepWorld(fresh, A.eraser.graceMs);
     typeChar(fresh, 'z');
     expect(fresh.stats.errors).toBe(1);
     expect(fresh.stats.combo).toBe(0);
