@@ -39,7 +39,7 @@ import { DEFAULT_CONTENT_LEVEL, type ContentLevel } from './content/contentFilte
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { loadFonts } from './fonts';
 import { registerOffline } from './pwa';
-import { difficultyLabel, type OverlayLinkId } from './render/overlay';
+import { difficultyLabel, themedHandsArt, type OverlayLinkId } from './render/overlay';
 import { Menu } from './ui/menu';
 import { Sfx, type Sound } from './audio/sfx';
 import { createRenderer } from './render/renderer';
@@ -562,6 +562,12 @@ async function main(): Promise<void> {
         : null;
     },
     keysSummary: () => `${describeKeys(store.data.keys)} · ${t('menu.keyCount', { count: store.data.keys.length })}`,
+    portrait: (id) => renderer.portrait(id),
+    handsPicture: () => {
+      const keys = store.data.keys;
+      if (keys.length === 0) return null;
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(themedHandsArt(layout(), keys).svg)}`;
+    },
     apprenticeDetail: () => {
       const { earned, max } = totalStars(store.data.apprentice.stars);
       return store.data.apprentice.completed
@@ -800,7 +806,7 @@ async function main(): Promise<void> {
     End: 'end',
   };
 
-  /** While playing, these keys edit Run-ons and Misprints, and Tab switches target. */
+  /** While playing, these keys edit Run-ons, and Tab switches target. */
   const handleSpecial = (key: SpecialKey): boolean => {
     if (game.phase !== 'playing') return false;
     if (key === 'Tab') {
@@ -826,6 +832,11 @@ async function main(): Promise<void> {
         if (game.phase === 'gameOver') {
           const lower = char.toLowerCase();
           if (lower === 'r' || lower === 'm') actions.onLink(lower === 'r' ? 'retry' : 'mainMenu');
+          return;
+        }
+        // On the page-cleared card, M goes to the menu (the next page is already saved).
+        if (game.phase === 'pageCleared') {
+          if (char.toLowerCase() === 'm') actions.onLink('mainMenu');
           return;
         }
         // 1, 2 and 3 also fire abilities, unless the player is practicing number keys.

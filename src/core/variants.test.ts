@@ -28,9 +28,8 @@ describe('variant chances', () => {
     expect(variantChances('drip', 3, 'expert').crimson).toBeGreaterThan(variantChances('drip', 3, 'relaxed').crimson);
   });
 
-  it('never apply to Run-ons or Misprints', () => {
+  it('never apply to Run-ons', () => {
     expect(variantChances('runon', 9, 'expert')).toEqual({ crimson: 0, violet: 0, ghost: 0 });
-    expect(variantChances('misprint', 9, 'expert')).toEqual({ crimson: 0, violet: 0, ghost: 0 });
   });
 
   it('are part of the page settings', () => {

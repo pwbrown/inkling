@@ -55,8 +55,8 @@ describe('SaveStore', () => {
   it('does not let callers mutate the stored save directly', async () => {
     const store = await SaveStore.open(new MemoryBackend());
     const before = store.data;
-    store.update((s) => s.keys.push('z'));
-    expect(before.keys).not.toContain('z');
+    store.update((s) => s.keys.push('7'));
+    expect(before.keys).not.toContain('7');
   });
 
   it('flush writes immediately, and erase resets everything', async () => {

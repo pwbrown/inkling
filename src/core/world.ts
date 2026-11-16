@@ -56,7 +56,7 @@ export interface Target {
    */
   typed: number;
   /**
-   * Buffer-mode targets (Run-on, Misprint) only: the text as currently
+   * Buffer-mode targets (Run-ons) only: the text as currently
    * typed or edited. The target is done when it equals `text`.
    */
   buffer?: string;
@@ -160,7 +160,7 @@ export interface PageState {
   bossSpawned: boolean;
   params: PageParams;
   spawned: number;
-  /** Run-ons and Misprints sprinkled into this page so far. */
+  /** Run-ons sprinkled into this page so far. */
   sprinkled: number;
   /** An ink bottle has crossed this page (at most one per page). */
   bottleSpawned: boolean;
@@ -489,7 +489,7 @@ const DISTINCT_FIRST_CHAR_TRIES = 6;
 
 /** Whether a target type is edited as a buffer (rather than typed letter by letter). */
 export function isBufferKind(kind: TargetKind): boolean {
-  return kind === 'runon' || kind === 'misprint';
+  return kind === 'runon';
 }
 
 /**
@@ -501,12 +501,6 @@ function payloadFor(world: World, kind: TargetKind, maxLives = 1): Pick<Target, 
   // Creatures with several lives carry shorter words.
   const complexity = world.page.params.complexity * (GAME_CONFIG.variants.complexityScale[maxLives] ?? 1);
   const { content, random } = world;
-  if (kind === 'misprint') {
-    // Misprints are picked by urgency, not first letter, so no re-rolls needed.
-    const { right, wrong } = content.nextMisprint(complexity, random);
-    return { text: right, buffer: wrong, cursor: [...wrong].length };
-  }
-
   const taken = new Set(world.targets.map((t) => t.text[t.typed]));
   const next = () =>
     kind === 'drip'
@@ -532,7 +526,7 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
   const sprinkle = overrides.kind === undefined ? sprinkleKind(world) : null;
   const kind = overrides.kind ?? sprinkle ?? params.kind;
   const sprinkled = sprinkle !== null;
-  // A sprinkled Run-on or Misprint moves at its own kind's pace.
+  // A sprinkled Run-on moves at its own kind's pace.
   const speed = params.speed * (kind === params.kind ? 1 : GAME_CONFIG.base[kind].speed / GAME_CONFIG.base[params.kind].speed);
   const jitter = GAME_CONFIG.speedJitter;
   const lane = overrides.lane ?? pick(lanes, world.random);
@@ -568,19 +562,16 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
 }
 
 /**
- * Maybe sprinkle a Run-on or Misprint into this page instead of its usual
+ * Maybe sprinkle a Run-on into this page instead of its usual
  * type (GAME_CONFIG.sprinkles). Returns null for an ordinary spawn.
  */
 function sprinkleKind(world: World): TargetKind | null {
   const { sprinkles } = world.page.params;
-  if (sprinkles.runon <= 0 && sprinkles.misprint <= 0) return null;
+  if (sprinkles.runon <= 0) return null;
   const s = GAME_CONFIG.sprinkles;
   if (world.page.sprinkled >= s.maxPerPage) return null;
   if (world.targets.filter((t) => isBufferKind(t.kind)).length >= s.maxOnScreen) return null;
-  const roll = world.random();
-  if (roll < sprinkles.runon) return 'runon';
-  if (roll < sprinkles.runon + sprinkles.misprint) return 'misprint';
-  return null;
+  return world.random() < sprinkles.runon ? 'runon' : null;
 }
 
 function updateSpawner(world: World, stepMs: number): void {

@@ -10,6 +10,7 @@ import type { Target, World } from './world';
 
 export type MechanicId =
   | 'basics'
+  | 'space'
   | 'combo'
   | 'blotling'
   | 'mistakes'
@@ -18,13 +19,14 @@ export type MechanicId =
   | 'ghost'
   | 'spill'
   | 'runon'
-  | 'misprint'
   | 'violet'
   | AbilityId;
 
 /** In teaching order: when several are new at once, the earlier ones are shown first. */
 export const MECHANICS: readonly MechanicId[] = [
   'basics',
+  // The ␣ glyph isn't obvious: explained the first time a page can show it.
+  'space',
   'blotling',
   'combo',
   'mistakes',
@@ -33,7 +35,6 @@ export const MECHANICS: readonly MechanicId[] = [
   'spill',
   'ghost',
   'runon',
-  'misprint',
   'violet',
   ...ABILITIES,
 ];
@@ -45,14 +46,20 @@ export function isMechanic(value: unknown): value is MechanicId {
 /** New things explained before one page, at most. The rest wait for the next page. */
 export const MAX_BRIEFINGS = 2;
 
+/** What mechanicsForPage reads from the world. `keys` is optional so callers that only care about creatures can skip it. */
+type PageWorld = Pick<World, 'page' | 'mode' | 'difficulty' | 'abilities'> & Partial<Pick<World, 'keys'>>;
+
 /** Everything that can come up on the page about to be played. */
-export function mechanicsForPage(world: Pick<World, 'page' | 'mode' | 'difficulty' | 'abilities'>): MechanicId[] {
+export function mechanicsForPage(world: PageWorld): MechanicId[] {
   const { page, mode, difficulty, abilities } = world;
+  const hasSpace = world.keys?.includes(' ') ?? false;
   const { kind, variants, sprinkles } = page.params;
   const word = kind === 'blotling';
   const plain = kind === 'drip' || kind === 'blotling';
   const has: Record<MechanicId, boolean> = {
     basics: true,
+    // A drip showing ␣, or a Run-on phrase with spaces in it.
+    space: hasSpace && (kind === 'drip' || kind === 'runon' || sprinkles.runon > 0),
     blotling: word,
     // A run of keys only matters once there's a page behind you.
     combo: page.index > 0 || page.chapter > 0,
@@ -63,7 +70,6 @@ export function mechanicsForPage(world: Pick<World, 'page' | 'mode' | 'difficult
     ghost: plain && variants.ghost > 0,
     spill: page.hasBoss,
     runon: kind === 'runon' || sprinkles.runon > 0,
-    misprint: kind === 'misprint' || sprinkles.misprint > 0,
     blotter: abilities.includes('blotter'),
     eraser: abilities.includes('eraser'),
     paperweight: abilities.includes('paperweight'),
@@ -75,7 +81,7 @@ export function mechanicsForPage(world: Pick<World, 'page' | 'mode' | 'difficult
 
 /** Mechanics on this page the player hasn't been shown yet, a few at a time. */
 export function pendingBriefings(
-  world: Pick<World, 'page' | 'mode' | 'difficulty' | 'abilities'>,
+  world: PageWorld,
   seen: readonly string[],
   max = MAX_BRIEFINGS,
 ): MechanicId[] {
@@ -87,6 +93,8 @@ export function pendingBriefings(
 /** How the first creature of a newly taught kind is spawned for its guided try, or null if there's nothing to spawn. */
 export function guidedSpawn(id: MechanicId): Partial<Target> | null {
   switch (id) {
+    case 'space':
+      return { kind: 'drip', text: ' ', lives: 1, ghost: false };
     case 'blotling':
       return { kind: 'blotling', lives: 1, ghost: false };
     case 'crimson':
@@ -97,8 +105,6 @@ export function guidedSpawn(id: MechanicId): Partial<Target> | null {
       return { lives: 1, ghost: true };
     case 'runon':
       return { kind: 'runon', lives: 1, ghost: false };
-    case 'misprint':
-      return { kind: 'misprint', lives: 1, ghost: false };
     default:
       return null;
   }

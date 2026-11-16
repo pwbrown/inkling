@@ -4,13 +4,13 @@
  *
  * Two input models (REQUIREMENTS §3):
  * - Match mode, for Drips and Scrawlers: each key must be the next character.
- * - Buffer mode, for Run-ons and Misprints: keys edit a buffer with a cursor,
- *   so mistakes stay until fixed with Backspace, Delete and the arrow keys.
+ * - Buffer mode, for Run-ons: keys edit a buffer, so mistakes stay until
+ *   fixed with Backspace.
  */
 import { abilityCost, chargeKeys, eraserKeys, type ActiveAbility } from './abilities';
 import { APPRENTICE_CHAPTERS } from './campaign';
 import { DIFFICULTIES, GAME_CONFIG, mistakeInk, streakKeys, type Difficulty } from './config';
-import { applyEdit, correctPrefix, editDistance, isTextEdit, type EditAction } from './editing';
+import { applyEdit, correctPrefix, isTextEdit, type EditAction } from './editing';
 import { applyBriefings } from './mechanics';
 import { createStats, type Stats } from './stats';
 import {
@@ -225,18 +225,15 @@ function lock(world: World, target: Target): void {
 /** Can this keystroke start on a target that isn't locked yet? */
 function startsWith(target: Target, key: string): boolean {
   // Ghost text can't be typed before it shows.
-  if (target.kind === 'misprint' || !isRevealed(target)) return false;
+  if (!isRevealed(target)) return false;
   if (target.kind === 'runon') return target.buffer === '' && target.text[0] === key;
   return target.text[target.typed] === key;
 }
 
 /**
- * Apply an edit to a Run-on or Misprint and score it.
- *
- * - Run-on: typing the next character is correct; anything else is a
- *   mistake that stays in the buffer until Backspace removes it.
- * - Misprint: an edit is correct if it brings the text closer to the right
- *   spelling and a mistake if it moves further away. Moving the cursor is free.
+ * Apply an edit to a Run-on and score it: typing the next character is
+ * correct; anything else is a mistake that stays in the buffer until
+ * Backspace removes it.
  */
 function editBuffer(world: World, target: Target, action: EditAction): void {
   const scoreBefore = world.stats.score;
@@ -256,17 +253,10 @@ function editBuffer(world: World, target: Target, action: EditAction): void {
   }
 
   const char = action.type === 'insert' ? action.char : null;
-  let correct: boolean;
-  let expected: string | null = null;
-  if (target.kind === 'runon') {
-    const prefix = correctPrefix(before, target.text);
-    expected = [...target.text][prefix] ?? null;
-    if (action.type === 'insert') correct = prefix === [...before].length && char === expected;
-    // Backspacing over a mistake is the right move; erasing correct text isn't scored.
-    else correct = prefix < [...before].length;
-  } else {
-    correct = editDistance(next.buffer, target.text) < editDistance(before, target.text);
-  }
+  const prefix = correctPrefix(before, target.text);
+  const expected = [...target.text][prefix] ?? null;
+  // Backspacing over a mistake is the right move; erasing correct text isn't scored.
+  const correct = action.type === 'insert' ? prefix === [...before].length && char === expected : prefix < [...before].length;
 
   if (correct) {
     if (char) registerHit(world, char);
@@ -274,7 +264,7 @@ function editBuffer(world: World, target: Target, action: EditAction): void {
       bothStats(world, (s) => {
         s.score += GAME_CONFIG.points.perChar * multiplier(s.combo) * pointsFactor(world);
       });
-  } else if (action.type === 'insert' || target.kind === 'misprint') {
+  } else if (action.type === 'insert') {
     registerError(world, char ?? action.type, target, expected);
   }
 
@@ -282,11 +272,10 @@ function editBuffer(world: World, target: Target, action: EditAction): void {
   else world.events.push({ type: 'progress', targetId: target.id, shot: correct && char !== null });
 }
 
-/** The target an edit key (Backspace, arrows…) applies to: the locked one, or the most urgent Misprint. */
+/** The target an edit key (Backspace…) applies to: the locked Run-on, if any. */
 function editTarget(world: World): Target | undefined {
   const locked = world.targets.find((t) => t.id === world.lockedId);
-  if (locked) return isBufferKind(locked.kind) ? locked : undefined;
-  return mostUrgent(visibleTargets(world).filter((t) => t.kind === 'misprint'));
+  return locked && isBufferKind(locked.kind) ? locked : undefined;
 }
 
 /** Handle one typed character. */
@@ -305,11 +294,6 @@ export function typeChar(world: World, key: string): void {
   if (!target) {
     // Lock onto the closest visible target this key can start…
     target = mostUrgent(visibleTargets(world).filter((t) => startsWith(t, key)));
-    // …or else, when only Misprints are on the page, the most urgent one,
-    // which is edited in place. (A Misprint sprinkled among Scrawlers is
-    // started with Backspace, the arrows or Tab, so a slip on a Scrawler
-    // doesn't land in it.)
-    if (!target && visibleTargets(world).every((t) => t.kind === 'misprint')) target = editTarget(world);
     if (!target) {
       registerError(world, key, undefined);
       return;

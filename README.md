@@ -18,16 +18,15 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | Key | Action |
 |---|---|
 | Characters | Hit the matching target closest to the margin |
-| Backspace / Delete | Erase mistakes in a Run-on; fix a Misprint |
-| ← → / Home / End | Move the cursor in a Misprint |
+| Backspace | Erase mistakes in a Run-on |
 | Tab | Switch to the next target (nearest the margin first) |
 | Esc | Pause: **Resume**, **Restart page**, **Settings** or **Quit to menu** (the game also pauses when the window loses focus) |
 | Enter | While playing: fire the **Blotter** (when charged). On a card: begin, turn the page, or retry the chapter after running out of ink |
 | R / M | After running out of ink: **Retry chapter** or go to the **Main menu** |
 
-The **main menu** has buttons for everything: **Continue** (C), **Apprentice** (A), **Practice** (P, then pick a difficulty with 1–4 and change keys), **Word lists** (W), **Desk** (D), **Settings** (S), **Manage saves** (B), **How to play** (H), **About** (I, with links to the source code and a form for ideas and bug reports) and **Switch player** (U). Use the arrow keys or Tab and Enter, or the mouse.
+The **main menu** has buttons for everything: **Continue** (C), **Free Write** (F, then pick a difficulty with 1–4 and change keys), **Apprentice** (A), **Word lists** (W), **Desk** (D), **Settings** (S), **Manage saves** (B), **How to play** (H), **About** (I, with links to the source code and a form for ideas and bug reports) and **Switch player** (U). Use the arrow keys or Tab and Enter, or the mouse.
 
-A notebook is a series of **chapters**, each made of a few **pages**. Each page is mostly **drips** (single characters) or mostly **Scrawlers** (words); from chapter 4, Scrawler pages now and then slip in a **Run-on** or **Misprint** (at most one on screen and three per page). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. Drip and Scrawler pages never show more targets at once than you have keys to tell them apart. All of these numbers live in `src/core/config.ts`. 
+A notebook is a series of **chapters**, each made of a few **pages**. Each page is mostly **drips** (single characters) or mostly **Scrawlers** (words); from chapter 4, Scrawler pages now and then slip in a **Run-on** (at most one on screen and three per page). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. Drip and Scrawler pages never show more targets at once than you have keys to tell them apart. All of these numbers live in `src/core/config.ts`. 
 
 ### Choosing keys
 
@@ -35,16 +34,16 @@ The **Type Case** shows a keyboard where every key has two halves: its plain cha
 
 The game builds everything from your keys: drips use them directly, and word pages use real words that only need those letters. Selected capitals and punctuation show up in words too. If too few words fit, made-up strings are mixed in, and the Type Case warns you when that will happen.
 
-### Apprentice and Practice
+### Free Write and Apprentice
 
 - **Apprentice** is a typing course for beginners, 27 chapters long.
   - Chapter 1 teaches just `f` and `j`, the keys with bumps. Each later chapter adds **one** key: the rest of the home row (`d k s l a ; g h`), then space, then `e i r u t y o w n m c v b x p q z`.
-  - **Pacing:** difficulty climbs a quarter as fast as in Practice. The first 8 chapters are extra gentle, with slower, sparser creatures and shorter pages, easing off as you go.
-  - **What appears when:** every chapter, even the first (just `f` and `j`), has a Scrawler page. Until there are enough keys for real words, Scrawlers carry short made-up strings of the keys learned so far, like `fjf`. Once space is learned, an occasional phrase (Run-on) joins the word pages, and later an occasional Misprint. Crimson creatures arrive from chapter 5, ghosts from chapter 9, violet ones from chapter 17, and the Spill from chapter 7. On Hard and Expert, the first 10 chapters start nearer Normal and ease up to full strength.
+  - **Pacing:** difficulty climbs a quarter as fast as in Free Write. The first 8 chapters are extra gentle, with slower, sparser creatures and shorter pages, easing off as you go.
+  - **What appears when:** every chapter, even the first (just `f` and `j`), has a Scrawler page. Until there are enough keys for real words, Scrawlers carry short made-up strings of the keys learned so far, like `fjf`. Once space is learned, an occasional phrase (Run-on) joins the word pages. Crimson creatures arrive from chapter 5, ghosts from chapter 9, violet ones from chapter 17, and the Spill from chapter 7. On Hard and Expert, the first 10 chapters start nearer Normal and ease up to full strength.
   - **Introductions:** every chapter opens with a card showing its new key and which finger types it. The new key comes up three times as often as the others.
   - **Stars and progress:** each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter. Finishing the last chapter completes the notebook.
-- **Practice** uses exactly the keys you choose in the Type Case, with endless chapters.
-- **From Apprentice to Practice:** pause a chapter and pick **Practice these keys** (P) to keep practicing that chapter's keys at the same difficulty. The Practice screen and the Type Case also offer **My Apprentice keys**, which always matches the furthest chapter you've reached.
+- **Free Write** (formerly Practice) is the main mode. It uses exactly the keys you choose in the Type Case, with endless chapters. New players start with all letters, capitals and space.
+- **From Apprentice to Free Write:** pause a chapter and pick **Free Write with these keys** (F) to keep practicing that chapter's keys at the same difficulty. The Free Write screen and the Type Case also offer **My Apprentice keys**, which always matches the furthest chapter you've reached.
 
 ### Players
 
@@ -78,7 +77,6 @@ Every correct key flicks a drop of ink from your pen at the letter you typed. Th
 - **Drips:** a single character.
 - **Scrawlers:** a word.
 - **Run-ons** (sprinkled in from chapter 4): a phrase. Mistakes stay, struck through in red, until you erase them with Backspace. They need the space key, so without it they don't appear.
-- **Misprints** (sprinkled in from chapter 5): a crooked rubber stamp with a misspelled word and the correct spelling pencilled above. Start fixing it with Backspace, Delete, the arrow keys or Tab, then type. (When only Misprints are on the page, typing goes straight to the nearest one.) Edits that bring it closer to right score, and edits that make it worse count as mistakes.
 - **Tougher ink:** some drips and Scrawlers come in **crimson**, which need two words (or characters), or **violet**, which need three. Their words are shorter to make up for it, and each has its own look: crimson ones are spiky with horns, violet ones are lumpy with a crown and a third eye. Dots above them show how many are left. You can switch to other creatures between words, and they never repeat a word back to back. **Ghosts** in invisible ink hide their text until they're a quarter to half of the way in from the right edge. In Practice crimson starts in chapter 2, ghosts in 3 and violet in 5; in Apprentice they start later.
 
 ### Word lists

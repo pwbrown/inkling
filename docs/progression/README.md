@@ -39,7 +39,7 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 | M9 | M12 | M13 | M14 | Latest |
 |---|---|---|---|---|
 | <img src="m09/menu.png" width="170" alt="M9 main menu"> | <img src="m12/menu.png" width="170" alt="M12 menu with Apprentice and Practice"> | <img src="m13/menu.png" width="170" alt="M13 menu with Desk and rank"> | <img src="m14/menu.png" width="170" alt="M14 menu with player badge and About"> | <img src="latest/menu.png" width="170" alt="Latest menu"> |
-| A real **main menu** with a logo replaces the card. | **Apprentice** and **Practice** replace New notebook and Choose keys. | **Desk** button, and your rank and ink along the bottom. | **Player** badge and **About**. The course is now 27 chapters long. | New tagline, and "Save data" is now **Manage saves**. |
+| A real **main menu** with a logo replaces the card. | **Apprentice** and **Practice** replace New notebook and Choose keys. | **Desk** button, and your rank and ink along the bottom. | **Player** badge and **About**. The course is now 27 chapters long. | **Free Write** (formerly Practice) comes first; new players start on letters, capitals and space. |
 
 ### Type Case (choosing keys)
 
@@ -50,10 +50,10 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 
 ### End of a page
 
-| M2 | M7 | M12 | M13 | M15 |
-|---|---|---|---|---|
-| <img src="m02/page-done.png" width="170" alt="M2 page complete card"> | <img src="m07/page-done.png" width="170" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="170" alt="M12 page with stars"> | <img src="m13/page-done.png" width="170" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="170" alt="M15 page with handwritten title, drawn stars and best run"> |
-| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. |
+| M2 | M7 | M12 | M13 | M15 | M17 |
+|---|---|---|---|---|---|
+| <img src="m02/page-done.png" width="140" alt="M2 page complete card"> | <img src="m07/page-done.png" width="140" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="140" alt="M12 page with stars"> | <img src="m13/page-done.png" width="140" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="140" alt="M15 page with handwritten title, drawn stars and best run"> | <img src="m17/page-done.png" width="140" alt="M17 page card with a Main menu (M) link"> |
+| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. | A **Main menu (M)** link, so you can stop without starting the next page. |
 
 ### Starting a chapter
 
@@ -67,7 +67,7 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 | M7 settings | Latest settings | M9 pause | Latest pause |
 |---|---|---|---|
 | <img src="m07/settings.png" width="210" alt="M7 settings"> | <img src="latest/settings.png" width="210" alt="Latest settings"> | <img src="m09/pause.png" width="210" alt="M9 pause menu"> | <img src="latest/pause.png" width="210" alt="Latest pause menu"> |
-| Text size, colors, motion, sound. | The same options in the new font. | Resume, Restart page, Settings, Quit. | Adds **Practice these keys** (from M14). |
+| Text size, colors, motion, sound. | The same options in the new font. | Resume, Restart page, Settings, Quit. | Adds **Free Write with these keys** (F; added in M14 as Practice these keys). |
 
 ## Milestone by milestone
 
@@ -203,15 +203,29 @@ The notebook page, the red margin, the Nib, and one placeholder creature driftin
 
 **Changed:** layouts are now built from one table of physical keys and fingering, with each layout giving only its characters (`src/content/layouts/`). On QWERTY, "ready to learn" now suggests keys in the Apprentice course's order, so E and I come after the home row rather than R and U.
 
+### M17: First impressions
+
+| Menu | How to play | Spacebar briefing |
+|---|---|---|
+| <img src="m17/menu.png" width="260" alt="Main menu with Free Write first, on Letters + capitals + space, 53 keys"> | <img src="m17/how-to-play.png" width="260" alt="How to play with a picture beside each creature"> | <img src="m17/briefing.png" width="260" alt="Briefing cards for drips and the spacebar, with a drip showing the space mark"> |
+
+**New:**
+- **Free Write** (formerly Practice) is first on the menu (F), and a new player starts on **Letters + capitals + space**, a new preset.
+- A **spacebar briefing** the first time a page can show the ␣ mark, with a guided first space drip.
+- **How to play** has pictures: each creature, the tougher inks, the Spill and the ink bottle, the player's keys on the hands guide, and key caps for the controls.
+- The page-complete card has a **Main menu (M)** link.
+
+**Changed:** **Misprints are gone** (the stamp creature, its briefing and the arrow-key editing), so the lineup ends with the Run-on. The yellow rings that marked ink coming back now hold for a moment and fade; before, they could get stuck on the ink bar until the screen was rebuilt.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m16
+npm run snapshots -- m17
 ```
 
-That writes a standard set of shots to `docs/progression/m16/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m17/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

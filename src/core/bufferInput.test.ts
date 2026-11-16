@@ -10,8 +10,6 @@ function playingWorld(): World {
 
 const runon = (world: World, text: string, x = 500, lane = 0) =>
   spawnTarget(world, { kind: 'runon', text, buffer: '', cursor: 0, x, prevX: x, lane })!;
-const misprint = (world: World, right: string, wrong: string, x = 500, lane = 1) =>
-  spawnTarget(world, { kind: 'misprint', text: right, buffer: wrong, cursor: [...wrong].length, x, prevX: x, lane })!;
 
 const type = (world: World, text: string) => {
   for (const ch of text) typeChar(world, ch);
@@ -59,48 +57,11 @@ describe('Run-ons', () => {
   });
 });
 
-describe('Misprints', () => {
-  it('auto-targets the most urgent misprint and scores edits that bring it closer', () => {
-    const world = playingWorld();
-    const near = misprint(world, 'flask', 'flaskk', 300, 1);
-    const far = misprint(world, 'glass', 'gass', 800, 2);
-
-    editKey(world, 'backspace');
-    expect(world.targets).toEqual([far]);
-    expect(near.buffer).toBe('flask');
-    expect(world.stats.destroyed).toBe(1);
-    expect(world.stats.errors).toBe(0);
-  });
-
-  it('fixes a swap with arrows, Delete and typing', () => {
-    const world = playingWorld();
-    const m = misprint(world, 'salad', 'slaad');
-    editKey(world, 'home');
-    editKey(world, 'right');
-    expect(m.cursor).toBe(1);
-    editKey(world, 'delete'); // "saad"
-    editKey(world, 'right'); // cursor after "sa"
-    typeChar(world, 'l'); // "salad"
-    expect(world.targets).not.toContain(m);
-    expect(world.stats.errors).toBe(0);
-  });
-
-  it('counts an edit that makes things worse as a mistake, and cursor moves as free', () => {
-    const world = playingWorld();
-    const m = misprint(world, 'glass', 'glas');
-    editKey(world, 'left');
-    expect(world.stats.errors).toBe(0);
-    editKey(world, 'backspace');
-    expect(m.buffer).toBe('gls');
-    expect(world.stats.errors).toBe(1);
-  });
-});
-
 describe('Tab', () => {
   it('moves the lock to the next target, nearest first, wrapping', () => {
     const world = playingWorld();
     const a = runon(world, 'ab', 300, 0);
-    const b = misprint(world, 'flask', 'flak', 600, 1);
+    const b = runon(world, 'cd', 600, 1);
     cycleLock(world);
     expect(world.lockedId).toBe(a.id);
     cycleLock(world);

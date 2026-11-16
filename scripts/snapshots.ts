@@ -60,7 +60,6 @@ const LINEUP = `(() => {
     { kind: 'blotling', text: 'ink', x: 1000, lane: 4, lives: 2, maxLives: 2 },
     { kind: 'blotling', text: 'pen', x: 640, lane: 6, lives: 3, maxLives: 3 },
     { kind: 'runon', text: 'ink pot', buffer: '', cursor: 0, x: 860, lane: 8 },
-    { kind: 'misprint', text: 'paper', buffer: 'papre', cursor: 5, x: 520, lane: 10 },
   ];
   w.page.spawned += items.length - w.targets.length;
   w.targets = items.map(make);
@@ -85,6 +84,9 @@ const NEXT_KEY = (maxX: number) => `(() => {
   return t.text[t.typed];
 })()`;
 
+/** The free-play mode's button: "Free Write" since M17, "Practice" before. */
+const FREE_WRITE = 'Free Write|Practice';
+
 const TOUR: Step[] = [
   { shot: 'menu' },
   { click: 'Desk' }, { eval: SCROLL_TOP }, { shot: 'desk' }, { key: 'Escape' },
@@ -92,11 +94,11 @@ const TOUR: Step[] = [
   { click: 'Settings' }, { shot: 'settings' }, { key: 'Escape' },
   // Another keyboard layout (M16): the Type Case and the first chapter card follow it.
   { click: 'Settings' }, { click: 'Dvorak' }, { eval: SHOW_LAYOUT }, { shot: 'settings-layout' }, { key: 'Escape' },
-  { click: 'Practice' }, { click: 'Change keys' }, { shot: 'type-case-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
+  { click: FREE_WRITE }, { click: 'Change keys' }, { shot: 'type-case-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
   { click: 'Apprentice' }, { click: 'Chapter 1' }, { shot: 'chapter-intro-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
   { click: 'Settings' }, { click: 'US QWERTY' }, { key: 'Escape' },
   { click: 'How to play' }, { eval: SCROLL_TOP }, { shot: 'how-to-play' }, { key: 'Escape' },
-  { click: 'Practice' }, { shot: 'practice' },
+  { click: FREE_WRITE }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },
   // A fresh player gets the "New on this page" briefing before their first page.
   { click: 'Start writing' }, { wait: 800 }, { shot: 'briefing' }, { key: 'Enter' },
@@ -178,16 +180,24 @@ async function press(key: string): Promise<void> {
   await send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
 }
 
-/** Clicks the first visible, enabled button (else list item or label) whose text contains `label`. */
+/**
+ * Clicks the first visible, enabled button (else list item or label) whose
+ * text contains `label`. `label` may list alternatives as "A|B" (first match
+ * wins), for buttons renamed between milestones.
+ */
 async function click(label: string): Promise<void> {
   const ok = await evaluate(`(() => {
-    const q = ${JSON.stringify(label.toLowerCase())};
-    const find = (sel) => [...document.querySelectorAll(sel)].find((e) =>
+    const options = ${JSON.stringify(label.toLowerCase().split('|'))};
+    const find = (sel, q) => [...document.querySelectorAll(sel)].find((e) =>
       e.offsetParent !== null && !e.disabled && e.textContent.trim().toLowerCase().includes(q));
-    const el = find('button, a, [role=button]') || find('li, label');
-    if (!el) return false;
-    el.click();
-    return true;
+    for (const q of options) {
+      const el = find('button, a, [role=button]', q) || find('li, label', q);
+      if (el) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
   })()`);
   if (!ok) console.warn(`  (no "${label}" button on screen; skipped)`);
 }

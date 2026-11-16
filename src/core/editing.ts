@@ -1,6 +1,6 @@
 /**
- * Buffer mode (REQUIREMENTS §3): Run-ons and Misprints keep a text buffer
- * with a cursor, edited with typing, Backspace, Delete and the arrow keys.
+ * Buffer mode (REQUIREMENTS §3): Run-ons keep a text buffer with a cursor,
+ * edited with typing and Backspace.
  * Pure string helpers; input.ts applies them to targets.
  */
 
@@ -44,21 +44,6 @@ export function applyEdit({ buffer, cursor }: BufferState, action: EditAction): 
     case 'end':
       return { buffer, cursor: chars.length };
   }
-}
-
-/** Levenshtein edit distance in code points. */
-export function editDistance(a: string, b: string): number {
-  const x = [...a];
-  const y = [...b];
-  let prev = Array.from({ length: y.length + 1 }, (_, j) => j);
-  for (let i = 1; i <= x.length; i++) {
-    const row = [i];
-    for (let j = 1; j <= y.length; j++) {
-      row[j] = Math.min(prev[j]! + 1, row[j - 1]! + 1, prev[j - 1]! + (x[i - 1] === y[j - 1] ? 0 : 1));
-    }
-    prev = row;
-  }
-  return prev[y.length]!;
 }
 
 /** How many leading characters of `buffer` match `text`. */

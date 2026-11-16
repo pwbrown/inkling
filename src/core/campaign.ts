@@ -47,7 +47,7 @@ const SPACE_CHAPTER = US_QWERTY.lessons.findIndex((keys) => keys.includes(' '));
  * new key comes up often, and ends with Scrawlers, from chapter 1 on. With
  * too few keys for real words, Scrawlers carry short made-up strings of the
  * keys learned so far ("fjf"), see generator.ts. Pages are only ever drips
- * or Scrawlers: Run-ons (once space is learned) and Misprints are sprinkled
+ * or Scrawlers: Run-ons (once space is learned) are sprinkled
  * into Scrawler pages instead (GAME_CONFIG.sprinkles).
  */
 export function apprenticePlan(chapter: number): TargetKind[] {

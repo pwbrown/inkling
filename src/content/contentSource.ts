@@ -32,50 +32,8 @@ export interface ContentSource {
   nextWord(difficulty: number, random: () => number): string;
   /** Several words separated by spaces, for a Run-on (T3). Needs the space key. */
   nextPhrase(difficulty: number, random: () => number): string;
-  /** A word and a misspelled copy of it, for a Misprint (T4). */
-  nextMisprint(difficulty: number, random: () => number): { right: string; wrong: string };
   /** Whether these keys can make a target type (Run-ons need the space key). */
   supports(kind: TargetKind): boolean;
-}
-
-export type Corruption = 'swap' | 'drop' | 'double' | 'replace';
-const CORRUPTIONS: readonly Corruption[] = ['swap', 'drop', 'double', 'replace'];
-
-/**
- * Misspell a word with one typo of the given kind (REQUIREMENTS §6, T4).
- * Returns null if that kind of typo isn't possible for this word. Characters
- * added by "replace" come from `keys`, so the fix only needs selected keys.
- */
-export function corrupt(word: string, kind: Corruption, keys: readonly string[], random: () => number): string | null {
-  const chars = [...word];
-  const at = (n: number) => Math.floor(random() * n);
-  switch (kind) {
-    case 'swap': {
-      const spots = chars.slice(0, -1).flatMap((ch, i) => (ch !== chars[i + 1] ? [i] : []));
-      if (spots.length === 0) return null;
-      const i = spots[at(spots.length)]!;
-      [chars[i], chars[i + 1]] = [chars[i + 1]!, chars[i]!];
-      break;
-    }
-    case 'drop':
-      if (chars.length < 3) return null;
-      chars.splice(at(chars.length), 1);
-      break;
-    case 'double': {
-      const i = at(chars.length);
-      chars.splice(i, 0, chars[i]!);
-      break;
-    }
-    case 'replace': {
-      const i = at(chars.length);
-      const options = keys.filter((k) => k !== chars[i] && k !== ' ');
-      if (options.length === 0) return null;
-      chars[i] = options[at(options.length)]!;
-      break;
-    }
-  }
-  const out = chars.join('');
-  return out === word ? null : out;
 }
 
 export interface ContentOptions {
@@ -203,24 +161,6 @@ export function createContentSource({
       const capitalized =
         keySet.has(first.toUpperCase()) && keySet.has(first) && random() < 0.5 ? first.toUpperCase() + phrase.slice(1) : phrase;
       return withPunctuation(capitalized, 0.6, random);
-    },
-    nextMisprint(difficulty, random) {
-      const minLength = GAME_CONFIG.misprintMinLength;
-      let right = baseWord(difficulty, random);
-      for (let i = 0; i < 10 && [...right].length < minLength; i++) right = baseWord(Math.max(difficulty, 0.5), random);
-      while ([...right].length < minLength) right += baseWord(difficulty, random);
-
-      // One typo, or two on harder pages.
-      const typos = difficulty >= 0.7 ? 2 : 1;
-      for (let attempt = 0; attempt < 20; attempt++) {
-        let wrong: string | null = right;
-        for (let n = 0; n < typos && wrong; n++) {
-          wrong = corrupt(wrong, CORRUPTIONS[Math.floor(random() * CORRUPTIONS.length)]!, unique, random);
-        }
-        if (wrong && wrong !== right && !blocklist.blocksString(wrong)) return { right, wrong };
-      }
-      // Always possible: double a letter.
-      return { right, wrong: corrupt(right, 'double', unique, random)! };
     },
     nextChar(random) {
       if (totalWeight <= 0) return unique[Math.floor(random() * unique.length)] as string;

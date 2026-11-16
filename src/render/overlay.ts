@@ -11,7 +11,7 @@ import type { KeyboardLayout, LayoutId } from '../content/layouts/types';
 import { accuracy, topMissedKeys, wpm, type Stats } from '../core/stats';
 import { WORLD_HEIGHT, WORLD_WIDTH, isLastPageOfChapter, type World } from '../core/world';
 import { formatNumber, t, type MessageKey } from '../i18n';
-import { handsArt } from './handsArt';
+import { handsArt, type HandsArt } from './handsArt';
 import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, TEXT_FONT, keyLabel } from './theme';
 import { outBack, outCubic } from './tween';
 
@@ -20,6 +20,26 @@ const CARD_WIDTH = 620;
 const HANDS_WIDTH = 500;
 /** How much ink is in the wash the hands are painted with. */
 const HAND_WASH = 0.13;
+
+/** The hands-on-keyboard picture for `keys`, in the current theme's colors. */
+export function themedHandsArt(layout: KeyboardLayout, keys: readonly string[]): HandsArt {
+  const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
+  /** `a` with `amount` of `b` mixed in, channel by channel. */
+  const mix = (a: number, b: number, amount: number) =>
+    [16, 8, 0].reduce((out, shift) => {
+      const ca = (a >> shift) & 0xff;
+      const cb = (b >> shift) & 0xff;
+      return out | (Math.round(ca + (cb - ca) * amount) << shift);
+    }, 0);
+  return handsArt(layout, keys, {
+    ink: hex(COLORS.ink),
+    paper: hex(COLORS.paper),
+    hand: hex(mix(COLORS.paper, COLORS.ink, HAND_WASH)),
+    highlight: hex(COLORS.highlighter),
+    margin: hex(COLORS.margin),
+    rim: hex(COLORS.inkFaded),
+  });
+}
 const PAD = 32;
 export type OverlayLinkId = 'retry' | 'mainMenu';
 
@@ -123,6 +143,7 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
         lines,
         circled: topMissedKeys(stats),
         note: t(`note.${note.kind}` as MessageKey, { key: note.key ? keyLabel(note.key) : '' }),
+        links: [{ id: 'mainMenu', label: t('overlay.gameOver.mainMenu') }],
         prompt: lastPage ? t('overlay.chapterCleared.prompt', { next: chapter + 1 }) : t('overlay.pageCleared.prompt'),
       };
     }
@@ -398,22 +419,7 @@ export class Overlay {
       this.handsKey = '';
       return 0;
     }
-    const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
-    /** `a` with `amount` of `b` mixed in, channel by channel. */
-    const mix = (a: number, b: number, amount: number) =>
-      [16, 8, 0].reduce((out, shift) => {
-        const ca = (a >> shift) & 0xff;
-        const cb = (b >> shift) & 0xff;
-        return out | (Math.round(ca + (cb - ca) * amount) << shift);
-      }, 0);
-    const art = handsArt(layout, keys, {
-      ink: hex(COLORS.ink),
-      paper: hex(COLORS.paper),
-      hand: hex(mix(COLORS.paper, COLORS.ink, HAND_WASH)),
-      highlight: hex(COLORS.highlighter),
-      margin: hex(COLORS.margin),
-      rim: hex(COLORS.inkFaded),
-    });
+    const art = themedHandsArt(layout, keys);
     const width = HANDS_WIDTH;
     const height = Math.round((art.height / art.width) * width);
     this.hands.anchor.set(0.5, 0);

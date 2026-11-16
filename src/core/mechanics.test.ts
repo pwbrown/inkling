@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { US_QWERTY } from '../content/layouts/us-qwerty';
+import { apprenticeKeys } from './campaign';
 import { GAME_CONFIG } from './config';
 import { confirm, startApprentice, startPractice } from './input';
-import { MAX_BRIEFINGS, MECHANICS, mechanicsForPage, pendingBriefings } from './mechanics';
+import { MAX_BRIEFINGS, MECHANICS, guidedSpawn, mechanicsForPage, pendingBriefings } from './mechanics';
 import { createPage, createWorld, stepWorld, type World } from './world';
 
 const LETTERS = [...'abcdefghijklmnopqrstuvwxyz;', ' '];
@@ -10,6 +12,8 @@ function apprentice(chapter: number, page = 0, abilities: World['abilities'] = [
   const world = createWorld({ random: () => 0.5, keys: LETTERS, abilities });
   world.mode = 'apprentice';
   world.page = createPage('normal', chapter, page, world.content, 'apprentice');
+  // The chapter's own keys, for what the page can show (content stays broad so fixed-random spawns never stall).
+  world.keys = apprenticeKeys(US_QWERTY, chapter);
   return world;
 }
 
@@ -35,7 +39,6 @@ describe('mechanicsForPage', () => {
     expect(firstWith('spill')).toBe(GAME_CONFIG.boss.fromApprenticeChapter);
     expect(firstWith('mistakes')).toBe(GAME_CONFIG.mistakes.fromApprenticeChapter);
     expect(firstWith('runon')).toBe(GAME_CONFIG.sprinkles.runon.fromApprenticeChapter);
-    expect(firstWith('misprint')).toBe(GAME_CONFIG.sprinkles.misprint.fromApprenticeChapter);
     expect(firstWith('crimson')).toBeGreaterThan(0);
     expect(firstWith('violet')).toBeGreaterThan(firstWith('crimson'));
   });
@@ -50,6 +53,31 @@ describe('mechanicsForPage', () => {
     const got = mechanicsForPage(apprentice(3, 0, ['eraser', 'blotter']));
     expect(got.slice(-2)).toEqual(['blotter', 'eraser']);
     expect(got).toEqual(MECHANICS.filter((id) => got.includes(id)));
+  });
+});
+
+describe('the spacebar briefing', () => {
+  const practice = (keys: string[]) => {
+    const world = createWorld({ random: () => 0.5, keys, abilities: [] });
+    world.page = createPage('normal', 0, 0, world.content);
+    return world;
+  };
+
+  it('comes the first time a drip page can show ␣', () => {
+    const world = practice(LETTERS);
+    expect(world.page.params.kind).toBe('drip');
+    expect(mechanicsForPage(world).slice(0, 2)).toEqual(['basics', 'space']);
+    expect(mechanicsForPage(practice([...'asdf']))).not.toContain('space');
+  });
+
+  it('sends a lone space drip for its guided try', () => {
+    expect(guidedSpawn('space')).toMatchObject({ kind: 'drip', text: ' ' });
+  });
+
+  it('reaches the Apprentice course once space is learned', () => {
+    const space = US_QWERTY.lessons.findIndex((keys) => keys.includes(' '));
+    expect(mechanicsForPage(apprentice(space - 1))).not.toContain('space');
+    expect(mechanicsForPage(apprentice(space))).toContain('space');
   });
 });
 

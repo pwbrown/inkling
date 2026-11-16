@@ -27,7 +27,7 @@
 
 | Requirements term | In-world name | Notes |
 |---|---|---|
-| Campaign | **Notebook** | **Apprentice** (a 10-chapter course that teaches keys, with stars and a finish) or **Practice** (your own keys, endless) |
+| Campaign | **Notebook** | **Apprentice** (a 10-chapter course that teaches keys, with stars and a finish) or **Free Write** (your own keys, endless; the main mode, formerly Practice) |
 | Level | **Chapter** | Shown as a notebook tab. Finishing one refills 30% of the ink well. |
 | Wave | **Page** | Single target type per page |
 | Summary screen | **Graded page** | See §6 |
@@ -59,7 +59,7 @@ This is where the Spellbook mechanic comes in. The key-selection screen is a **l
 | **T1** word | **Scrawlers** | Wobbly ink-blot creatures with little legs, the word written on their belly | When you lock on, the Nib draws a thin guide line to it. Each correct letter is "re-inked" in crisp calligraphy, and finishing the word blots it up into a splatter. |
 | **T2** char | **Drips** | Small fast droplets, one glyph each | They come in swarms. Each pops with a tiny ink flick. |
 | **T3** phrase | **Run-ons** | A centipede where each segment is one word | Typos *smear* the segment, and Backspace acts as an **eraser** to clean it. Clearing a segment detaches it. |
-| **T4** correction | **Misprints** | A crooked rubber-stamp word with a visible text caret | Use arrow keys to move the caret, then Backspace or Delete and retype to fix it. When fixed, the stamp straightens and fades. |
+| ~~T4 correction~~ | ~~Misprints~~ | Removed in milestone 17: too out of place beside the other creatures. A new kind may take this slot later. | |
 
 *Code names:* Scrawlers were called Blotlings until 2026-11-15 (the name belongs to Disney's *Epic Mickey* enemies). The code still uses `blotling` for the target kind, because saves and the progression snapshots of older milestones depend on it. When the Spill splits, its small Scrawlers are called **Inkmites**.
 
@@ -145,7 +145,7 @@ Names considered for the first version:
 ## 10. Open Design Questions
 
 - [x] Final name: **Inky Keys** (renamed from Inkling on 2026-11-15).
-- [ ] Should the Apprentice path be the default for new players, with Free Case unlocked from the start? (Free Case is the default. Milestone 7 added mastery inking and next-key suggestions inside it, rather than a separate locked path.)
+- [x] Should the Apprentice path be the default for new players? No: Free Write (formerly Practice) comes first on the menu since milestone 17, starting on all letters, capitals and space; the Apprentice course sits just below it.
 - [ ] Does the page get messier from errors permanently within a chapter, or reset every page?
 - [x] Is the Spill boss part of the MVP or post-MVP? Added in milestone 13.
 - [x] Ship night mode in the MVP? Yes, in milestone 7, alongside a high-contrast theme.

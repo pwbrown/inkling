@@ -89,12 +89,12 @@ describe('presets', () => {
     }
   });
 
-  it('start new players on the Home row preset', () => {
-    expect(matchingPreset(presets, DEFAULT_KEYS)?.id).toBe('homeRow');
+  it('start new players on the Letters + capitals + space preset', () => {
+    expect(matchingPreset(presets, DEFAULT_KEYS)?.id).toBe('lettersCapitalsSpace');
   });
 
   it('match only exact selections', () => {
-    expect(matchingPreset(presets, [...DEFAULT_KEYS, 'e', 'r'])).toBeUndefined();
+    expect(matchingPreset(presets, [...DEFAULT_KEYS, '1', '2'])).toBeUndefined();
     expect(matchingPreset(presets, [...region('digits')].reverse())?.id).toBe('numbers');
   });
 
@@ -118,7 +118,8 @@ describe('presets', () => {
 
 describe('remapSelection', () => {
   it('carries a preset over to the same preset on the new layout', () => {
-    expect(remapSelection(US_QWERTY, DVORAK, DEFAULT_KEYS, 1)).toEqual([...'aoeuidhtns']);
+    expect(remapSelection(US_QWERTY, DVORAK, homeRowLesson(US_QWERTY), 1)).toEqual([...'aoeuidhtns']);
+    expect(remapSelection(US_QWERTY, DVORAK, DEFAULT_KEYS, 1).sort()).toEqual([...DEFAULT_KEYS].sort());
     const qwertyApprentice = apprenticePreset(US_QWERTY, 3, '').chars;
     expect(qwertyApprentice).toEqual([...'fjdk']);
     expect(remapSelection(US_QWERTY, COLEMAK, qwertyApprentice, 3).sort()).toEqual([...'tnse'].sort());

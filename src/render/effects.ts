@@ -64,11 +64,14 @@ export class Effects {
     }
   }
 
-  /** An expanding ring, for impacts and pickups. */
-  ring(x: number, y: number, color: number = this.splatterColor, radius = 26, lifeMs = 320): void {
+  /**
+   * An expanding ring, for impacts and pickups. `hold` is the share of its
+   * life it stays fully visible before fading (for rings meant to be noticed).
+   */
+  ring(x: number, y: number, color: number = this.splatterColor, radius = 26, lifeMs = 320, hold = 0): void {
     const g = new Graphics().circle(0, 0, radius).stroke({ width: 3, color });
     g.position.set(x, y);
-    this.add(g, lifeMs, { scaleFrom: this.reducedMotion ? 1 : 0.25, scaleTo: 1 });
+    this.add(g, lifeMs, { scaleFrom: this.reducedMotion ? 1 : 0.25, scaleTo: 1, hold });
   }
 
   /** A red-pen cross where a wrong key landed. */
@@ -217,6 +220,10 @@ export class Effects {
 
   update(dtMs: number): void {
     const dt = dtMs / 1000;
+    // Callbacks run after the sweep: they may add particles (a ring where a
+    // drop lands), and anything pushed onto the old array mid-filter would be
+    // dropped from the list and left on screen forever.
+    const arrived: Array<() => void> = [];
     this.particles = this.particles.filter((p) => {
       p.lifeMs += dtMs;
       const t = Math.min(1, p.lifeMs / p.maxLifeMs);
@@ -231,7 +238,7 @@ export class Effects {
         p.node.y += p.vy * dt;
       }
       if (p.lifeMs >= p.maxLifeMs) {
-        p.to?.onArrive?.();
+        if (p.to?.onArrive) arrived.push(p.to.onArrive);
         p.node.destroy();
         return false;
       }
@@ -242,6 +249,7 @@ export class Effects {
       p.node.alpha = t <= p.hold ? 1 : 1 - (t - p.hold) / (1 - p.hold || 1);
       return true;
     });
+    for (const callback of arrived) callback();
   }
 
   private add(node: Graphics | Text, maxLifeMs: number, options: ParticleOptions = {}): void {

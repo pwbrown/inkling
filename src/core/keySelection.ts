@@ -124,6 +124,8 @@ export function builtInPresets(layout: KeyboardLayout): Preset[] {
     preset('homeTopRows', [...home, ...r('topRow').filter(isLetter)]),
     preset('allLetters', r('lowercase')),
     preset('lettersCapitals', [...r('lowercase'), ...r('uppercase')]),
+    // What a brand-new player starts with (DEFAULT_KEYS in config.ts).
+    preset('lettersCapitalsSpace', [...r('lowercase'), ...r('uppercase'), ' ']),
     preset('lettersPunctuation', [...r('lowercase'), ...r('uppercase'), ',', '.', "'", '?', '!', ' ']),
     preset('leftHand', r('leftHand')),
     preset('rightHand', r('rightHand')),

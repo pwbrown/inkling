@@ -1,6 +1,6 @@
 # Game release system with versioning
 
-Claude Code session started 2026-11-16. 2 prompts.
+Claude Code session started 2026-11-16. 3 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -617,3 +617,143 @@ Committing will also export the transcript, as the project requires.
   ```
 
 </details>
+
+### 🤖 Claude
+
+Scanning the new and changed transcripts with generic patterns.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Scan transcripts for emails, paths and tokens
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys/docs/transcripts && F="2026-11-16-game-name-change-feasibility-26b363a8.md 2026-11-16-game-name-change-feasibility-fork-0d3c04f9.md 2026-11-16-game-release-system-with-versioning-e31c68db.md 2026-11-16-inkykeys-com-connection-security-error-1a386715.md README.md"; grep -nEo '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' $F | grep -v noreply | sort | uniq -c; grep -nEc '/Users/|/private/tmp|home/[a-z]' $F; grep -nE '(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{12,}|Bearer [A-Za-z0-9._-]{20,}|-----BEGIN)' $F | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+zsh didn't split the variable; retrying with the files listed directly.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Scan transcripts for emails, paths and tokens
+
+  ```bash
+  set -- 2026-11-16-game-name-change-feasibility-26b363a8.md 2026-11-16-game-name-change-feasibility-fork-0d3c04f9.md 2026-11-16-game-release-system-with-versioning-e31c68db.md 2026-11-16-inkykeys-com-connection-security-error-1a386715.md README.md; grep -nEo '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' "$@" | grep -v noreply | sort | uniq -c; grep -nEc '/Users/|/private/tmp|home/[a-z]' "$@"; grep -nE '(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{12,}|Bearer [A-Za-z0-9._-]{20,}|-----BEGIN)' "$@" | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+No emails or tokens. Checking what the path hits are.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Inspect path matches in transcripts
+
+  ```bash
+  grep -hEo '(/Users/|/private/tmp|home/[a-z])[^ `)"]{0,60}' 2026-11-16-game-name-change-feasibility-26b363a8.md 2026-11-16-game-name-change-feasibility-fork-0d3c04f9.md 2026-11-16-inkykeys-com-connection-security-error-1a386715.md | sort | uniq -c | head -20; grep -c "Tagger" 2026-11-16-game-release-system-with-versioning-e31c68db.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Paths are already redacted and the Tagger lines with your email didn't make it into the export. Committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit all changes on feat/releases
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git add -A && git commit -q -F - <<'EOF'
+  Release system: versions, tags and in-game What's new
+
+  - Semantic versions for players: major when the game changes shape, minor
+    for anything new, patch for fixes only (docs/RELEASING.md)
+  - Release notes for every version in src/core/releases.ts, with short
+    player-facing lines in en.ts; everything else is "Bug fixes and small
+    improvements"
+  - "What's new" card the first time a browser runs a new version, listing
+    what changed since its last visit; nothing for brand-new players
+  - Version and a What's new 
+  … (469 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I committed everything to the `feat/releases` branch as `47fe7f2` ("Release system: versions, tags and in-game What's new"). The commit message lists each change as a bullet point.
+
+As the project requires, I exported this session's transcript and included it. Before committing I checked the new and changed transcript files for email addresses, tokens and personal paths, and found nothing private. Your username is already replaced with `[removed]` in every path. The `git show` output earlier included your email in the tag's author line, but that line didn't end up in the exported file.
+
+The branch isn't merged into `main` yet, and `v2.6.0` isn't tagged. That tag should be made on `main` after the merge. Nothing has been pushed.
+
+## 🧑 Prompt
+
+> merge tag and push
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Merge to main, delete branch, tag v2.6.0
+
+  ```bash
+  git switch -q main && git merge --ff-only feat/releases | tail -2 && git branch -d feat/releases && npm run release:tag
+  ```
+- **Shell:** Push main and all version tags
+
+  ```bash
+  git push origin main 2>&1 | tail -2 && git push origin --tags 2>&1 | tail -4 && git ls-remote --tags origin | grep -c '\^{}'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+All 20 tags are on GitHub. Checking that the Release workflow ran for v2.6.0.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** List recent workflow runs
+
+  ```bash
+  gh run list --limit 6 --json workflowName,headBranch,status,conclusion | cat
+  ```
+- **Shell:** Check for a Release workflow run
+
+  ```bash
+  gh run list --workflow release.yml --limit 3 --json status,headBranch 2>&1 | cat; gh release list --limit 3 | cat
+  ```
+
+</details>
+
+### 🤖 Claude
+
+GitHub skips tag events when more than three tags are pushed at once, so the workflow never fired. I'm creating the v2.6.0 release directly, using the same command the workflow runs.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Create the GitHub Release for v2.6.0
+
+  ```bash
+  gh release create v2.6.0 --verify-tag --notes-from-tag --title "Inky Keys 2.6.0" && gh release view v2.6.0 | cat
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Version 2.6.0 is merged, tagged and on GitHub, along with all the older version tags.
+
+- **Merge:** `main` was fast-forwarded to `47fe7f2` and pushed. I deleted the `feat/releases` branch locally.
+- **Tags:** I tagged `v2.6.0` with `npm run release:tag`. All 20 tags, `v0.1.0` to `v2.6.0`, are now on GitHub.
+- **GitHub Release:** [Inky Keys 2.6.0](https://github.com/pwbrown/inky-keys/releases/tag/v2.6.0) is published, with the in-game notes as its text. Only 2.6.0 has a Release; the older tags are just tags. That's because those commits don't contain the Release workflow, so my earlier warning about creating 19 Releases was wrong.
+- **One snag:** GitHub doesn't start workflows when more than three tags are pushed at once, so the Release workflow never ran for 2.6.0. I created that Release by hand with the same command the workflow uses.
+- **Next time:** push one tag at a time with `git push origin v<version>`, as [docs/RELEASING.md](docs/RELEASING.md) says, and the workflow will run.
+- **Deploy and CI:** both were queued for the new `main` when I last checked. I didn't wait for them to finish.
+
+Once the deploy finishes, anyone who has played before will see the "What's new" card on their next visit.

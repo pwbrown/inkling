@@ -13,19 +13,25 @@
  */
 
 /**
- * Keys a brand-new player starts with: the home row, the usual first lesson
- * (DESIGN §4). Matches the "Home row" preset in keySelection.ts.
+ * Keys a brand-new player starts with in Free Write: every letter, both
+ * cases, and space, so real words and phrases show up from the first page.
+ * Matches the "Letters + capitals + space" preset in keySelection.ts.
+ * Beginners who want the home row start the Apprentice course instead.
  */
-export const DEFAULT_KEYS: readonly string[] = [...'asdfghjkl;'];
+export const DEFAULT_KEYS: readonly string[] = [
+  ...'abcdefghijklmnopqrstuvwxyz',
+  ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  ' ',
+];
 
 /**
- * Target types (REQUIREMENTS §3): drips (one character), Scrawlers (a word),
- * Run-ons (a phrase, fixed with Backspace) and Misprints (a misspelled word,
- * fixed with the arrow keys, Backspace and Delete).
+ * Target types (REQUIREMENTS §3): drips (one character), Scrawlers (a word)
+ * and Run-ons (a phrase, fixed with Backspace). Misprints were removed in
+ * milestone 17.
  */
-export type TargetKind = 'drip' | 'blotling' | 'runon' | 'misprint';
+export type TargetKind = 'drip' | 'blotling' | 'runon';
 
-export const TARGET_KINDS: readonly TargetKind[] = ['drip', 'blotling', 'runon', 'misprint'];
+export const TARGET_KINDS: readonly TargetKind[] = ['drip', 'blotling', 'runon'];
 
 export type Difficulty = 'relaxed' | 'normal' | 'hard' | 'expert';
 
@@ -103,7 +109,6 @@ export const GAME_CONFIG = {
     drip: { size: 20, spawnIntervalMs: 1300, maxOnScreen: 6, speed: 85, inkLoss: 10 },
     blotling: { size: 12, spawnIntervalMs: 2600, maxOnScreen: 4, speed: 55, inkLoss: 20 },
     runon: { size: 4, spawnIntervalMs: 7500, maxOnScreen: 2, speed: 28, inkLoss: 25 },
-    misprint: { size: 8, spawnIntervalMs: 4200, maxOnScreen: 3, speed: 36, inkLoss: 20 },
   } satisfies Record<TargetKind, KindSettings>,
 
   /** Hard limits so late chapters stay humanly possible. */
@@ -111,7 +116,6 @@ export const GAME_CONFIG = {
     drip: { maxSize: 36, minSpawnIntervalMs: 420, maxOnScreen: 10, maxSpeed: 240 },
     blotling: { maxSize: 22, minSpawnIntervalMs: 1000, maxOnScreen: 7, maxSpeed: 150 },
     runon: { maxSize: 7, minSpawnIntervalMs: 4500, maxOnScreen: 3, maxSpeed: 55 },
-    misprint: { maxSize: 14, minSpawnIntervalMs: 2200, maxOnScreen: 5, maxSpeed: 80 },
   } satisfies Record<TargetKind, KindLimits>,
 
   progression: {
@@ -131,7 +135,7 @@ export const GAME_CONFIG = {
 
   /**
    * Page types in each chapter. Pages are drips or Scrawlers; later on,
-   * Run-ons and Misprints are sprinkled into Scrawler pages (`sprinkles`).
+   * Run-ons are sprinkled into Scrawler pages (`sprinkles`).
    * Chapters past the end of this list reuse the last entry.
    */
   chapters: [
@@ -143,7 +147,7 @@ export const GAME_CONFIG = {
   ] as TargetKind[][],
 
   /**
-   * Occasional Run-ons and Misprints on Scrawler pages, for variety without
+   * Occasional Run-ons on Scrawler pages, for variety without
    * whole pages of them. Chance per spawn: `start` from chapter `fromChapter`
    * (Practice) or `fromApprenticeChapter` (Apprentice, both 0-based), plus
    * `perChapter` after that (Apprentice chapters count `apprentice.pace` each),
@@ -152,7 +156,6 @@ export const GAME_CONFIG = {
   sprinkles: {
     pageKinds: ['blotling'] as TargetKind[],
     runon: { fromChapter: 3, fromApprenticeChapter: 10, start: 0.1, perChapter: 0.03, max: 0.2 },
-    misprint: { fromChapter: 4, fromApprenticeChapter: 15, start: 0.1, perChapter: 0.03, max: 0.2 },
     /** Most sprinkled targets on one page, and on screen at once. */
     maxPerPage: 3,
     maxOnScreen: 1,
@@ -174,8 +177,6 @@ export const GAME_CONFIG = {
     /** Longest word allowed in a phrase. */
     maxWordLength: 6,
   },
-  /** Shortest word worth misprinting. */
-  misprintMinLength: 4,
 
   /** When a key counts as practiced or mastered (DESIGN §4). */
   mastery: {
@@ -361,19 +362,18 @@ export interface PageParams {
   inkLoss: number;
   /** Chance per spawn of each tougher variant. */
   variants: VariantChances;
-  /** Chance per spawn of a sprinkled Run-on or Misprint (see GAME_CONFIG.sprinkles). */
+  /** Chance per spawn of a sprinkled Run-on (see GAME_CONFIG.sprinkles). */
   sprinkles: SprinkleChances;
 }
 
 export interface SprinkleChances {
   runon: number;
-  misprint: number;
 }
 
 type SprinkleSettings = { fromChapter: number; fromApprenticeChapter: number; start: number; perChapter: number; max: number };
 
 /**
- * Chances of a sprinkled Run-on or Misprint on a page of type `kind`.
+ * Chance of a sprinkled Run-on on a page of type `kind`.
  * `apprentice`: count from the Apprentice start chapters, at Apprentice pace.
  */
 export function sprinkleChances(
@@ -383,14 +383,14 @@ export function sprinkleChances(
   canUse: (kind: TargetKind) => boolean = () => true,
 ): SprinkleChances {
   const s = GAME_CONFIG.sprinkles;
-  if (!s.pageKinds.includes(kind)) return { runon: 0, misprint: 0 };
+  if (!s.pageKinds.includes(kind)) return { runon: 0 };
   const chance = (c: SprinkleSettings, sprinkled: TargetKind) => {
     const from = apprentice ? c.fromApprenticeChapter : c.fromChapter;
     if (chapter < from || !canUse(sprinkled)) return 0;
     const steps = (chapter - from) * (apprentice ? GAME_CONFIG.apprentice.pace : 1);
     return Math.min(c.max, c.start + c.perChapter * steps);
   };
-  return { runon: chance(s.runon, 'runon'), misprint: chance(s.misprint, 'misprint') };
+  return { runon: chance(s.runon, 'runon') };
 }
 
 export interface VariantChances {

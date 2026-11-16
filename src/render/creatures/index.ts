@@ -4,7 +4,6 @@ import { createBlotling } from './blotling';
 import { createBottle } from './bottle';
 import type { CreatureView } from './common';
 import { createDrip } from './drip';
-import { createMisprint } from './misprint';
 import { createRunon } from './runon';
 
 export type { CreatureView, FrameContext } from './common';
@@ -22,7 +21,5 @@ export function createCreature(target: Target, baseScale: number): CreatureView 
       return createBlotling(target, scale);
     case 'runon':
       return createRunon(target, scale);
-    case 'misprint':
-      return createMisprint(target, scale);
   }
 }

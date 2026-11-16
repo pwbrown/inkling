@@ -60,6 +60,9 @@ export interface DisplayOptions {
 }
 
 const GOLD = 0xc9a227;
+/** Rings that point at the HUD (ink gained or lost, a power ready) stay up a moment, then fade. */
+const HIGHLIGHT_RING_MS = 900;
+const HIGHLIGHT_RING_HOLD = 0.45;
 
 /** Splatter colors for the unlockable ink choices. */
 function splatterColor(choice: Cosmetics['splatter']): number {
@@ -135,6 +138,8 @@ function portraitTarget(id: MechanicId): Target | null {
   switch (id) {
     case 'basics':
       return { ...base, kind: 'drip', text: 'f' };
+    case 'space':
+      return { ...base, kind: 'drip', text: ' ' };
     case 'blotling':
       return base;
     case 'crimson':
@@ -147,8 +152,6 @@ function portraitTarget(id: MechanicId): Target | null {
       return { ...base, text: 'spill', lives: 3, maxLives: 3, boss: true };
     case 'runon':
       return { ...base, kind: 'runon', text: 'ink dries', buffer: 'ink d', cursor: 5, typed: 5 };
-    case 'misprint':
-      return { ...base, kind: 'misprint', text: 'paper', buffer: 'papre', cursor: 5 };
     case 'recovery':
       return { ...base, text: 'ink', bottle: true };
     default:
@@ -469,7 +472,7 @@ export async function createRenderer(
       case 'passiveReady': {
         const at = hud.abilityPoint(event.id);
         hud.pulse(event.id);
-        effects.ring(at.x, at.y, COLORS.highlighter, 26);
+        effects.ring(at.x, at.y, COLORS.highlighter, 26, HIGHLIGHT_RING_MS, HIGHLIGHT_RING_HOLD);
         break;
       }
       case 'eraserUsed': {
@@ -510,7 +513,7 @@ export async function createRenderer(
         if (event.inkLost > 0) {
           // Ink spilt by the slip: a red tick on the well.
           const well = hud.inkPoint();
-          effects.ring(well.x, well.y, COLORS.margin, 16, 300);
+          effects.ring(well.x, well.y, COLORS.margin, 16, HIGHLIGHT_RING_MS, HIGHLIGHT_RING_HOLD);
         }
         if (!reducedMotion) wobbleMs = 220;
         startShake(150, event.inkLost > 0 ? 5 : 3.5);
@@ -529,7 +532,7 @@ export async function createRenderer(
         const well = hud.inkPoint();
         const drops = event.source === 'bottle' ? 6 : 3;
         for (let i = 0; i < drops; i++) {
-          effects.flyTo(from.x + (Math.random() - 0.5) * 30, from.y + (Math.random() - 0.5) * 30, well.x, well.y, COLORS.ink, i === 0 ? () => effects.ring(well.x, well.y, COLORS.highlighter, 20) : undefined, 420 + i * 70);
+          effects.flyTo(from.x + (Math.random() - 0.5) * 30, from.y + (Math.random() - 0.5) * 30, well.x, well.y, COLORS.ink, i === 0 ? () => effects.ring(well.x, well.y, COLORS.highlighter, 20, HIGHLIGHT_RING_MS, HIGHLIGHT_RING_HOLD) : undefined, 420 + i * 70);
         }
         effects.popup(from.x, from.y - 44, t('popup.ink', { ink: event.amount }), { size: 20 });
         nibMood.cheerMs = 600;

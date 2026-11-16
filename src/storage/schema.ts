@@ -296,7 +296,7 @@ const MECHANICS_BEFORE_V7: Record<string, number> = {
   spill: 6,
   ghost: 8,
   runon: 10,
-  misprint: 15,
+  misprint: 15, // Misprints were removed in milestone 17; sanitizing drops the id.
   violet: 16,
 };
 

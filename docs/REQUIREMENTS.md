@@ -43,7 +43,7 @@ This is an arcade typing game inspired by *Typer Shark*. The player sits on the 
 | **T1** | Word target | A word, or a string of allowed keys when no words fit | Typing sequences | MVP |
 | **T2** | Character target | One character (letter, digit or symbol) | Single-key recall, reaction time | MVP |
 | **T3** | Phrase target | Several words or a sentence. Errors stay in the buffer and **must be fixed with Backspace** | Accuracy and correction | Post-MVP |
-| **T4** | Correction target | A misspelled word shown in an editable field. Fix it with **arrow keys plus Backspace/Delete** | Cursor navigation and editing | Post-MVP |
+| **T4** | Correction target | A misspelled word shown in an editable field. Fix it with **arrow keys plus Backspace/Delete** | Cursor navigation and editing | Post-MVP | *(Removed in milestone 17.)*
 
 ### Input models
 - **Match mode (T1, T2):** each keystroke is checked against the next expected character.
@@ -116,7 +116,7 @@ param = clamp(
 ### Per target type
 - **T2:** characters are sampled from the selected keys, with **extra weight on the player's most-missed keys** (from local stats).
 - **T3 (post-MVP):** phrases come from a bundled phrase/sentence list filtered the same way, or are built from matching words.
-- **T4 (post-MVP):** misspellings are made by applying swap, drop, duplicate or replace operations to matching words.
+- **T4 (post-MVP):** misspellings are made by applying swap, drop, duplicate or replace operations to matching words. *(Misprints were removed in milestone 17.)*
 
 ### Optional vocabulary fetch (post-MVP)
 - The **player** starts it from settings, and only while online.
@@ -270,6 +270,14 @@ Inky Keys is **open source** and will be **publicly hosted** as a static web app
 | 15 | **Character and teaching** | Game feel (Nib face, screen shake, damage flash, animated HUD, more sounds); mistakes cost points and ink; ink recovery; five powers unlocked over the course; briefings and guided first tries for every new mechanic (save version 7) |
 | 16 | **Keyboard layouts** | Dvorak and Colemak beside US QWERTY, chosen per player (save version 8); the Apprentice course, Type Case, hands guide, finger hints and presets follow the layout |
 
+## 13c. Round 3 milestones (Free Write first)
+
+| # | Milestone | Scope |
+|---|---|---|
+| 17 | **First impressions** | Practice renamed Free Write and listed first; Misprints removed; new players start on letters, capitals and space; Main menu link on the page-cleared card; ink-bar rings fade properly; a spacebar briefing; How to play with pictures |
+| 18 | **Waves and pacing** | Targets zoom in until fully on the page; Scrawlers are the main wave; numbers and symbols get their own pages; a 1-second grace after the Eraser; Blotter charges harder to earn on higher difficulties |
+| 19 | **Bosses** | Four new bosses (Shuffler, Bookworm, Inkwell Squid, Rival Quill) beside the Spill, rotating at the end of each chapter, earlier in the Apprentice course and in Free Write |
+
 ## 14. Open Questions / TODO
 
 - [x] **Theme, art direction and audio.** See [DESIGN.md](DESIGN.md) (Inkwell direction). Name: **Inky Keys**.
@@ -279,4 +287,4 @@ Inky Keys is **open source** and will be **publicly hosted** as a static web app
 - [x] Vocabulary API: Datamuse (`api.datamuse.com/words?ml=<topic>`). No key needed, CORS-enabled, sends only the topic. See PRIVACY.md.
 - [ ] Confirm the code license (MIT vs GPL-3.0) and the art/audio license.
 - [ ] Pick the public repo/site name (§12). Host: GitHub Pages via `.github/workflows/deploy.yml` (any static host works).
-- [ ] An endless or practice mode alongside the campaign?
+- [x] An endless or practice mode alongside the campaign? Yes: Free Write (formerly Practice), listed first since milestone 17.

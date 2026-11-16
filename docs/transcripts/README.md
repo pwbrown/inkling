@@ -13,4 +13,5 @@ Each file is exported from the session log with `npm run transcript` (see `scrip
 - [2026-11-16-game-name-change-feasibility-26b363a8](2026-11-16-game-name-change-feasibility-26b363a8.md)
 - [2026-11-16-game-name-change-feasibility-fork-0d3c04f9](2026-11-16-game-name-change-feasibility-fork-0d3c04f9.md)
 - [2026-11-16-game-release-system-with-versioning-e31c68db](2026-11-16-game-release-system-with-versioning-e31c68db.md)
+- [2026-11-16-inky-keys-milestones-95f6365a](2026-11-16-inky-keys-milestones-95f6365a.md)
 - [2026-11-16-inkykeys-com-connection-security-error-1a386715](2026-11-16-inkykeys-com-connection-security-error-1a386715.md)

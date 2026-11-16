@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Blocklist } from './blocklist';
-import { MIN_WORD_POOL, corrupt, countTypeableWords, createContentSource, styleWord, wordLetters } from './contentSource';
+import { MIN_WORD_POOL, countTypeableWords, createContentSource, styleWord, wordLetters } from './contentSource';
 import { entriesFromTiers } from './wordPool';
 
 const counter = () => {
@@ -86,7 +86,7 @@ describe('capitals and punctuation', () => {
   });
 });
 
-describe('phrases and misprints', () => {
+describe('phrases', () => {
   const words = entriesFromTiers([
     Array.from({ length: 40 }, (_, i) => ['flask', 'glass', 'salad', 'dash', 'hall'][i % 5] + 'a'.repeat(Math.floor(i / 5))).join(' '),
   ]);
@@ -98,7 +98,6 @@ describe('phrases and misprints', () => {
   it('only offers Run-ons when space is selected', () => {
     expect(createContentSource({ keys: [...'asdf'] }).supports('runon')).toBe(false);
     expect(createContentSource({ keys: [...'asdf '] }).supports('runon')).toBe(true);
-    expect(createContentSource({ keys: [...'asdf'] }).supports('misprint')).toBe(true);
   });
 
   it('builds short phrases: two words, three only when hard', () => {
@@ -115,26 +114,6 @@ describe('phrases and misprints', () => {
     for (let i = 0; i < 30; i++) {
       for (const word of content.nextPhrase(1, random).split(' ')) expect([...word].length).toBeLessThanOrEqual(6);
     }
-  });
-
-  it('misspells a real word using only selected keys', () => {
-    const content = createContentSource({ keys: [...'asdfghjkl'], words });
-    for (let i = 0; i < 50; i++) {
-      const { right, wrong } = content.nextMisprint(0.3, random);
-      expect(wrong).not.toBe(right);
-      expect([...right].length).toBeGreaterThanOrEqual(4);
-      expect(wrong).toMatch(/^[asdfghjkl]+$/);
-    }
-  });
-
-  it('makes each kind of typo', () => {
-    const r = () => 0;
-    expect(corrupt('flask', 'swap', [], r)).toBe('lfask');
-    expect(corrupt('flask', 'drop', [], r)).toBe('lask');
-    expect(corrupt('flask', 'double', [], r)).toBe('fflask');
-    expect(corrupt('flask', 'replace', ['g'], r)).toBe('glask');
-    expect(corrupt('aa', 'swap', [], r)).toBeNull();
-    expect(corrupt('ab', 'replace', ['a'], r)).toBeNull();
   });
 });
 

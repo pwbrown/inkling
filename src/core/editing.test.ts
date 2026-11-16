@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyEdit, correctPrefix, editDistance } from './editing';
+import { applyEdit, correctPrefix } from './editing';
 
 describe('applyEdit', () => {
   const s = { buffer: 'cta', cursor: 3 };
@@ -27,14 +27,7 @@ describe('applyEdit', () => {
   });
 });
 
-describe('editDistance and correctPrefix', () => {
-  it('measures edits', () => {
-    expect(editDistance('flask', 'flask')).toBe(0);
-    expect(editDistance('falsk', 'flask')).toBe(2);
-    expect(editDistance('flaask', 'flask')).toBe(1);
-    expect(editDistance('', 'abc')).toBe(3);
-  });
-
+describe('correctPrefix', () => {
   it('finds the correct start of a buffer', () => {
     expect(correctPrefix('flx', 'flask')).toBe(2);
     expect(correctPrefix('', 'flask')).toBe(0);

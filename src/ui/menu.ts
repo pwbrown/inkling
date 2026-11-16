@@ -6,6 +6,7 @@
 import './dialog.css';
 import './menu.css';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
+import type { MechanicId } from '../core/mechanics';
 import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
 import { t, type MessageKey } from '../i18n';
 import { CONTENT_LEVELS, type ContentLevel } from '../content/contentFilter';
@@ -53,6 +54,10 @@ export interface MenuHooks {
   continueDetail(): string | null;
   /** e.g. "Home row · 10 keys". */
   keysSummary(): string;
+  /** A picture of the creature for a mechanic, as an image URL (shared with the briefing cards). */
+  portrait(id: MechanicId): string | null;
+  /** The player's keys on a keyboard with hands, as an image URL, or null. */
+  handsPicture(): string | null;
   /** e.g. "Chapter 3 of 10 · ★ 14 of 102". */
   apprenticeDetail(): string;
   /** Every Apprentice chapter, for the Contents page. */
@@ -255,14 +260,14 @@ export class Menu {
       ),
       h('nav', { className: 'menu-list' }, [
         cont ? this.button('continue', t('menu.continue'), () => this.hooks.onContinue(), { detail: cont, key: 'c', primary: true }) : null,
+        this.button('practice', t('menu.practice'), () => this.show('newNotebook'), {
+          detail: t('menu.practiceDetail', { keys: this.hooks.keysSummary() }),
+          key: 'f',
+          primary: !cont,
+        }),
         this.button('apprentice', t('menu.apprentice'), () => this.show('contents'), {
           detail: this.hooks.apprenticeDetail(),
           key: 'a',
-          primary: !cont,
-        }),
-        this.button('practice', t('menu.practice'), () => this.show('newNotebook'), {
-          detail: t('menu.practiceDetail', { keys: this.hooks.keysSummary() }),
-          key: 'p',
         }),
         this.button('words', t('menu.wordLists'), () => this.hooks.onWordLists(), { key: 'w' }),
         this.button('desk', t('menu.desk'), () => this.show('desk'), { detail: t('menu.deskDetail'), key: 'd' }),
@@ -448,21 +453,52 @@ export class Menu {
   }
 
   private howToPlay(): HTMLElement[] {
-    const section = (title: MessageKey, ...body: (HTMLElement | string)[]) =>
+    const section = (title: MessageKey, ...body: (HTMLElement | string | null)[]) =>
       h('section', { className: 'how-section' }, [h('h3', {}, [t(title)]), ...body]);
     const p = (key: MessageKey) => h('p', {}, [t(key)]);
+    // Pictures are drawn by the game renderer; if one can't be, the words still stand.
+    const picture = (id: MechanicId) => {
+      const src = this.hooks.portrait(id);
+      return src ? h('img', { className: 'how-art', src, alt: '' }) : h('span', { className: 'how-art how-art-none', 'aria-hidden': 'true' }, ['✎']);
+    };
+    const creature = (id: MechanicId, text: MessageKey) => h('li', { className: 'how-creature' }, [picture(id), h('p', {}, [t(text)])]);
+    const variant = (id: MechanicId) =>
+      h('figure', { className: 'how-variant' }, [picture(id), h('figcaption', {}, [t(`tutorial.${id}.title` as MessageKey)])]);
+    const control = (keys: string[], action: MessageKey) =>
+      h('div', { className: 'how-control' }, [
+        h('dt', {}, keys.map((k) => h('kbd', {}, [k]))),
+        h('dd', {}, [t(action)]),
+      ]);
+    const hands = this.hooks.handsPicture();
     return [
       h('h2', { id: 'menu-title' }, [t('how.title')]),
       section('how.goalTitle', p('how.goal')),
       section('how.modesTitle', p('how.modes')),
       section(
         'how.creaturesTitle',
-        h('ul', { className: 'how-list' }, (['how.drip', 'how.blotling', 'how.runon', 'how.misprint'] as const).map((k) => h('li', {}, [t(k)]))),
+        h('ul', { className: 'how-creatures' }, [
+          creature('basics', 'how.drip'),
+          creature('blotling', 'how.blotling'),
+          creature('runon', 'how.runon'),
+          creature('recovery', 'how.bottle'),
+        ]),
       ),
-      section('how.variantsTitle', p('how.variants'), p('how.mix')),
+      section('how.variantsTitle', h('div', { className: 'how-variants' }, [variant('crimson'), variant('violet'), variant('ghost')]), p('how.variants'), p('how.mix')),
+      section('how.bossTitle', h('ul', { className: 'how-creatures' }, [creature('spill', 'how.boss')])),
       section('how.powersTitle', p('how.powers')),
-      section('how.keysTitle', p('how.keys')),
-      section('how.controlsTitle', p('how.controls')),
+      section('how.keysTitle', hands ? h('img', { className: 'how-hands', src: hands, alt: t('how.handsAlt') }) : null, p('how.keys')),
+      section(
+        'how.controlsTitle',
+        h('dl', { className: 'how-controls' }, [
+          control([t('how.control.typeKey')], 'how.control.type'),
+          control(['Tab'], 'how.control.tab'),
+          control(['↑'], 'how.control.up'),
+          control(['↓'], 'how.control.down'),
+          control(['Enter'], 'how.control.enter'),
+          control(['Backspace'], 'how.control.backspace'),
+          control(['Esc'], 'how.control.esc'),
+        ]),
+      ),
       h('div', { className: 'tc-actions' }, [
         h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', onClick: () => this.show('title') }, [t('menu.back')]),
       ]),
@@ -477,7 +513,7 @@ export class Menu {
         this.button('resume', t('pause.resume'), () => this.hooks.onResume(), { key: 'Esc', primary: true }),
         this.button('restart', t('pause.restart'), () => this.hooks.onRestart(), { key: 'r' }),
         this.hooks.canPracticeChapterKeys()
-          ? this.button('practice', t('pause.practice'), () => this.hooks.onPracticeChapterKeys(), { detail: t('pause.practiceDetail'), key: 'p' })
+          ? this.button('practice', t('pause.practice'), () => this.hooks.onPracticeChapterKeys(), { detail: t('pause.practiceDetail'), key: 'f' })
           : null,
         this.button('settings', t('menu.settings'), () => this.hooks.onSettings(), { key: 's' }),
         this.button('quit', t('pause.quit'), () => this.hooks.onQuit(), { key: 'q' }),

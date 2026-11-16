@@ -81,7 +81,9 @@ describe('save schema', () => {
     expect(veteran.tutorials.seen).not.toContain('mistakes');
 
     const done = migrate({ version: 6, apprentice: { unlocked: 27, stars: {}, completed: true } });
-    expect(done.tutorials.seen).toEqual(expect.arrayContaining(['spill', 'ghost', 'runon', 'misprint', 'violet']));
+    expect(done.tutorials.seen).toEqual(expect.arrayContaining(['spill', 'ghost', 'runon', 'violet']));
+    // Misprints were removed in milestone 17, so their id is dropped.
+    expect(done.tutorials.seen).not.toContain('misprint');
     expect(done.tutorials.seen).not.toContain('eraser');
   });
 

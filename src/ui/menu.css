@@ -188,15 +188,10 @@
   margin-bottom: 4px;
 }
 
-.how-section p,
-.how-list {
+.how-section p {
   margin: 0;
   line-height: 1.5;
   color: var(--tc-ink-light);
-}
-
-.how-list {
-  padding-left: 20px;
 }
 
 @media (max-width: 520px) {
@@ -530,4 +525,98 @@
 
 .menu-grown-up-row .menu-input {
   width: 6em;
+}
+
+/* How to play: pictures beside the words. */
+.how-creatures {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.how-creature {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.how-art {
+  width: 96px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.how-art-none {
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  color: var(--tc-ink-light);
+}
+
+.how-variants {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.how-variant {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font-size: 0.9em;
+  color: var(--tc-ink-light);
+}
+
+.how-hands {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  margin: 4px auto 8px;
+}
+
+.how-controls {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+}
+
+.how-control {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.how-control dt {
+  text-align: right;
+}
+
+.how-control dd {
+  margin: 0;
+  color: var(--tc-ink-light);
+}
+
+.how-control kbd {
+  display: inline-block;
+  min-width: 1.8em;
+  padding: 1px 6px;
+  border: 1.5px solid var(--tc-ink-light);
+  border-bottom-width: 3px;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 0.85em;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .how-controls {
+    grid-template-columns: 1fr;
+  }
 }

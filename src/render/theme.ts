@@ -85,9 +85,6 @@ export function setTheme(theme: ThemeId): void {
  */
 export const TEXT_FONT = '"Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
-/** Fixed-width text, so the Misprint caret lines up between letters. */
-export const MONO_FONT = '"Atkinson Hyperlegible Mono", ui-monospace, Menlo, Consolas, monospace';
-
 /** Handwritten headings, grades and notes (Caveat, see src/fonts.ts). Never used for text the player types. */
 export const DISPLAY_FONT = 'Caveat, "Segoe Print", "Bradley Hand", Georgia, serif';
 

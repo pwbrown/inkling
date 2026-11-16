@@ -88,23 +88,18 @@ describe('pageParams', () => {
     }
   });
 
-  it('sprinkles Run-ons from chapter 4 and Misprints from chapter 5, on Scrawler pages only', () => {
-    expect(sprinkleChances('blotling', 2)).toEqual({ runon: 0, misprint: 0 });
+  it('sprinkles Run-ons from chapter 4, on Scrawler pages only', () => {
+    expect(sprinkleChances('blotling', 2)).toEqual({ runon: 0 });
     expect(sprinkleChances('blotling', 3).runon).toBeGreaterThan(0);
-    expect(sprinkleChances('blotling', 3).misprint).toBe(0);
-    expect(sprinkleChances('blotling', 4).misprint).toBeGreaterThan(0);
-    expect(sprinkleChances('drip', 9)).toEqual({ runon: 0, misprint: 0 });
+    expect(sprinkleChances('drip', 9)).toEqual({ runon: 0 });
     expect(sprinkleChances('blotling', 9, false, (k) => k !== 'runon').runon).toBe(0);
     const late = sprinkleChances('blotling', 99);
     expect(late.runon).toBeLessThanOrEqual(GAME_CONFIG.sprinkles.runon.max);
-    expect(late.runon + late.misprint).toBeLessThan(0.5);
   });
 
   it('starts Apprentice sprinkles after space is learned', () => {
     expect(sprinkleChances('blotling', 9, true).runon).toBe(0);
     expect(sprinkleChances('blotling', 10, true).runon).toBeGreaterThan(0);
-    expect(sprinkleChances('blotling', 14, true).misprint).toBe(0);
-    expect(sprinkleChances('blotling', 15, true).misprint).toBeGreaterThan(0);
   });
 
   it('keeps Relaxed playable: at least one target on screen and complexity ≥ 0', () => {
