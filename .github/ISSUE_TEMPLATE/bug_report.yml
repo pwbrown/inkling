@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping make Inkling better! Please don't include personal details like your full name, email or where you live.
+        Thanks for helping make Inky Keys better! Please don't include personal details like your full name, email or where you live.
   - type: textarea
     id: what-happened
     attributes:

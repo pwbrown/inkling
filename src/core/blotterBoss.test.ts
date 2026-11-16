@@ -87,7 +87,7 @@ describe('the Spill', () => {
     expect(createPage('normal', 1, 0, undefined, 'practice').hasBoss).toBe(false);
   });
 
-  it('splits into smaller Blotlings when its last word is typed', () => {
+  it('splits into Inkmites when its last word is typed', () => {
     const world = playingWorld();
     const boss = spawnBoss(world);
     boss.x = boss.prevX = 600;

@@ -77,18 +77,18 @@ describe('pageParams', () => {
     }
   });
 
-  it('swaps in a Blotling page when the keys cannot make the planned type', () => {
+  it('swaps in a Scrawler page when the keys cannot make the planned type', () => {
     expect(pageParams('normal', 3, 0, () => true, ['runon']).kind).toBe('runon');
     expect(pageParams('normal', 3, 0, (k) => k !== 'runon', ['runon']).kind).toBe('blotling');
   });
 
-  it('only plans drip and Blotling pages', () => {
+  it('only plans drip and Scrawler pages', () => {
     for (let chapter = 0; chapter < GAME_CONFIG.chapters.length + 2; chapter++) {
       expect(chapterPlan(chapter).every((k) => k === 'drip' || k === 'blotling')).toBe(true);
     }
   });
 
-  it('sprinkles Run-ons from chapter 4 and Misprints from chapter 5, on Blotling pages only', () => {
+  it('sprinkles Run-ons from chapter 4 and Misprints from chapter 5, on Scrawler pages only', () => {
     expect(sprinkleChances('blotling', 2)).toEqual({ runon: 0, misprint: 0 });
     expect(sprinkleChances('blotling', 3).runon).toBeGreaterThan(0);
     expect(sprinkleChances('blotling', 3).misprint).toBe(0);

@@ -18,7 +18,7 @@ describe('mechanicsForPage', () => {
     expect(mechanicsForPage(apprentice(0))).toEqual(['basics']);
   });
 
-  it('adds Blotlings on the first word page', () => {
+  it('adds Scrawlers on the first word page', () => {
     const world = apprentice(0, 2);
     expect(world.page.params.kind).toBe('blotling');
     expect(mechanicsForPage(world)).toEqual(['basics', 'blotling', 'combo', 'recovery']);

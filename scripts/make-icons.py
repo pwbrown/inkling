@@ -1,5 +1,5 @@
 """
-Draws Inkling's app icons (an ink drop on notebook paper with a red margin)
+Draws Inky Keys' app icons (an ink drop on notebook paper with a red margin)
 as PNGs with no dependencies beyond the standard library.
 
     python3 scripts/make-icons.py

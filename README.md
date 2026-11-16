@@ -1,7 +1,7 @@
-# Inkling
+# Inky Keys
 
 > [!NOTE]
-> **This project is almost entirely AI-generated ("vibe coded").** Unlike my other repositories, which I wrote by hand, nearly all of Inkling's code and documentation was written by an AI coding assistant (Claude) from my direction, with me setting the goals, reviewing and steering. I built it this way to quickly create a typing-practice game for my kids, something that would otherwise have taken me months on my own. Please read the code with that in mind. The full conversations are in [docs/transcripts](docs/transcripts/README.md), so you can see how it was built.
+> **This project is almost entirely AI-generated ("vibe coded").** Unlike my other repositories, which I wrote by hand, nearly all of Inky Keys' code and documentation was written by an AI coding assistant (Claude) from my direction, with me setting the goals, reviewing and steering. I built it this way to quickly create a typing-practice game for my kids, something that would otherwise have taken me months on my own. Please read the code with that in mind. The full conversations are in [docs/transcripts](docs/transcripts/README.md), so you can see how it was built.
 
 A browser-based, offline-first typing game inspired by *Typer Shark*. Ink-blot creatures crawl across a notebook page carrying words, characters, digits or symbols, and you type them before they reach the margin. What makes it different is that **you choose exactly which keys to practice**, and the game builds all of its content from only those keys, so it grows with you as you learn.
 
@@ -27,7 +27,7 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 
 The **main menu** has buttons for everything: **Continue** (C), **Apprentice** (A), **Practice** (P, then pick a difficulty with 1–4 and change keys), **Word lists** (W), **Desk** (D), **Settings** (S), **Manage saves** (B), **How to play** (H), **About** (I, with links to the source code and a form for ideas and bug reports) and **Switch player** (U). Use the arrow keys or Tab and Enter, or the mouse.
 
-A notebook is a series of **chapters**, each made of a few **pages**. Each page is mostly **drips** (single characters) or mostly **Blotlings** (words); from chapter 4, Blotling pages now and then slip in a **Run-on** or **Misprint** (at most one on screen and three per page). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. Drip and Blotling pages never show more targets at once than you have keys to tell them apart. All of these numbers live in `src/core/config.ts`. 
+A notebook is a series of **chapters**, each made of a few **pages**. Each page is mostly **drips** (single characters) or mostly **Scrawlers** (words); from chapter 4, Scrawler pages now and then slip in a **Run-on** or **Misprint** (at most one on screen and three per page). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. Drip and Scrawler pages never show more targets at once than you have keys to tell them apart. All of these numbers live in `src/core/config.ts`. 
 
 ### Choosing keys
 
@@ -40,7 +40,7 @@ The game builds everything from your keys: drips use them directly, and word pag
 - **Apprentice** is a typing course for beginners, 27 chapters long.
   - Chapter 1 teaches just `f` and `j`, the keys with bumps. Each later chapter adds **one** key: the rest of the home row (`d k s l a ; g h`), then space, then `e i r u t y o w n m c v b x p q z`.
   - **Pacing:** difficulty climbs a quarter as fast as in Practice. The first 8 chapters are extra gentle, with slower, sparser creatures and shorter pages, easing off as you go.
-  - **What appears when:** every chapter, even the first (just `f` and `j`), has a Blotling page. Until there are enough keys for real words, Blotlings carry short made-up strings of the keys learned so far, like `fjf`. Once space is learned, an occasional phrase (Run-on) joins the word pages, and later an occasional Misprint. Crimson creatures arrive from chapter 5, ghosts from chapter 9, violet ones from chapter 17, and the Spill from chapter 7. On Hard and Expert, the first 10 chapters start nearer Normal and ease up to full strength.
+  - **What appears when:** every chapter, even the first (just `f` and `j`), has a Scrawler page. Until there are enough keys for real words, Scrawlers carry short made-up strings of the keys learned so far, like `fjf`. Once space is learned, an occasional phrase (Run-on) joins the word pages, and later an occasional Misprint. Crimson creatures arrive from chapter 5, ghosts from chapter 9, violet ones from chapter 17, and the Spill from chapter 7. On Hard and Expert, the first 10 chapters start nearer Normal and ease up to full strength.
   - **Introductions:** every chapter opens with a card showing its new key and which finger types it. The new key comes up three times as often as the others.
   - **Stars and progress:** each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter. Finishing the last chapter completes the notebook.
 - **Practice** uses exactly the keys you choose in the Type Case, with endless chapters.
@@ -61,13 +61,13 @@ Swear words and slurs are always left out. Making the filter looser asks a quick
 ### Ink, ranks and your desk
 
 - **Ink:** every page you finish earns ink (XP): a tenth of its score, plus 15 per star. Completing the Apprentice notebook adds 500. Each level needs more ink than the last, and new things unlock only every few levels (the gold nib at level 14), so they're worth working toward.
-- **Ranks:** ink raises your level, and you rise from Scribbler through Doodler, Scribe, Penman, Calligrapher and Illuminator to Master Inkling.
+- **Ranks:** ink raises your level, and you rise from Scribbler through Doodler, Scribe, Penman, Calligrapher and Illuminator to Master of Keys.
 - **Unlocks:** levels unlock things for your **Desk** (D on the main menu): pens (fountain nib, quill, brush, gold nib), splatter ink colors and paper (ruled, graph, parchment). When you unlock something, a card shows a picture of it with a **Use it now** button, and the Desk shows a picture of every item.
 
 ### Powers and bosses
 
 - **The Blotter:** every 25 correct keys in a row charges it, up to 2 charges, shown as drops by the ink bar. Press **Enter** while playing to blot every creature on the page for half points.
-- **The Spill:** from chapter 7, the last page of each Apprentice chapter starts with the Spill, a big, slow boss that needs three words in a row. It costs double ink if it reaches the margin and splits into three small Blotlings when blotted. The Blotter can't touch it.
+- **The Spill:** from chapter 7, the last page of each Apprentice chapter starts with the Spill, a big, slow boss that needs three words in a row. It costs double ink if it reaches the margin and splits into three small Inkmites when blotted. The Blotter can't touch it.
 
 ### Ink shots
 
@@ -76,14 +76,14 @@ Every correct key flicks a drop of ink from your pen at the letter you typed. Th
 ### Target types
 
 - **Drips:** a single character.
-- **Blotlings:** a word.
+- **Scrawlers:** a word.
 - **Run-ons** (sprinkled in from chapter 4): a phrase. Mistakes stay, struck through in red, until you erase them with Backspace. They need the space key, so without it they don't appear.
 - **Misprints** (sprinkled in from chapter 5): a crooked rubber stamp with a misspelled word and the correct spelling pencilled above. Start fixing it with Backspace, Delete, the arrow keys or Tab, then type. (When only Misprints are on the page, typing goes straight to the nearest one.) Edits that bring it closer to right score, and edits that make it worse count as mistakes.
-- **Tougher ink:** some drips and Blotlings come in **crimson**, which need two words (or characters), or **violet**, which need three. Their words are shorter to make up for it, and each has its own look: crimson ones are spiky with horns, violet ones are lumpy with a crown and a third eye. Dots above them show how many are left. You can switch to other creatures between words, and they never repeat a word back to back. **Ghosts** in invisible ink hide their text until they're a quarter to half of the way in from the right edge. In Practice crimson starts in chapter 2, ghosts in 3 and violet in 5; in Apprentice they start later.
+- **Tougher ink:** some drips and Scrawlers come in **crimson**, which need two words (or characters), or **violet**, which need three. Their words are shorter to make up for it, and each has its own look: crimson ones are spiky with horns, violet ones are lumpy with a crown and a third eye. Dots above them show how many are left. You can switch to other creatures between words, and they never repeat a word back to back. **Ghosts** in invisible ink hide their text until they're a quarter to half of the way in from the right edge. In Practice crimson starts in chapter 2, ghosts in 3 and violet in 5; in Apprentice they start later.
 
 ### Word lists
 
-Press **W** to download words about a topic (e.g. *ocean*). Inkling asks the free [Datamuse](https://www.datamuse.com/api/) service for related words, sending only your topic. It keeps the clean single words, saves them on your device, and favours the ones your keys can type on word pages. Lists can be switched off or deleted. This is the only feature that uses the network, and only when you ask.
+Press **W** to download words about a topic (e.g. *ocean*). Inky Keys asks the free [Datamuse](https://www.datamuse.com/api/) service for related words, sending only your topic. It keeps the clean single words, saves them on your device, and favours the ones your keys can type on word pages. Lists can be switched off or deleted. This is the only feature that uses the network, and only when you ask.
 
 ### After each page
 
@@ -119,11 +119,11 @@ npm run words:build  # regenerate the bundled word pack and blocklist
 npm run preview    # serve the production build locally
 ```
 
-Build for a GitHub Pages project site with `INKLING_BASE=/inkling/ npm run build`.
+Build for a GitHub Pages project site with `INKY_KEYS_BASE=/inkling/ npm run build`.
 
 ### Deploying
 
-The game is published to **https://pwbrown.github.io/inkling/** by `.github/workflows/deploy.yml`, which builds and deploys to GitHub Pages on every push to `main`. You can also run it by hand from **Actions → Deploy → Run workflow**. One-time setup: **Settings → Pages → Source: GitHub Actions**. The build is a static site, so any static host works too: serve the `dist/` folder from `npm run build` over HTTPS, with `INKLING_BASE` set to the path it's served from.
+The game is published to **https://pwbrown.github.io/inkling/** by `.github/workflows/deploy.yml`, which builds and deploys to GitHub Pages on every push to `main`. You can also run it by hand from **Actions → Deploy → Run workflow**. One-time setup: **Settings → Pages → Source: GitHub Actions**. The build is a static site, so any static host works too: serve the `dist/` folder from `npm run build` over HTTPS, with `INKY_KEYS_BASE` set to the path it's served from.
 
 The service worker is only registered in production builds. Use `npm run build && npm run preview` to try offline mode locally.
 

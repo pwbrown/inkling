@@ -15,7 +15,7 @@ import { h } from './dom';
 
 export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk' | 'players' | 'playerEdit' | 'about';
 
-/** Inkling's source code and issue forms. */
+/** Inky Keys' source code and issue forms. */
 export const REPO_URL = 'https://github.com/pwbrown/inkling';
 export const ISSUES_URL = `${REPO_URL}/issues/new/choose`;
 
@@ -99,15 +99,15 @@ export interface MenuHooks {
 /** The GitHub mark, for the About page's link to the source. */
 const GITHUB_SVG = `<svg class="art art-github" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>`;
 
-/** The Inkling wordmark: an ink drop beside the name, drawn in SVG. */
+/** The Inky Keys wordmark: an ink drop beside the name, drawn in SVG. */
 const LOGO_SVG = `
-<svg class="menu-logo" viewBox="0 0 360 96" role="img" aria-label="Inkling">
+<svg class="menu-logo" viewBox="0 0 390 96" role="img" aria-label="Inky Keys">
   <path class="logo-drop" d="M44 6 L26 48 A21 21 0 1 0 62 48 Z"/>
   <circle class="logo-eye" cx="38" cy="62" r="4.2"/><circle class="logo-eye" cx="52" cy="62" r="4.2"/>
   <circle class="logo-shine" cx="34" cy="50" r="3"/>
   <path class="logo-smile" d="M39 72 q6 5 12 0"/>
-  <text class="logo-word" x="80" y="70">Inkling</text>
-  <path class="logo-underline" d="M84 82 C150 74 250 90 330 78"/>
+  <text class="logo-word" x="80" y="70">Inky Keys</text>
+  <path class="logo-underline" d="M84 82 C160 74 270 90 366 78"/>
 </svg>`;
 
 export class Menu {
@@ -237,7 +237,7 @@ export class Menu {
     return [
       h('header', { className: 'menu-header' }, [
         logo,
-        h('h1', { id: 'menu-title', className: 'visually-hidden' }, ['Inkling']),
+        h('h1', { id: 'menu-title', className: 'visually-hidden' }, ['Inky Keys']),
         h('p', { className: 'menu-tagline' }, [t('menu.tagline')]),
       ]),
       h(
@@ -743,7 +743,7 @@ export class Menu {
     ]);
   }
 
-  /** What Inkling is, why it exists, and where its code lives. */
+  /** What Inky Keys is, why it exists, and where its code lives. */
   private about(): HTMLElement[] {
     const link = (id: string, href: string, label: string, detail: string, icon: string | null) =>
       h('a', { className: 'menu-btn menu-link-card', href, target: '_blank', rel: 'noopener noreferrer', 'data-id': id }, [

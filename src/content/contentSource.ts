@@ -28,7 +28,7 @@ export interface ContentSource {
   readonly topicWordCount: number;
   /** A single character for a Drip (T2). */
   nextChar(random: () => number): string;
-  /** A word, or a generated string, for a Blotling (T1). */
+  /** A word, or a generated string, for a Scrawler (T1). */
   nextWord(difficulty: number, random: () => number): string;
   /** Several words separated by spaces, for a Run-on (T3). Needs the space key. */
   nextPhrase(difficulty: number, random: () => number): string;

@@ -17,9 +17,9 @@ export interface SaveDataOptions {
   onClose(): void;
 }
 
-/** File name for an export, e.g. inkling-save-2026-11-12.json. */
+/** File name for an export, e.g. inky-keys-save-2026-11-12.json. */
 export function exportFileName(now = new Date()): string {
-  return `inkling-save-${now.toISOString().slice(0, 10)}.json`;
+  return `inky-keys-save-${now.toISOString().slice(0, 10)}.json`;
 }
 
 /** Hand the player a file to save, without any network request. */

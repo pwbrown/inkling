@@ -1,5 +1,5 @@
 /**
- * Blotling (DESIGN §5): a wobbly ink blot carrying a word, with eyes peeking
+ * Scrawler (DESIGN §5): a wobbly ink blot carrying a word, with eyes peeking
  * over its top edge and little legs scurrying underneath.
  */
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';

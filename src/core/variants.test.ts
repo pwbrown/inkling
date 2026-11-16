@@ -55,7 +55,7 @@ describe('spawning variants', () => {
 });
 
 describe('lives', () => {
-  it('a crimson Blotling needs two words, releasing the lock in between', () => {
+  it('a crimson Scrawler needs two words, releasing the lock in between', () => {
     const world = playingWorld();
     const t = spawnTarget(world, { kind: 'blotling', text: 'ink', lives: 2, x: 500, prevX: 500, lane: 0 })!;
     type(world, 'ink');

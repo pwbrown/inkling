@@ -1,7 +1,7 @@
-# Inkling: Design
+# Inky Keys: Design
 
 > Direction: **Inkwell** (hand-drawn notebook look) + **Spellbook-style learning** (keys are learned like runes and mastered over time).
-> Name: **Inkling** (chosen 2026-11-12). See [§9 Name](#9-name).
+> Name: **Inky Keys** (chosen 2026-11-15, previously Inkling). See [§9 Name](#9-name).
 > Status: Draft v0.1 (2026-11-12). Companion to [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ---
@@ -31,7 +31,7 @@
 | Level | **Chapter** | Shown as a notebook tab. Finishing one refills 30% of the ink well. |
 | Wave | **Page** | Single target type per page |
 | Summary screen | **Graded page** | See §6 |
-| Boss | **The Spill** | Opens the last page of each Apprentice chapter: three lives, splits into small Blotlings (milestone 13) |
+| Boss | **The Spill** | Opens the last page of each Apprentice chapter: three lives, splits into small Inkmites (milestone 13) |
 
 ---
 
@@ -56,12 +56,14 @@ This is where the Spellbook mechanic comes in. The key-selection screen is a **l
 
 | Type | Name | Look | Behavior / interaction |
 |---|---|---|---|
-| **T1** word | **Blotlings** | Wobbly ink-blot creatures with little legs, the word written on their belly | When you lock on, the Nib draws a thin guide line to it. Each correct letter is "re-inked" in crisp calligraphy, and finishing the word blots it up into a splatter. |
+| **T1** word | **Scrawlers** | Wobbly ink-blot creatures with little legs, the word written on their belly | When you lock on, the Nib draws a thin guide line to it. Each correct letter is "re-inked" in crisp calligraphy, and finishing the word blots it up into a splatter. |
 | **T2** char | **Drips** | Small fast droplets, one glyph each | They come in swarms. Each pops with a tiny ink flick. |
 | **T3** phrase | **Run-ons** | A centipede where each segment is one word | Typos *smear* the segment, and Backspace acts as an **eraser** to clean it. Clearing a segment detaches it. |
 | **T4** correction | **Misprints** | A crooked rubber-stamp word with a visible text caret | Use arrow keys to move the caret, then Backspace or Delete and retype to fix it. When fixed, the stamp straightens and fades. |
 
-**Personality:** every creature has a face. Eyes follow the Nib, and they blink. A creature looks worried near the margin, wide-eyed when you lock onto it, and happy for a moment with each correct key. Drips bob and squash, Blotlings wobble and scurry on little legs, Run-ons ripple like centipedes, and Misprints hop like stamps. Reduced motion stops the movement but keeps the faces.
+*Code names:* Scrawlers were called Blotlings until 2026-11-15 (the name belongs to Disney's *Epic Mickey* enemies). The code still uses `blotling` for the target kind, because saves and the progression snapshots of older milestones depend on it. When the Spill splits, its small Scrawlers are called **Inkmites**.
+
+**Personality:** every creature has a face. Eyes follow the Nib, and they blink. A creature looks worried near the margin, wide-eyed when you lock onto it, and happy for a moment with each correct key. Drips bob and squash, Scrawlers wobble and scurry on little legs, Run-ons ripple like centipedes, and Misprints hop like stamps. Reduced motion stops the movement but keeps the faces.
 
 **Tougher ink** (Typer Shark style): crimson creatures need two completions in a row and violet ones three, with dots showing what's left. Ghosts in invisible ink are faint and blurred until they're a quarter to half of the way in from the right edge (a random point per ghost). Chances grow by chapter and difficulty (`GAME_CONFIG.variants`).
 
@@ -108,15 +110,27 @@ This is where the Spellbook mechanic comes in. The key-selection screen is a **l
 
 ## 9. Name
 
-**Inkling**: "a bit of ink" and "a small idea". It's short and easy to type.
+**Inky Keys** (chosen 2026-11-15): the ink-and-notebook world plus the keyboard, so the name says "typing game" at a glance. It's short, friendly, and easy for young players to read. The domain is **inkykeys.com**.
 
-**Availability notes (2026-11-12):**
-- No typing game called *Inkling* turned up.
-- Similar names already exist: *Inklings* (a 2016 Lemmings-style puzzle game on Steam), *Inkling Cats* (a roguelike) and *Inkslinger* (a typing game).
-- Nintendo's *Splatoon* uses "Inklings" for its characters.
-- Do a trademark check and look for store-name conflicts before any public or commercial release. A subtitle (e.g. *Inkling: Type Case*) could help tell it apart.
+**Availability notes (2026-11-15):**
+- No game, app or typing tool called *Inky Keys* turned up. The nearest names are a tattoo artist (*Inky Key*), the ELECFOX *INKY 75* mechanical keyboard and *inkkeys*, a DIY e-ink keypad.
+- No *INKY KEYS* or *INKYKEYS* mark in the USPTO or the WIPO Global Brand Database. Live marks for plain *INKY* exist in class 9 (Kaseya email security, Kraken's crypto wallet, the *Inky Trivia* app) for unrelated goods. This was a quick knockout search, not legal clearance.
 
-Other names considered:
+**Earlier name: Inkling** (2026-11-12 to 2026-11-15). It was dropped because it collided with Thinking Machines Lab's *Inkling* AI model (July 2026) and Nintendo's *Splatoon* Inklings. Some internal identifiers still say `inkling`: the IndexedDB database, the `app` marker in exported saves, the settings key in local storage and the `window.inkling` debug hook. Renaming them would cut players off from their saves and settings, or break the snapshots of older milestones.
+
+Other names checked during the rename:
+
+| Name | Result |
+|---|---|
+| **The Typist's Apprentice** | Clear, .com free. The runner-up. |
+| **Letterclack**, **Clatterpage** | Clear, .com free |
+| **Mind the Margin** | Clear for games; the phrase is used in finance |
+| **Inkstroke**, **Typewright** | Taken by ink-themed games and typing tools |
+| **Ten Inky Fingers** | Too close to *Inky Fingers*, a 2026 Steam game |
+| **Carriage Return** | Small existing games; the .com is taken |
+| **Blotlings** (for the enemies) | Disney's *Epic Mickey* enemies, so they became Scrawlers |
+
+Names considered for the first version:
 
 | Name | Notes |
 |---|---|
@@ -130,7 +144,7 @@ Other names considered:
 
 ## 10. Open Design Questions
 
-- [x] Final name: **Inkling**.
+- [x] Final name: **Inky Keys** (renamed from Inkling on 2026-11-15).
 - [ ] Should the Apprentice path be the default for new players, with Free Case unlocked from the start? (Free Case is the default. Milestone 7 added mastery inking and next-key suggestions inside it, rather than a separate locked path.)
 - [ ] Does the page get messier from errors permanently within a chapter, or reset every page?
 - [x] Is the Spill boss part of the MVP or post-MVP? Added in milestone 13.

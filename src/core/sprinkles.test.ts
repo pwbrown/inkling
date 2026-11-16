@@ -6,7 +6,7 @@ import { createPage, createWorld, inkLossFor, spawnTarget, type World } from './
 
 const ALL = [...'abcdefghijklmnopqrstuvwxyz '];
 
-/** A Blotling page with the given sprinkle chances. */
+/** A Scrawler page with the given sprinkle chances. */
 function blotlingWorld(sprinkles: { runon: number; misprint: number }, random: () => number = () => 0.5): World {
   const world = createWorld({ random, content: createContentSource({ keys: ALL }) });
   world.page = createPage('normal', 6, 1, world.content);
@@ -18,7 +18,7 @@ function blotlingWorld(sprinkles: { runon: number; misprint: number }, random: (
 }
 
 describe('sprinkles', () => {
-  it('slip a Run-on or Misprint into a Blotling page', () => {
+  it('slip a Run-on or Misprint into a Scrawler page', () => {
     const runon = spawnTarget(blotlingWorld({ runon: 1, misprint: 0 }))!;
     expect(runon.kind).toBe('runon');
     expect(runon.buffer).toBe('');
@@ -40,7 +40,7 @@ describe('sprinkles', () => {
     const world = blotlingWorld({ runon: 1, misprint: 0 });
     spawnTarget(world);
     world.laneStep = 1;
-    // A second spawn while one is on screen is an ordinary Blotling.
+    // A second spawn while one is on screen is an ordinary Scrawler.
     expect(spawnTarget(world)!.kind).toBe('blotling');
     world.targets = [];
     world.page.sprinkled = GAME_CONFIG.sprinkles.maxPerPage;
@@ -57,7 +57,7 @@ describe('sprinkles', () => {
 });
 
 describe('typing on a mixed page', () => {
-  it('does not drop a slip meant for a Blotling into a sprinkled Misprint', () => {
+  it('does not drop a slip meant for a Scrawler into a sprinkled Misprint', () => {
     const world = blotlingWorld({ runon: 0, misprint: 0 });
     const misprint = spawnTarget(world, { kind: 'misprint', text: 'cake', buffer: 'caek', cursor: 4, x: 400, prevX: 400, lane: 0 })!;
     spawnTarget(world, { kind: 'blotling', text: 'jump', x: 600, prevX: 600, lane: 2 });
@@ -67,7 +67,7 @@ describe('typing on a mixed page', () => {
     expect(world.stats.errors).toBe(1);
   });
 
-  it('starts a sprinkled Misprint with Backspace and keeps Blotling typing separate', () => {
+  it('starts a sprinkled Misprint with Backspace and keeps Scrawler typing separate', () => {
     const world = blotlingWorld({ runon: 0, misprint: 0 });
     const misprint = spawnTarget(world, { kind: 'misprint', text: 'cake', buffer: 'cakee', cursor: 5, x: 400, prevX: 400, lane: 0 })!;
     const blot = spawnTarget(world, { kind: 'blotling', text: 'jump', x: 600, prevX: 600, lane: 2 })!;

@@ -19,7 +19,7 @@
 export const DEFAULT_KEYS: readonly string[] = [...'asdfghjkl;'];
 
 /**
- * Target types (REQUIREMENTS §3): drips (one character), Blotlings (a word),
+ * Target types (REQUIREMENTS §3): drips (one character), Scrawlers (a word),
  * Run-ons (a phrase, fixed with Backspace) and Misprints (a misspelled word,
  * fixed with the arrow keys, Backspace and Delete).
  */
@@ -130,8 +130,8 @@ export const GAME_CONFIG = {
   },
 
   /**
-   * Page types in each chapter. Pages are drips or Blotlings; later on,
-   * Run-ons and Misprints are sprinkled into Blotling pages (`sprinkles`).
+   * Page types in each chapter. Pages are drips or Scrawlers; later on,
+   * Run-ons and Misprints are sprinkled into Scrawler pages (`sprinkles`).
    * Chapters past the end of this list reuse the last entry.
    */
   chapters: [
@@ -143,7 +143,7 @@ export const GAME_CONFIG = {
   ] as TargetKind[][],
 
   /**
-   * Occasional Run-ons and Misprints on Blotling pages, for variety without
+   * Occasional Run-ons and Misprints on Scrawler pages, for variety without
    * whole pages of them. Chance per spawn: `start` from chapter `fromChapter`
    * (Practice) or `fromApprenticeChapter` (Apprentice, both 0-based), plus
    * `perChapter` after that (Apprentice chapters count `apprentice.pace` each),
@@ -159,7 +159,7 @@ export const GAME_CONFIG = {
   },
 
   /**
-   * Drip and Blotling pages never have more targets on screen than the player
+   * Drip and Scrawler pages never have more targets on screen than the player
    * has keys (minus `keysMinus`), so the first keystroke always says which
    * one you mean. Matters most with a beginner's two or three keys.
    */
@@ -289,8 +289,8 @@ export const GAME_CONFIG = {
 
   /**
    * The Spill: a boss on the last page of every Apprentice chapter. A big,
-   * slow Blotling with three lives and longer words, which splits into small
-   * Blotlings when finally blotted.
+   * slow Scrawler with three lives and longer words, which splits into small
+   * Inkmites (little Scrawlers) when finally blotted.
    */
   boss: {
     lives: 3,
@@ -417,7 +417,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 /**
  * Settings for page `page` of chapter `chapter` (both 0-based). `canUse`
  * says whether the player's keys can produce a target type (e.g. Run-ons
- * need the space key); unusable pages become Blotling pages.
+ * need the space key); unusable pages become Scrawler pages.
  */
 export function pageParams(
   difficulty: Difficulty,

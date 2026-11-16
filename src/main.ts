@@ -889,7 +889,9 @@ async function main(): Promise<void> {
   syncMenu();
 
   if (import.meta.env.DEV) {
-    // Handy for poking at state from the console during development.
+    // Handy for poking at state from the console during development. Still
+    // called `inkling` (the first name) because the snapshots script reads it
+    // from builds of older milestones.
     (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, menu, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
   }
 }

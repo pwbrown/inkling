@@ -946,12 +946,66 @@ I left a hand-over note in the shared notes folder (`m16-layouts.md`).
 
 > commit it and merge into main and then push all
 
-<details><summary>1 tool call</summary>
+<details><summary>4 tool calls</summary>
 
 - **Shell:** Export the build transcript
 
   ```bash
   npm run transcript 2>&1 | tail -5; git status --short docs/transcripts | head
   ```
+- **Shell:** Scan transcripts for private details
+
+  ```bash
+  f="docs/transcripts/2026-11-14-add-two-new-keyboard-layouts-491092a5.md docs/transcripts/2026-11-14-game-look-feel-and-mechanics-1bcd11e0.md docs/transcripts/README.md"; grep -nEio "[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|/Users/[a-z]+|sk-[a-z0-9]{10,}|ghp_[a-z0-9]+|token[=:][^ ]+|philip|pwbrown" $f | sort | uniq -c | head -20; git diff --stat docs/transcripts
+  ```
+- **Shell:** Scan transcripts for private details
+
+  ```bash
+  grep -nEio "[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|/Users/[a-z]+|sk-[a-z0-9]{10,}|ghp_[a-z0-9]+|philip|pwbrown|Application Support" docs/transcripts/2026-11-14-add-two-new-keyboard-layouts-491092a5.md docs/transcripts/2026-11-14-game-look-feel-and-mechanics-1bcd11e0.md docs/transcripts/README.md | sort | uniq -c | head -20
+  ```
+- **Shell:** Inspect flagged transcript lines
+
+  ```bash
+  sed -n '54p;61p;902p' docs/transcripts/2026-11-14-add-two-new-keyboard-layouts-491092a5.md | cut -c1-300; sed -n '1436,1455p' docs/transcripts/2026-11-14-game-look-feel-and-mechanics-1bcd11e0.md | cut -c1-300
+  ```
 
 </details>
+
+### 🤖 Claude
+
+Transcript scan is clean: home paths are already redacted, and the only `pwbrown` hits are the project's public GitHub URL. Committing.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Commit M16 on the feature branch
+
+  ```bash
+  git add -A src scripts docs && git status --short | grep -v "^[AM] \|^R " ; git commit -q -F - <<'EOF'
+  M16: Dvorak and Colemak keyboard layouts
+
+  - Layouts built from one table of ANSI keys and fingering; US QWERTY, Dvorak and Colemak each give their characters and Apprentice key order
+  - Keyboard layout chosen per player in Settings and kept in the save (save version 8, older saves start on US QWERTY)
+  - Apprentice course, Type Case, hands guide, finger hints, presets and key suggestions follow the player's layout
+  - Switching layout carries a preset selection over to the same preset on the new l
+  … (291 more characters)
+  ```
+- **Shell:** Fast-forward main and delete the branch
+
+  ```bash
+  git status --short | head -3; git switch main && git merge --ff-only feat/m16-layouts && git branch -d feat/m16-layouts && git log --oneline -3 && git status -sb | head -1
+  ```
+- **Shell:** Push main to origin
+
+  ```bash
+  git push origin main 2>&1 | tail -3 && git status -sb | head -1 && git stash list
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M16 is committed as `f88d488` (Dvorak and Colemak keyboard layouts) and pushed. `origin/main` was still at `dc358f4`, so this push sent both M15 (`c34334c`) and M16.
+
+- **Transcript:** I ran `npm run transcript` and checked it before committing. Home folder paths are already removed. The only username that appears is the project's public GitHub URL, and there are no emails or tokens.
+- **Merge:** fast-forward only into `main`, then I deleted `feat/m16-layouts` with `git branch -d`.
+- **Not pushed:** the custom-domain stash (inklingtyping.com) is still parked, since it's meant to wait until the DNS works.

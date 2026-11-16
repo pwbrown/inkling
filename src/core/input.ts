@@ -3,7 +3,7 @@
  * changes. Pure: the DOM listener lives in src/input/keyboard.ts.
  *
  * Two input models (REQUIREMENTS §3):
- * - Match mode, for Drips and Blotlings: each key must be the next character.
+ * - Match mode, for Drips and Scrawlers: each key must be the next character.
  * - Buffer mode, for Run-ons and Misprints: keys edit a buffer with a cursor,
  *   so mistakes stay until fixed with Backspace, Delete and the arrow keys.
  */
@@ -306,8 +306,8 @@ export function typeChar(world: World, key: string): void {
     // Lock onto the closest visible target this key can start…
     target = mostUrgent(visibleTargets(world).filter((t) => startsWith(t, key)));
     // …or else, when only Misprints are on the page, the most urgent one,
-    // which is edited in place. (A Misprint sprinkled among Blotlings is
-    // started with Backspace, the arrows or Tab, so a slip on a Blotling
+    // which is edited in place. (A Misprint sprinkled among Scrawlers is
+    // started with Backspace, the arrows or Tab, so a slip on a Scrawler
     // doesn't land in it.)
     if (!target && visibleTargets(world).every((t) => t.kind === 'misprint')) target = editTarget(world);
     if (!target) {

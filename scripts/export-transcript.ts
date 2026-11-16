@@ -1,6 +1,6 @@
 /**
  * Turns Claude Code session logs into readable Markdown in docs/transcripts/,
- * so anyone can see how Inkling was built (see the README's AI note).
+ * so anyone can see how Inky Keys was built (see the README's AI note).
  *
  *   npm run transcript                 # every session for this project
  *   npm run transcript -- <file.jsonl> # specific session logs
@@ -331,9 +331,9 @@ function main() {
     .filter((f) => f.endsWith('.md') && f !== 'README.md')
     .sort();
   const index = [
-    '# How Inkling was built',
+    '# How Inky Keys was built',
     '',
-    'Inkling was written almost entirely by Claude (an AI coding assistant) in Claude Code, from my direction. These are the conversations, in order, so you can see what I asked for, what Claude planned and did, and how the game changed after playtesting.',
+    'Inky Keys was written almost entirely by Claude (an AI coding assistant) in Claude Code, from my direction. These are the conversations, in order, so you can see what I asked for, what Claude planned and did, and how the game changed after playtesting.',
     '',
     'Each file is exported from the session log with `npm run transcript` (see `scripts/export-transcript.ts`). Tool output, hidden reasoning and system prompts are left out, and private details are removed.',
     '',

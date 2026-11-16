@@ -4,6 +4,7 @@
  */
 import { defaultSave, migrate, type SaveData } from './schema';
 
+// Still named after the game's first name (Inkling): renaming it would hide existing saves.
 const DB_NAME = 'inkling';
 const DB_VERSION = 1;
 const STORE = 'saves';

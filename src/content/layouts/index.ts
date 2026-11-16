@@ -1,4 +1,4 @@
-/** Every keyboard layout Inkling knows (REQUIREMENTS §11). */
+/** Every keyboard layout Inky Keys knows (REQUIREMENTS §11). */
 import { COLEMAK } from './colemak';
 import { DVORAK } from './dvorak';
 import type { KeyboardLayout, LayoutId } from './types';

@@ -36,6 +36,7 @@ export const DEFAULT_SETTINGS: Settings = {
   muted: false,
 };
 
+// Keeps the game's first name (Inkling) so players don't lose their settings.
 const STORAGE_KEY = 'inkling.settings';
 
 /** Validate whatever was stored, keeping good fields and defaulting the rest. */

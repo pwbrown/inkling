@@ -1,5 +1,5 @@
 /**
- * Registers the service worker that makes Inkling work offline
+ * Registers the service worker that makes Inky Keys work offline
  * (REQUIREMENTS §7). Production builds only: in development the dev server
  * should always serve fresh files.
  */

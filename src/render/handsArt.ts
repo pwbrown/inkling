@@ -180,7 +180,7 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
       `<g transform="translate(${4 * mirror} 7) ${place}"><path d="${SKIN}" transform="${ROTATE}" fill="${colors.ink}" opacity="0.16"/></g>` +
       `<g transform="${place}">` +
       `<path data-hand="${side}" d="${SKIN}" transform="${ROTATE}" fill="${colors.hand}"/>` +
-      `<g clip-path="url(#inkling-hand-skin)" fill="${colors.highlight}">` +
+      `<g clip-path="url(#inky-hand-skin)" fill="${colors.highlight}">` +
       fingers.map((finger) => `<path data-lit="${side}-${finger}" d="${fingerArea(finger)}"/>`).join('') +
       `</g>` +
       `<path d="${NAILS}" transform="${ROTATE}" fill="${colors.paper}"/>` +
@@ -251,7 +251,7 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
   const h = r1(height * U);
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true" focusable="false">` +
-    `<defs><clipPath id="inkling-hand-skin"><path d="${SKIN}" transform="${ROTATE}"/></clipPath></defs>` +
+    `<defs><clipPath id="inky-hand-skin"><path d="${SKIN}" transform="${ROTATE}"/></clipPath></defs>` +
     `<g>${keyCaps.join('')}</g>` +
     hands.join('') +
     `<g>${marks.join('')}${arrows.join('')}</g>` +

@@ -44,11 +44,11 @@ const SPACE_CHAPTER = US_QWERTY.lessons.findIndex((keys) => keys.includes(' '));
 
 /**
  * Pages in an Apprentice chapter. Every chapter opens with drips, where the
- * new key comes up often, and ends with Blotlings, from chapter 1 on. With
- * too few keys for real words, Blotlings carry short made-up strings of the
+ * new key comes up often, and ends with Scrawlers, from chapter 1 on. With
+ * too few keys for real words, Scrawlers carry short made-up strings of the
  * keys learned so far ("fjf"), see generator.ts. Pages are only ever drips
- * or Blotlings: Run-ons (once space is learned) and Misprints are sprinkled
- * into Blotling pages instead (GAME_CONFIG.sprinkles).
+ * or Scrawlers: Run-ons (once space is learned) and Misprints are sprinkled
+ * into Scrawler pages instead (GAME_CONFIG.sprinkles).
  */
 export function apprenticePlan(chapter: number): TargetKind[] {
   // Every layout teaches the same number of keys per chapter.

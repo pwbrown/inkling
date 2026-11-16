@@ -1,6 +1,6 @@
-# Inkling: working conventions
+# Inky Keys: working conventions
 
-Inkling is an offline-first, open-source browser typing game (TypeScript + Vite + PixiJS). Start with `docs/REQUIREMENTS.md` (what to build, milestones) and `docs/DESIGN.md` (look and feel).
+Inky Keys is an offline-first, open-source browser typing game (TypeScript + Vite + PixiJS). Start with `docs/REQUIREMENTS.md` (what to build, milestones) and `docs/DESIGN.md` (look and feel).
 
 ## Git workflow
 

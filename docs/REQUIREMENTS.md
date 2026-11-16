@@ -1,6 +1,6 @@
-# Inkling: Requirements
+# Inky Keys: Requirements
 
-> Name: **Inkling**. Theme and art direction are in [DESIGN.md](DESIGN.md).
+> Name: **Inky Keys**. Theme and art direction are in [DESIGN.md](DESIGN.md).
 > Status: Draft v0.1 (2026-11-12)
 
 This doc is the source of truth for what the game must do. It is organized so the game can be built one milestone at a time (§13).
@@ -203,7 +203,7 @@ English is the only language at launch, but the game is built so new languages c
 
 ## 12. Licensing & Distribution
 
-Inkling is **open source** and will be **publicly hosted** as a static web app.
+Inky Keys is **open source** and will be **publicly hosted** as a static web app.
 
 ### Licenses
 | What | License | Notes |
@@ -237,7 +237,7 @@ Inkling is **open source** and will be **publicly hosted** as a static web app.
 
 ### Naming
 - Local folder: `~/projects/inkling`.
-- Use a distinctive public identifier (repo or site name), e.g. `inkling-type` or *Inkling: Type Case*, to avoid confusion with similarly named games (see DESIGN.md §9).
+- Public identifier: **Inky Keys**, at inkykeys.com (see DESIGN.md §9).
 - Do a trademark search before any commercial use.
 
 ---
@@ -272,7 +272,7 @@ Inkling is **open source** and will be **publicly hosted** as a static web app.
 
 ## 14. Open Questions / TODO
 
-- [x] **Theme, art direction and audio.** See [DESIGN.md](DESIGN.md) (Inkwell direction). Name: **Inkling**.
+- [x] **Theme, art direction and audio.** See [DESIGN.md](DESIGN.md) (Inkwell direction). Name: **Inky Keys**.
 - [ ] Health or lives? (DESIGN.md proposes an ink-reservoir health meter.) Does game-over restart the level or the campaign?
 - [ ] Which additional locales to add first, and which layouts after Dvorak and Colemak (§11)? AZERTY and QWERTZ need dead keys, accented letters and Shift for digits (which affects the 1/2/3 ability shortcuts).
 - [x] Word-list source: SCOWL levels 10–50 (via `wordlist-english`) plus the LDNOOBW blocklist. See CREDITS.md.

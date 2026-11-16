@@ -33,7 +33,7 @@ jobs:
       - name: Build for the Pages project path
         run: npm run build
         env:
-          INKLING_BASE: /${{ github.event.repository.name }}/
+          INKY_KEYS_BASE: /${{ github.event.repository.name }}/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

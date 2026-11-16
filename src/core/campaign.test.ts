@@ -179,7 +179,7 @@ describe('Apprentice pacing', () => {
     }
   });
 
-  it('brings Blotlings from chapter 1, made of the keys learned so far when no words fit', () => {
+  it('brings Scrawlers from chapter 1, made of the keys learned so far when no words fit', () => {
     const world = createWorld({ difficulty: 'normal' });
     startApprentice(world, 0, 'normal');
     world.page = createPage('normal', 0, 2, world.content, 'apprentice');

@@ -199,7 +199,7 @@ export interface World {
   events: GameEvent[];
   /** Characters to build targets from (the player's Type Case). */
   keys: readonly string[];
-  /** Supplies drip characters and Blotling words for those keys. */
+  /** Supplies drip characters and Scrawler words for those keys. */
   content: ContentSource;
   /** Apprentice (the course) or Practice (free key choice, endless). */
   mode: GameMode;
@@ -680,7 +680,7 @@ export function nextLife(world: World, target: Target): void {
 /** Re-rolls allowed to avoid repeating a creature's previous word. */
 const NEXT_LIFE_TRIES = 12;
 
-/** Bring on the Spill: a big, slow, three-life Blotling in the middle of the page. */
+/** Bring on the Spill: a big, slow, three-life Scrawler in the middle of the page. */
 export function spawnBoss(world: World): Target {
   const b = GAME_CONFIG.boss;
   const { params } = world.page;
@@ -698,7 +698,7 @@ export function spawnBoss(world: World): Target {
   return target;
 }
 
-/** The Spill is blotted: it splits into small, quick Blotlings with short words. */
+/** The Spill is blotted: it splits into Inkmites: small, quick Scrawlers with short words. */
 export function splitBoss(world: World, boss: Target): void {
   const b = GAME_CONFIG.boss;
   const lanes = laneCount(world.laneStep);

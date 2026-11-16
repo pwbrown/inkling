@@ -1,6 +1,6 @@
 # Credits
 
-Third-party content bundled with Inkling, with its source and license (REQUIREMENTS §12).
+Third-party content bundled with Inky Keys, with its source and license (REQUIREMENTS §12).
 
 ## Word list
 
@@ -39,7 +39,7 @@ Third-party content bundled with Inkling, with its source and license (REQUIREME
 
 - **What:** the GitHub logo (the "Invertocat" mark) beside the source-code link on the About screen, drawn inline in `src/ui/menu.ts`.
 - **Source:** [GitHub's logos](https://github.com/logos), from the [Octicons](https://github.com/primer/octicons) `mark-github` icon (MIT).
-- **Use:** only to link to Inkling's repository on GitHub, as GitHub's logo guidelines allow. GitHub and the Invertocat logo are trademarks of GitHub, Inc.
+- **Use:** only to link to Inky Keys' repository on GitHub, as GitHub's logo guidelines allow. GitHub and the Invertocat logo are trademarks of GitHub, Inc.
 
 ## Hands picture
 

@@ -2,8 +2,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 // `base` must match the deploy path (REQUIREMENTS §12). The deploy workflow
-// sets INKLING_BASE=/<repo>/ for GitHub Pages; locally it's `/`.
-const base = process.env.INKLING_BASE ?? '/';
+// sets INKY_KEYS_BASE=/<repo>/ for GitHub Pages; locally it's `/`.
+const base = process.env.INKY_KEYS_BASE ?? '/';
 
 export default defineConfig({
   base,
@@ -22,8 +22,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'Inkling',
-        short_name: 'Inkling',
+        name: 'Inky Keys',
+        short_name: 'Inky Keys',
         description: 'An offline typing game where you choose which keys to practice.',
         start_url: '.',
         scope: '.',

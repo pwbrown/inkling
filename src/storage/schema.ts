@@ -1,5 +1,5 @@
 /**
- * The save file: everything Inkling keeps on the device (REQUIREMENTS §8).
+ * The save file: everything Inky Keys keeps on the device (REQUIREMENTS §8).
  * It never leaves the device unless the player exports it themselves.
  *
  * Bump SAVE_VERSION and add a step to `MIGRATIONS` whenever the shape
@@ -116,6 +116,7 @@ export interface Tutorials {
 
 /** File format for export/import. */
 export interface SaveExport {
+  /** The game's first name (Inkling), kept so every export, old or new, imports. */
   app: 'inkling';
   exportedAt: string;
   save: SaveData;
@@ -124,7 +125,7 @@ export interface SaveExport {
 export class SaveFormatError extends Error {
   constructor(
     message: string,
-    /** 'invalid' = not an Inkling save; 'newer' = made by a newer version of the game. */
+    /** 'invalid' = not an Inky Keys save; 'newer' = made by a newer version of the game. */
     readonly reason: 'invalid' | 'newer' = 'invalid',
   ) {
     super(message);
@@ -372,6 +373,6 @@ export function fromExport(text: string): SaveData {
   } catch {
     throw new SaveFormatError('Not valid JSON');
   }
-  if (!isObject(parsed) || parsed.app !== 'inkling') throw new SaveFormatError('Not an Inkling save file');
+  if (!isObject(parsed) || parsed.app !== 'inkling') throw new SaveFormatError('Not an Inky Keys save file');
   return migrate(parsed.save);
 }

@@ -176,7 +176,7 @@ export class Effects {
     }
   }
 
-  /** A Blotling's end: it is blotted up, a puddle soaking into the page and leaving a faint mark. */
+  /** A Scrawler's end: it is blotted up, a puddle soaking into the page and leaving a faint mark. */
   blotUp(x: number, y: number, width: number): void {
     const puddle = new Graphics();
     for (let i = 0; i < 5; i++) puddle.circle((i / 4 - 0.5) * width * 0.7, (Math.random() - 0.5) * 10, 12 + Math.random() * 9);

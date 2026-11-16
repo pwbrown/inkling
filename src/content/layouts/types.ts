@@ -27,7 +27,7 @@ export interface LayoutKey {
   home?: true;
 }
 
-/** The layouts Inkling knows. */
+/** The layouts Inky Keys knows. */
 export type LayoutId = 'us-qwerty' | 'dvorak' | 'colemak';
 
 export interface KeyboardLayout {
