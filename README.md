@@ -39,7 +39,7 @@ The game builds everything from your keys: drips use them directly, and word pag
 - **Apprentice** is a typing course for beginners, 27 chapters long.
   - Chapter 1 teaches just `f` and `j`, the keys with bumps. Each later chapter adds **one** key: the rest of the home row (`d k s l a ; g h`), then space, then `e i r u t y o w n m c v b x p q z`.
   - **Pacing:** difficulty climbs a quarter as fast as in Free Write. The first 8 chapters are extra gentle, with slower, sparser creatures and shorter pages, easing off as you go.
-  - **What appears when:** every chapter, even the first (just `f` and `j`), has a Scrawler page. Until there are enough keys for real words, Scrawlers carry short made-up strings of the keys learned so far, like `fjf`. Once space is learned, an occasional phrase (Run-on) joins the word pages. From six chapters after space, each chapter is one drip page for the new key and then four Scrawler pages. Crimson creatures arrive from chapter 5, ghosts from chapter 9, violet ones from chapter 17, and the Spill from chapter 7. On Hard and Expert, the first 10 chapters start nearer Normal and ease up to full strength.
+  - **What appears when:** every chapter, even the first (just `f` and `j`), has a Scrawler page. Until there are enough keys for real words, Scrawlers carry short made-up strings of the keys learned so far, like `fjf`. Once space is learned, an occasional phrase (Run-on) joins the word pages. From six chapters after space, each chapter is one drip page for the new key and then four Scrawler pages. Crimson creatures arrive from chapter 5, ghosts from chapter 9, violet ones from chapter 17, and a boss on the last page of each chapter from chapter 3. On Hard and Expert, the first 10 chapters start nearer Normal and ease up to full strength.
   - **Introductions:** every chapter opens with a card showing its new key and which finger types it. The new key comes up three times as often as the others.
   - **Stars and progress:** each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter. Finishing the last chapter completes the notebook.
 - **Free Write** (formerly Practice) is the main mode. It uses exactly the keys you choose in the Type Case, with endless chapters. New players start with all letters, capitals and space.
@@ -68,7 +68,12 @@ Swear words and slurs are always left out. Making the filter looser asks a quick
 - **Charges:** a run of correct keys in a row earns a charge (up to 3), shown as drops by the ink bar. The run starts at 25 keys and grows with the chapter, and harder difficulties need longer runs (×1.15 on Normal, ×1.35 on Hard, ×1.6 on Expert).
 - **The Blotter:** press **Enter** while playing to spend 2 charges (3 on Hard and Expert) and blot every creature on the page for half points.
 - **The Eraser** forgives a wrong key, and for a second afterwards any more slips are quietly ignored, since fast typists often hit one or two before they notice.
-- **The Spill:** from chapter 7, the last page of each Apprentice chapter starts with the Spill, a big, slow boss that needs three words in a row. It costs double ink if it reaches the margin and splits into three small Inkmites when blotted. The Blotter can't touch it.
+- **Bosses:** the last page of each chapter starts with a boss, from chapter 2 in Free Write and chapter 3 in the Apprentice course. They take turns, one per chapter, and the Blotter can't touch any of them.
+  - **The Spill:** a big, slow word that needs three words in a row. It costs double ink if it reaches the margin and splits into three small Inkmites when blotted.
+  - **The Bookworm:** a chain of short-word segments in one line, wearing reading glasses. Only the head can be typed; each segment you pop makes the rest a little faster.
+  - **The Shuffler:** a big word whose untyped letters swap places every few seconds. Three words to beat.
+  - **The Inkwell Squid:** a body word guarded by three tentacle words in nearby lines, which must be typed first. A tentacle left alone squirts ink that hides a line of words for a few seconds.
+  - **The Rival Quill:** a pen that races you to write the same word, shown by a red line under the letters. Finish first to win the round; if it finishes first, it splashes you with ink and starts a new word. Three rounds to beat.
 
 ### Ink shots
 

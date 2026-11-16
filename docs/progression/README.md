@@ -230,15 +230,27 @@ No new screens this time: everything changed is in motion and in which pages com
 - **Scrawlers are the main wave.** Free Write chapters are now mostly word pages with one letter-drip page (plus the symbols page, when there is one), and every chapter ends on words. Later Apprentice chapters are one drip page for the new key, then four word pages.
 - **Charges are harder to earn on harder difficulties** (runs ×1.15 on Normal, ×1.35 on Hard, ×1.6 on Expert), and the **Blotter costs 3 charges on Hard and Expert** (still 2 on Relaxed and Normal).
 
+### M19: Bosses
+
+<img src="m19/how-to-play-bosses.png" width="420" alt="How to play's Bosses section: the Spill, the Bookworm with red-pen glasses, the Shuffler with chasing arrows, the crimson Inkwell Squid and the Rival Quill with its red race line">
+
+**New:** four bosses beside the Spill, taking turns on the last page of each chapter:
+- **The Bookworm:** short-word segments in one line, joined by necks, wearing reading glasses. Only the head can be typed; the rest speed up as it shrinks.
+- **The Shuffler:** red arrows chase round its back, and its untyped letters swap places every few seconds.
+- **The Inkwell Squid:** a crimson body guarded by three curling tentacle words. Tentacles left alone squirt a band of ink that hides a line of words for a few seconds.
+- **The Rival Quill:** a red race line and a quill run along under its word; if the quill gets to the end first, it splashes you with ink and starts a new word.
+
+**Changed:** bosses arrive much sooner: from chapter 3 in the Apprentice course (was 7) and from chapter 2 in Free Write (which had none). Boss parts are sized and spaced in the core, so drawing and spacing agree. Also fixed: a key set of a single letter could freeze the game on a word page.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m18
+npm run snapshots -- m19
 ```
 
-That writes a standard set of shots to `docs/progression/m18/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m19/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

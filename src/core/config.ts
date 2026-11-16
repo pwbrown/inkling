@@ -39,6 +39,17 @@ export const TARGET_KINDS: readonly TargetKind[] = ['drip', 'blotling', 'runon']
  */
 export type PageKind = TargetKind | 'symbols';
 
+/**
+ * Bosses, one on the last page of a chapter (GAME_CONFIG.boss):
+ * - spill: a big slow word with three lives that splits into Inkmites.
+ * - shuffler: its untyped letters reshuffle every few seconds.
+ * - bookworm: a chain of short-word segments, typed head first.
+ * - squid: a body word guarded by tentacle words that squirt ink.
+ * - quill: a rival pen racing you to write the same word.
+ */
+export type BossKind = 'spill' | 'shuffler' | 'bookworm' | 'squid' | 'quill';
+export const BOSS_KINDS: readonly BossKind[] = ['spill', 'bookworm', 'shuffler', 'squid', 'quill'];
+
 /** Which keys a drip page draws from (see CharPool in contentSource.ts). */
 export type PagePool = 'all' | 'letters' | 'symbols';
 
@@ -325,14 +336,36 @@ export const GAME_CONFIG = {
    * Inkmites (little Scrawlers) when finally blotted.
    */
   boss: {
+    /** The Spill (lives, speed and complexity are shared by the one-word bosses). */
     lives: 3,
     speedFactor: 0.6,
     complexityBonus: 0.3,
     inkLossFactor: 2,
     splits: 3,
     splitSpeedFactor: 1.4,
-    /** First Apprentice chapter (0-based) whose last page has the Spill. */
-    fromApprenticeChapter: 6,
+    /** First chapter (0-based) whose last page has a boss: Apprentice, and Free Write. */
+    fromApprenticeChapter: 2,
+    fromChapter: 1,
+    /** Longest word (letters) a Bookworm segment or Squid tentacle should carry, when one can be found. */
+    partWordMax: 5,
+    /** Drawing size: the main body, a Bookworm segment, a Squid tentacle. */
+    scale: { main: 1.5, segment: 1.15, part: 1 },
+    /** Bosses take turns in this order, one per chapter, starting with the first. */
+    order: BOSS_KINDS,
+    /** Untyped letters reshuffle this often. */
+    shuffler: { shuffleMs: 2600 },
+    /** Segments grow with the chapter; the rest speed up by `speedStep` each time the head pops. */
+    bookworm: { segmentsMin: 4, segmentsMax: 6, speedFactor: 0.75, speedStep: 0.12 },
+    /**
+     * Tentacles guard the body. One left alone for `squirtMs` squirts ink
+     * that hides a lane's words for `smudgeMs`.
+     */
+    squid: { tentacles: 3, lives: 2, speedFactor: 0.5, squirtMs: 6500, smudgeMs: 2800 },
+    /**
+     * The rival writes `cps` letters a second (scaled with the page's speed)
+     * after `startDelayMs`; if it finishes first it splashes you for `inkLoss`.
+     */
+    quill: { cps: 1.5, startDelayMs: 1500, inkLoss: 12 },
   },
 
   /**

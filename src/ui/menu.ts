@@ -484,7 +484,15 @@ export class Menu {
         ]),
       ),
       section('how.variantsTitle', h('div', { className: 'how-variants' }, [variant('crimson'), variant('violet'), variant('ghost')]), p('how.variants'), p('how.mix')),
-      section('how.bossTitle', h('ul', { className: 'how-creatures' }, [creature('spill', 'how.boss')])),
+      section(
+        'how.bossTitle',
+        p('how.boss'),
+        h(
+          'ul',
+          { className: 'how-creatures' },
+          (['spill', 'bookworm', 'shuffler', 'squid', 'quill'] as const).map((id) => creature(id, `how.boss.${id}`)),
+        ),
+      ),
       section('how.powersTitle', p('how.powers')),
       section('how.keysTitle', hands ? h('img', { className: 'how-hands', src: hands, alt: t('how.handsAlt') }) : null, p('how.keys')),
       section(

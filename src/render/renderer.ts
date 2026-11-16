@@ -12,7 +12,9 @@ import {
   MARGIN_X,
   WORLD_HEIGHT,
   WORLD_WIDTH,
+  laneY,
   renderX,
+  sizeScale,
   type GameEvent,
   type GamePhase,
   type Target,
@@ -149,7 +151,15 @@ function portraitTarget(id: MechanicId): Target | null {
     case 'ghost':
       return { ...base, ghost: true, x: WORLD_WIDTH };
     case 'spill':
-      return { ...base, text: 'spill', lives: 3, maxLives: 3, boss: true };
+      return { ...base, text: 'spill', lives: 3, maxLives: 3, boss: true, bossKind: 'spill' };
+    case 'shuffler':
+      return { ...base, text: 'lsfhuef', lives: 3, maxLives: 3, boss: true, bossKind: 'shuffler' };
+    case 'bookworm':
+      return { ...base, text: 'book', boss: true, bossKind: 'bookworm', head: true };
+    case 'squid':
+      return { ...base, text: 'squid', lives: 2, maxLives: 2, boss: true, bossKind: 'squid' };
+    case 'quill':
+      return { ...base, text: 'quill', lives: 3, maxLives: 3, boss: true, bossKind: 'quill', rival: 2.5 };
     case 'runon':
       return { ...base, kind: 'runon', text: 'ink dries', buffer: 'ink d', cursor: 5, typed: 5 };
     case 'recovery':
@@ -209,6 +219,8 @@ export async function createRenderer(
   let glowWash!: Graphics;
   let guide!: Graphics;
   let targetLayer!: Container;
+  /** Squid ink squirted over a lane, drawn on top of the creatures in it. */
+  let smudgeLayer!: Graphics;
   let nib!: Container;
   let nibFace!: Graphics;
   let nibStyle: Cosmetics['nib'] = DEFAULT_COSMETICS.nib;
@@ -237,6 +249,7 @@ export async function createRenderer(
     targetLayer = new Container();
     // The locked creature is drawn on top of any it overlaps.
     targetLayer.sortableChildren = true;
+    smudgeLayer = new Graphics();
     nibStyle = cosmetics.nib;
     nib = new Container();
     nibFace = new Graphics();
@@ -259,7 +272,7 @@ export async function createRenderer(
     calloutId = null;
     slowWash = wash(COLORS.inkFaded);
     glowWash = wash(COLORS.highlighter);
-    scene.addChild(drawPage(cosmetics.paper), glowWash, slowWash, effects.stainLayer, guide, targetLayer, nib, shots.layer, effects.particleLayer, callout);
+    scene.addChild(drawPage(cosmetics.paper), glowWash, slowWash, effects.stainLayer, guide, targetLayer, smudgeLayer, nib, shots.layer, effects.particleLayer, callout);
     vignette = new Graphics();
     const bands = 7;
     for (let i = 0; i < bands; i++) {
@@ -386,7 +399,7 @@ export async function createRenderer(
           const char = glyph([...target.text][target.typed - 1] ?? '');
           shoot(target, view, target.typed - 1, (at) => {
             effects.splatter(at.x, at.y, 3);
-            effects.letterPop(at.x, at.y, char, 26 * textScale * (target.boss ? 1.5 : 1));
+            effects.letterPop(at.x, at.y, char, 26 * textScale * sizeScale(target));
             reactionFor(id).punch.hit();
           });
         }
@@ -433,10 +446,45 @@ export async function createRenderer(
         break;
       }
       case 'boss':
-        effects.banner(WORLD_WIDTH / 2, WORLD_HEIGHT / 2 - 40, t('banner.boss'));
+        effects.banner(WORLD_WIDTH / 2, WORLD_HEIGHT / 2 - 40, t(`banner.boss.${event.target.bossKind ?? 'spill'}` as MessageKey));
         startShake(420, 6);
         nibMood.alarmMs = 900;
         break;
+      case 'bossDefeated': {
+        const at = center(event.target, views.get(event.target.id));
+        effects.splatter(at.x, at.y, 18);
+        effects.ring(at.x, at.y, COLORS.ink, 60, 420);
+        nibMood.cheerMs = 900;
+        startShake(220, 4);
+        break;
+      }
+      case 'bossShuffled': {
+        // The letters jumble with a little shudder.
+        const reaction = reactionFor(event.target.id);
+        reaction.tauntMs = Math.max(reaction.tauntMs, 260);
+        reaction.punch.hit();
+        break;
+      }
+      case 'squirt': {
+        const at = center(event.target, views.get(event.target.id));
+        effects.splatter(at.x, at.y, 12);
+        effects.ring(at.x, at.y, COLORS.ink, 36, 360);
+        startShake(140, 3);
+        break;
+      }
+      case 'quillWins': {
+        const at = center(event.target, views.get(event.target.id));
+        effects.splatter(at.x, at.y, 14);
+        effects.banner(WORLD_WIDTH / 2, WORLD_HEIGHT / 2 - 40, t('banner.quillWins'), COLORS.margin);
+        if (event.inkLost > 0) {
+          const well = hud.inkPoint();
+          effects.ring(well.x, well.y, COLORS.margin, 16, HIGHLIGHT_RING_MS, HIGHLIGHT_RING_HOLD);
+          effects.popup(well.x + 40, well.y + 30, `−${event.inkLost}`, { color: COLORS.margin, size: 20 });
+        }
+        if (!reducedMotion) wobbleMs = 220;
+        startShake(200, 5);
+        break;
+      }
       case 'split': {
         const at = center(event.target, views.get(event.target.id));
         effects.splatter(at.x, at.y, 22);
@@ -600,11 +648,27 @@ export async function createRenderer(
     drawFace(nibFace, f.x, f.y, f.r, mood, m.blinkMs > 0, f.x + 100, f.y, COLORS.ink);
   };
 
+  /** Squid ink over lanes: blots that fade in, hold, then fade away. */
+  const drawSmudges = (world: World) => {
+    smudgeLayer.clear();
+    const full = GAME_CONFIG.boss.squid.smudgeMs;
+    for (const smudge of world.smudges) {
+      const fade = Math.min(1, smudge.ms / 500, (full - smudge.ms) / 150);
+      const cy = laneY(smudge.lane, world.laneStep) - LINE_SPACING / 2;
+      for (let x = MARGIN_X + 20, i = 0; x < WORLD_WIDTH; x += 46, i++) {
+        const wobble = Math.sin(i * 2.1 + smudge.lane);
+        smudgeLayer.ellipse(x, cy + wobble * 5, 40 + wobble * 8, 26 + Math.cos(i * 1.3) * 6);
+      }
+      smudgeLayer.fill({ color: COLORS.ink, alpha: 0.9 * fade });
+    }
+  };
+
   return {
     app,
     sync(world, alpha, frameMs) {
       for (const event of world.events) handleEvent(world, event);
       world.events.length = 0;
+      drawSmudges(world);
 
       // Creatures. Animation time only runs while playing, so they freeze when paused.
       const playing = world.phase === 'playing';

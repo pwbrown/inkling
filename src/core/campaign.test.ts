@@ -5,8 +5,8 @@ import {
   APPRENTICE_CHAPTERS,
   apprenticeKeys,
   apprenticePlan,
+  bossFor,
   chapterStars,
-  hasSpill,
   newKeysFor,
   starKey,
   starText,
@@ -14,7 +14,7 @@ import {
   totalStars,
 } from './campaign';
 import { confirm, finishedNotebook, retryChapter, startApprentice, startPractice } from './input';
-import { GAME_CONFIG } from './config';
+import { BOSS_KINDS, GAME_CONFIG } from './config';
 import { createPage, createWorld, spawnTarget, type World } from './world';
 
 describe('lessons', () => {
@@ -201,8 +201,22 @@ describe('Apprentice pacing', () => {
     expect(createPage('normal', APPRENTICE_CHAPTERS - 1, 0, undefined, 'apprentice').params.variants.violet).toBeGreaterThan(0);
   });
 
-  it('only brings the Spill once the basics are learned', () => {
-    expect(hasSpill(0)).toBe(false);
-    expect(hasSpill(APPRENTICE_CHAPTERS - 1)).toBe(true);
+  it('brings a boss once the basics are learned, a different one each chapter', () => {
+    const from = GAME_CONFIG.boss.fromApprenticeChapter;
+    expect(bossFor('apprentice', from - 1)).toBeNull();
+    const kinds = Array.from({ length: BOSS_KINDS.length }, (_, i) => bossFor('apprentice', from + i));
+    expect(new Set(kinds).size).toBe(BOSS_KINDS.length);
+    expect(bossFor('apprentice', from + BOSS_KINDS.length)).toBe(kinds[0]);
+    // Free Write gets them from its second chapter.
+    expect(bossFor('practice', 0)).toBeNull();
+    expect(bossFor('practice', GAME_CONFIG.boss.fromChapter)).not.toBeNull();
+  });
+
+  it('puts the boss on the last page of a chapter only', () => {
+    const chapter = GAME_CONFIG.boss.fromApprenticeChapter;
+    const last = createPage('normal', chapter, apprenticePlan(chapter).length - 1, undefined, 'apprentice');
+    expect(last.hasBoss).toBe(true);
+    expect(last.bossKind).toBe(bossFor('apprentice', chapter));
+    expect(createPage('normal', chapter, 0, undefined, 'apprentice').hasBoss).toBe(false);
   });
 });

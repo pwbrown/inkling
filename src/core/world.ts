@@ -10,8 +10,8 @@ import {
   apprenticePlan,
   easeDifficulty,
   easeForBeginners,
+  bossFor,
   effectiveChapter,
-  hasSpill,
   newKeysFor,
   type GameMode,
 } from './campaign';
@@ -24,10 +24,12 @@ import {
   chapterPlan,
   pageParams,
   sprinkleChances,
+  type BossKind,
   type Difficulty,
   type PageParams,
   type TargetKind,
 } from './config';
+import { bossNextLife, costsBossInk, spawnBoss as spawnBossOf, stepBosses } from './bosses';
 import { ABILITIES, type AbilityId, type ActiveAbility } from './abilities';
 import { guidedSpawn, pendingBriefings, type MechanicId } from './mechanics';
 import { createStats, type Stats } from './stats';
@@ -73,8 +75,20 @@ export interface Target {
   revealX?: number;
   /** Lives the creature started with (when more than 1), which keeps its words short. */
   maxLives?: number;
-  /** The Spill: a chapter's boss. */
+  /** Part of a chapter's boss (see bosses.ts). */
   boss?: boolean;
+  /** Which boss this is part of. */
+  bossKind?: BossKind;
+  /** Bookworm segments and Squid tentacles: the id of the boss's main target. */
+  partOf?: number;
+  /** Bookworm segments and Squid tentacles: their place in the boss (0 = first). */
+  partIndex?: number;
+  /** Bookworm: this segment is the head, the only one that can be started. */
+  head?: boolean;
+  /** Shuffler: time to the next reshuffle. Squid tentacle: to the next squirt. Quill: before it starts writing (ms). */
+  bossTimerMs?: number;
+  /** Rival Quill: letters the rival has written of the current word. */
+  rival?: number;
   /** An ink bottle: typing it restores ink, and it costs nothing if it gets away. */
   bottle?: boolean;
   /** Current position (left edge of the target body). */
@@ -105,10 +119,18 @@ export type GameEvent =
   | { type: 'destroyed'; target: Target; points: number; blotted?: boolean }
   /** A crimson or violet creature lost a life and got a new payload. */
   | { type: 'hit'; target: Target; points: number }
-  /** The Spill (boss) appeared. */
+  /** A boss appeared (its main target). */
   | { type: 'boss'; target: Target }
   /** The Spill was blotted and split into smaller creatures. */
   | { type: 'split'; target: Target }
+  /** The last of a boss (other than the Spill) was beaten. */
+  | { type: 'bossDefeated'; target: Target }
+  /** The Shuffler mixed up its untyped letters. */
+  | { type: 'bossShuffled'; target: Target }
+  /** A Squid tentacle squirted ink over a lane. */
+  | { type: 'squirt'; target: Target; lane: number }
+  /** The Rival Quill finished its word first and splashed the player. */
+  | { type: 'quillWins'; target: Target; inkLost: number }
   /** A clean run of keys earned an ability charge. */
   | { type: 'charged'; charges: number }
   /** An active ability was fired. */
@@ -157,8 +179,10 @@ export interface PageState {
   index: number;
   /** Pages in this chapter. */
   pageCount: number;
-  /** This page has a Spill (boss) to spawn: the last page of an Apprentice chapter. */
+  /** This page has a boss to spawn: the last page of a chapter (bossFor in campaign.ts). */
   hasBoss: boolean;
+  /** Which boss, when `hasBoss`. */
+  bossKind: BossKind | null;
   bossSpawned: boolean;
   params: PageParams;
   spawned: number;
@@ -237,6 +261,8 @@ export interface World {
   eraserRun: number;
   /** Time left after the Eraser was used in which wrong keys are quietly ignored (ms). */
   eraserGraceMs: number;
+  /** Lanes a Squid has squirted ink over: their words are hidden for `ms` more. */
+  smudges: { lane: number; ms: number }[];
   /** Blotting paper is held: the next creature to reach the margin is soaked up. */
   shield: boolean;
   /** Blotting paper was earned on the page just cleared (shown on the graded page). */
@@ -307,11 +333,13 @@ export function createPage(
     const { keysMinus, min } = GAME_CONFIG.targetsPerKeys;
     params.maxOnScreen = Math.min(params.maxOnScreen, Math.max(min, keyCount - keysMinus));
   }
+  const boss = index === plan.length - 1 ? bossFor(mode, chapter) : null;
   return {
     chapter,
     index,
     pageCount: plan.length,
-    hasBoss: apprentice && index === plan.length - 1 && hasSpill(chapter),
+    hasBoss: boss !== null,
+    bossKind: boss,
     bossSpawned: false,
     params,
     spawned: 0,
@@ -375,6 +403,7 @@ export function createWorld(options: WorldOptions = {}): World {
     eraser: false,
     eraserRun: 0,
     eraserGraceMs: 0,
+    smudges: [],
     shield: false,
     shieldEarned: false,
     slowMs: 0,
@@ -432,6 +461,7 @@ export function setPhase(world: World, phase: GamePhase): void {
 export function beginPage(world: World): void {
   world.guide = null;
   world.eraserGraceMs = 0;
+  world.smudges = [];
   world.briefing = world.tips ? pendingBriefings(world, world.seenMechanics) : [];
   setPhase(world, world.briefing.length > 0 ? 'briefing' : 'playing');
 }
@@ -456,10 +486,25 @@ export function resetWorld(world: World, difficulty: Difficulty = world.difficul
 }
 
 /**
+ * How much bigger than usual a target is drawn: a boss's main body is big,
+ * Bookworm segments a little bigger, Squid tentacles normal size.
+ */
+export function sizeScale(target: Partial<Pick<Target, 'boss' | 'bossKind' | 'partOf'>>): number {
+  const s = GAME_CONFIG.boss.scale;
+  if (!target.boss) return 1;
+  if (target.bossKind === 'bookworm') return s.segment;
+  return target.partOf === undefined ? s.main : s.part;
+}
+
+/**
  * Rough on-page width of a target, for spacing. Matches the renderer's
  * shapes closely enough without depending on font measurement.
  */
-export function estimateWidth(target: Pick<Target, 'kind' | 'text' | 'buffer'>, scale = 1): number {
+export function estimateWidth(
+  target: Pick<Target, 'kind' | 'text' | 'buffer'> & Partial<Pick<Target, 'boss' | 'bossKind' | 'partOf'>>,
+  baseScale = 1,
+): number {
+  const scale = baseScale * sizeScale(target);
   if (target.kind === 'drip') return 58 * scale;
   const length = Math.max([...target.text].length, [...(target.buffer ?? '')].length);
   return (36 + 17 * length) * scale;
@@ -617,7 +662,7 @@ function sprinkleKind(world: World): TargetKind | null {
 
 function updateSpawner(world: World, stepMs: number): void {
   const page = world.page;
-  // The Spill arrives first on a boss page.
+  // The boss arrives first on a boss page.
   if (page.hasBoss && !page.bossSpawned) {
     spawnBoss(world);
     page.spawnTimerMs = page.params.spawnIntervalMs * 2;
@@ -698,9 +743,10 @@ export function nextLife(world: World, target: Target): void {
     return text;
   };
   if (target.boss) {
-    // The Spill keeps throwing longer words.
+    // Bosses keep throwing longer words.
     const complexity = Math.min(1, world.page.params.complexity + GAME_CONFIG.boss.complexityBonus);
     Object.assign(target, { text: fresh(() => world.content.nextWord(complexity, world.random)), typed: 0 });
+    bossNextLife(target);
     return;
   }
   const make = () => payloadFor(world, target.kind, target.maxLives ?? 1);
@@ -712,22 +758,9 @@ export function nextLife(world: World, target: Target): void {
 /** Re-rolls allowed to avoid repeating a creature's previous word. */
 const NEXT_LIFE_TRIES = 12;
 
-/** Bring on the Spill: a big, slow, three-life Scrawler in the middle of the page. */
+/** Bring on this page's boss (the Spill if none is set). See bosses.ts. */
 export function spawnBoss(world: World): Target {
-  const b = GAME_CONFIG.boss;
-  const { params } = world.page;
-  const target = spawnTarget(world, {
-    kind: 'blotling',
-    lane: Math.floor(laneCount(world.laneStep) / 2),
-    text: world.content.nextWord(Math.min(1, params.complexity + b.complexityBonus), world.random),
-    lives: b.lives,
-    ghost: false,
-    boss: true,
-    speed: params.speed * b.speedFactor,
-  })!;
-  world.page.bossSpawned = true;
-  world.events.push({ type: 'boss', target });
-  return target;
+  return spawnBossOf(world, world.page.bossKind ?? 'spill');
 }
 
 /** The Spill is blotted: it splits into Inkmites: small, quick Scrawlers with short words. */
@@ -763,6 +796,7 @@ export function stepWorld(world: World, stepMs: number): void {
   // Timed abilities run down; the Paperweight makes everything crawl meanwhile.
   const slow = world.slowMs > 0 ? GAME_CONFIG.abilities.paperweight.speedFactor : 1;
   world.eraserGraceMs = Math.max(0, world.eraserGraceMs - stepMs);
+  stepBosses(world, stepMs);
   for (const [timer, id] of [
     ['slowMs', 'paperweight'],
     ['highlightMs', 'highlighter'],
@@ -845,7 +879,7 @@ export function stepWorld(world: World, stepMs: number): void {
 export function inkLossFor(world: World, target: Target): number {
   const params = world.page.params;
   const kindFactor = target.kind === params.kind ? 1 : GAME_CONFIG.base[target.kind].inkLoss / GAME_CONFIG.base[params.kind].inkLoss;
-  return Math.round(params.inkLoss * kindFactor * (target.boss ? GAME_CONFIG.boss.inkLossFactor : 1));
+  return Math.round(params.inkLoss * kindFactor * (costsBossInk(target) ? GAME_CONFIG.boss.inkLossFactor : 1));
 }
 
 /** Interpolated x position for rendering between two steps. */

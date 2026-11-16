@@ -11,6 +11,7 @@ import { abilityCost, chargeKeys, eraserKeys, type ActiveAbility } from './abili
 import { APPRENTICE_CHAPTERS } from './campaign';
 import { DIFFICULTIES, GAME_CONFIG, mistakeInk, streakKeys, type Difficulty } from './config';
 import { applyEdit, correctPrefix, isTextEdit, type EditAction } from './editing';
+import { canStart, onBossPartDone } from './bosses';
 import { applyBriefings } from './mechanics';
 import { createStats, type Stats } from './stats';
 import {
@@ -214,7 +215,7 @@ function destroyTarget(world: World, target: Target, scoreBefore: number): void 
   bothStats(world, (s) => {
     s.destroyed++;
   });
-  if (target.boss) splitBoss(world, target);
+  if (target.boss) onBossPartDone(world, target, () => splitBoss(world, target));
   if (target.bottle) restoreInk(world, GAME_CONFIG.recovery.bottle.ink, 'bottle', target);
   // Points from the finishing keystroke plus the completion bonus.
   world.events.push({ type: 'destroyed', target, points: world.stats.score - scoreBefore });
@@ -227,9 +228,9 @@ function lock(world: World, target: Target): void {
 }
 
 /** Can this keystroke start on a target that isn't locked yet? */
-function startsWith(target: Target, key: string): boolean {
-  // Ghost text can't be typed before it shows.
-  if (!isRevealed(target)) return false;
+function startsWith(world: World, target: Target, key: string): boolean {
+  // Ghost text can't be typed before it shows, and some boss parts must wait their turn.
+  if (!isRevealed(target) || !canStart(world, target)) return false;
   if (target.kind === 'runon') return target.buffer === '' && target.text[0] === key;
   return target.text[target.typed] === key;
 }
@@ -302,7 +303,7 @@ export function typeChar(world: World, key: string): void {
 
   if (!target) {
     // Lock onto the closest visible target this key can start…
-    target = mostUrgent(visibleTargets(world).filter((t) => startsWith(t, key)));
+    target = mostUrgent(visibleTargets(world).filter((t) => startsWith(world, t, key)));
     if (!target) {
       registerError(world, key, undefined);
       return;
@@ -348,7 +349,7 @@ export function editKey(world: World, key: EditKey): void {
 export function cycleLock(world: World): void {
   if (world.phase !== 'playing') return;
   const order = visibleTargets(world)
-    .filter((t) => isRevealed(t))
+    .filter((t) => isRevealed(t) && canStart(world, t))
     .sort((a, b) => a.x - b.x);
   if (order.length === 0) return;
   const i = order.findIndex((t) => t.id === world.lockedId);

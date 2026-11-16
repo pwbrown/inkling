@@ -18,6 +18,10 @@ export type MechanicId =
   | 'crimson'
   | 'ghost'
   | 'spill'
+  | 'bookworm'
+  | 'shuffler'
+  | 'squid'
+  | 'quill'
   | 'runon'
   | 'violet'
   | AbilityId;
@@ -33,6 +37,10 @@ export const MECHANICS: readonly MechanicId[] = [
   'recovery',
   'crimson',
   'spill',
+  'bookworm',
+  'shuffler',
+  'squid',
+  'quill',
   'ghost',
   'runon',
   'violet',
@@ -68,7 +76,11 @@ export function mechanicsForPage(world: PageWorld): MechanicId[] {
     crimson: plain && variants.crimson > 0,
     violet: plain && variants.violet > 0,
     ghost: plain && variants.ghost > 0,
-    spill: page.hasBoss,
+    spill: page.bossKind === 'spill',
+    bookworm: page.bossKind === 'bookworm',
+    shuffler: page.bossKind === 'shuffler',
+    squid: page.bossKind === 'squid',
+    quill: page.bossKind === 'quill',
     runon: kind === 'runon' || sprinkles.runon > 0,
     blotter: abilities.includes('blotter'),
     eraser: abilities.includes('eraser'),

@@ -31,7 +31,7 @@
 | Level | **Chapter** | Shown as a notebook tab. Finishing one refills 30% of the ink well. |
 | Wave | **Page** | Single target type per page |
 | Summary screen | **Graded page** | See §6 |
-| Boss | **The Spill** | Opens the last page of each Apprentice chapter: three lives, splits into small Inkmites (milestone 13) |
+| Bosses | **The Spill**, **Bookworm**, **Shuffler**, **Inkwell Squid**, **Rival Quill** | One opens the last page of each chapter, taking turns (the Spill from milestone 13, the rest from milestone 19) |
 
 ---
 

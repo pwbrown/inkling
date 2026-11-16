@@ -7,7 +7,7 @@
 import type { KeyboardLayout } from '../content/layouts/types';
 import { US_QWERTY } from '../content/layouts/us-qwerty';
 import type { Grade } from './grade';
-import { GAME_CONFIG, type PageParams, type TargetKind } from './config';
+import { GAME_CONFIG, type BossKind, type PageParams, type TargetKind } from './config';
 
 export type GameMode = 'apprentice' | 'practice';
 
@@ -109,9 +109,15 @@ export function easeForBeginners(params: PageParams, chapter: number): PageParam
   };
 }
 
-/** Whether a chapter's last page brings the Spill (not for beginners). */
-export function hasSpill(chapter: number): boolean {
-  return chapter >= GAME_CONFIG.boss.fromApprenticeChapter;
+/**
+ * The boss on a chapter's last page (0-based chapter), or null before
+ * bosses start. They take turns, one per chapter (GAME_CONFIG.boss.order).
+ */
+export function bossFor(mode: GameMode, chapter: number): BossKind | null {
+  const b = GAME_CONFIG.boss;
+  const from = mode === 'apprentice' ? b.fromApprenticeChapter : b.fromChapter;
+  if (chapter < from) return null;
+  return b.order[(chapter - from) % b.order.length]!;
 }
 
 /** How much more often a chapter's new keys appear than the others. */

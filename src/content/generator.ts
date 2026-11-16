@@ -18,6 +18,9 @@ export function generatedLength(difficulty: number, random: () => number): numbe
   return 2 + Math.round(d * 4) + (random() < 0.5 ? 0 : 1);
 }
 
+/** Most re-picks per string to avoid a triple letter. */
+const MAX_REPICKS = 20;
+
 /** One candidate string. Pronounceable when the keys include vowels and consonants. */
 function candidate(keys: readonly string[], length: number, random: () => number): string {
   const vowels = keys.filter((k) => VOWELS.has(k.toLowerCase()));
@@ -26,6 +29,9 @@ function candidate(keys: readonly string[], length: number, random: () => number
 
   let out = '';
   let useVowel = random() < 0.3;
+  // Re-picks to avoid a triple letter are capped: with a single key (or an
+  // unlucky run) there may be nothing else to pick.
+  let repicks = 0;
   while ([...out].length < length) {
     let ch: string;
     if (pronounceable) {
@@ -36,7 +42,7 @@ function candidate(keys: readonly string[], length: number, random: () => number
       ch = pick(keys, random);
     }
     // No triple letters: "aaa" isn't useful practice.
-    if (out.endsWith(ch + ch)) continue;
+    if (out.endsWith(ch + ch) && repicks++ < MAX_REPICKS) continue;
     out += ch;
   }
   return out;

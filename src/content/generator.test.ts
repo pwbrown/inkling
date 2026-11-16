@@ -16,6 +16,12 @@ function seeded(seed: number): () => number {
 const none = new Blocklist([]);
 
 describe('generator', () => {
+  it('finishes even with a single key, or a random source that always repeats', () => {
+    const blocklist = new Blocklist([]);
+    expect([...generateString(['f'], 6, () => 0.5, blocklist)].length).toBeGreaterThan(0);
+    expect([...generateString(['f', 'j'], 6, () => 0.5, blocklist)].length).toBeGreaterThan(0);
+  });
+
   it('grows string length with difficulty', () => {
     expect(generatedLength(0, () => 0)).toBe(2);
     expect(generatedLength(1, () => 0)).toBe(6);

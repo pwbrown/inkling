@@ -74,6 +74,13 @@ const SHOW_LAYOUT = `(() => {
   return 'ok';
 })()`;
 
+/** Scrolls How to play to its bosses, if it has a section for them (M19). */
+const SHOW_BOSSES = `(() => {
+  const heading = [...document.querySelectorAll('.how-section h3')].find((h) => /boss/i.test(h.textContent));
+  if (heading) heading.scrollIntoView({ block: 'start' });
+  return 'ok';
+})()`;
+
 /** The next character the auto-typer should press, or '' to wait. */
 const NEXT_KEY = (maxX: number) => `(() => {
   const w = window.inkling && window.inkling.world;
@@ -97,7 +104,8 @@ const TOUR: Step[] = [
   { click: FREE_WRITE }, { click: 'Change keys' }, { shot: 'type-case-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
   { click: 'Apprentice' }, { click: 'Chapter 1' }, { shot: 'chapter-intro-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
   { click: 'Settings' }, { click: 'US QWERTY' }, { key: 'Escape' },
-  { click: 'How to play' }, { eval: SCROLL_TOP }, { shot: 'how-to-play' }, { key: 'Escape' },
+  { click: 'How to play' }, { eval: SCROLL_TOP }, { shot: 'how-to-play' },
+  { eval: SHOW_BOSSES }, { wait: 300 }, { shot: 'how-to-play-bosses' }, { key: 'Escape' },
   { click: FREE_WRITE }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },
   // A fresh player gets the "New on this page" briefing before their first page.

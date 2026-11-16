@@ -67,3 +67,4 @@ Tagged after the fact on 2026-11-16.
 | 2.5.0 | `f88d488` | M16 Keyboard layouts |
 | 2.6.0 | `47fe7f2` | Inky Keys name, domain and icons; What's new and version on About |
 | 2.7.0 | `974e8bb` | M17 First impressions: Free Write first, no more Misprints |
+| 2.8.0 | `5fa294a` | M18 Waves and pacing: zoom-in, word-first chapters, symbol pages |

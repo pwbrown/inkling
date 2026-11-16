@@ -1,6 +1,6 @@
 # Inky Keys milestones
 
-Claude Code session started 2026-11-16. 4 prompts.
+Claude Code session started 2026-11-16. 6 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -2020,6 +2020,838 @@ The M18 progression entry is text only, because the standard snapshots mostly sh
 
   ```bash
   timeout 120 npm run transcript 2>&1 | tail -2; cd docs/transcripts && f=2026-11-16-inky-keys-milestones-95f6365a.md; grep -nEo "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $f | sort -u | head; grep -c "private/tmp\|[removed]\|[removed]" $f; grep -nEo "/(Users|home)/[^ )\`\"']*" $f | grep -v "\[removed\]" | head -3; grep -nEoi "(api[_-]?key|secret|password|bearer)[^ ]{0,30}" $f | head -3; git status --short .
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Two lines match a private pattern. Checking them:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Show matching lines with names masked
+
+  ```bash
+  grep -n "private/tmp\|[removed]\|[removed]" 2026-11-16-inky-keys-milestones-95f6365a.md | sed -E 's/([removed]|[removed])/<NAME>/g' | cut -c1-200
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Both matches are just my own scan commands, and the names in them are already redacted, so the transcript is clean. Committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit M18, merge, delete branch, tag
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git add -A && git commit -q -F - <<'EOF'
+  Milestone 18: Waves and pacing (2.8.0)
+
+  - New targets rush in until their whole word is on the page, then settle to their own speed, never closer than a gap to the target ahead
+  - Scrawlers are the main wave: Free Write chapters are mostly word pages; later Apprentice chapters are one drip page then four word pages
+  - Digits and symbols get their own Free Write drip pages (with at least three selected); letter drips never mix with them
+  - One-second Eraser grace: further wrong keys right after it are ignored
+  - Ch
+  … (479 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M18 is committed (`5fa294a`), merged into `main` with a fast-forward, and tagged `v2.8.0`. The branch is deleted. The build transcript went in with the commit, and I checked it for private details first: no emails, secrets or unredacted paths.
+
+Nothing has been pushed yet. To publish `main` and both new tags:
+
+```bash
+git push origin main v2.7.0 v2.8.0
+```
+
+The next milestone is M19, the four new bosses.
+
+## 🧑 Prompt
+
+> Start M19
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Branch and survey boss code in core
+
+  ```bash
+  git checkout -q -b feat/m19-bosses && grep -n "boss\|Boss\|hasSpill\|split" src/core/world.ts | cut -c1-150; sed -n 100,125p src/core/campaign.ts; grep -n "boss:" -A12 src/core/config.ts | head -16
+  ```
+- **Shell:** Read spawner, boss spawn, lives and split
+
+  ```bash
+  sed -n 612,760p src/core/world.ts; sed -n 815,830p src/core/world.ts
+  ```
+- **Shell:** Read target destruction and boss rendering hooks
+
+  ```bash
+  sed -n 185,225p src/core/input.ts; grep -n "boss" src/core/input.ts src/core/mechanics.ts src/render/*.ts src/render/creatures/*.ts | cut -c1-170
+  ```
+- **Shell:** Read creature factory and blotling creature
+
+  ```bash
+  wc -l src/render/creatures/*.ts src/render/renderer.ts; cat src/render/creatures/index.ts; sed -n 1,80p src/render/creatures/blotling.ts
+  ```
+- **Shell:** Read rest of blotling and common helpers
+
+  ```bash
+  sed -n 80,132p src/render/creatures/blotling.ts; grep -n "export function bodyColor" -A15 src/render/creatures/common.ts; grep -n "export function variantOf" -A8 src/render/creatures/common.ts; grep -n "export interface CreatureView" -A20 src/render/creatures/common.ts
+  ```
+- **Shell:** Find boss schedule users and banner strings
+
+  ```bash
+  grep -rn "hasBoss\|hasSpill\|fromApprenticeChapter" src | grep -v "sprinkles\|mistakes\." | cut -c1-170; grep -n "banner" src/i18n/en.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the core types and the boss schedule.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Add boss kinds, config and schedule
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/config.ts',[
+  ("""export type PageKind = TargetKind | 'symbols';""","""export type PageKind = TargetKind | 'symbols';
+
+  /**
+   * Bosses, one on the last page of a chapter (GAME_CONFIG.boss):
+   * - spill: a big slow word with three lives that splits into Inkmites.
+   * - shuffler: its untyped letters reshuffle every few seconds.
+   * - bookworm: a chain of short-word segments, typed head first.
+   * - squid: a body word guarded by tentacle 
+  … (2539 more characters)
+  ```
+- **Shell:** Read world imports, events, page state, ink loss
+
+  ```bash
+  sed -i '' "s/^import { GAME_CONFIG, type PageParams, type TargetKind } from '.\/config';/import { GAME_CONFIG, type BossKind, type PageParams, type TargetKind } from '.\/config';/" src/core/campaign.ts && sed -n 1,35p src/core/world.ts; sed -n 100,135p src/core/world.ts; sed -n 155,175p src/core/world.ts; sed -n 838,860p src/core/world.ts; sed -n 776,800p src/core/world.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the core boss module. `src/core/bosses.ts` holds spawning, per-step behavior, which parts can be started, and what happens on defeat. `world.ts` and `input.ts` call into it.
+
+<details><summary>5 tool calls</summary>
+
+- **Wrote** `src/core/bosses.ts`
+- **Shell:** Wire bosses into the world model
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/bosses.ts',[("""  if (target.bossKind === 'bookworm') {
+      for (const t of rest) t.speed *= 1 + GAME_CONFIG.boss.bookworm.speedStep;
+    }""","""  if (target.bossKind === 'bookworm') {
+      for (const t of rest) t.speed *= 1 + GAME_CONFIG.boss.bookworm.speedStep;
+      // The next segment is the head straight away, so typing can go on.
+      const next = rest.reduce<Target | null>((best, t) => (!best || t.x < best.x ? t : best), null)
+  … (5758 more characters)
+  ```
+- **Shell:** Fix type and read the campaign boss test
+
+  ```bash
+  sed -i '' 's/    const segment = spawnTarget(world, {/    const segment: Target = spawnTarget(world, {/' src/core/bosses.ts && sed -n 1,15p src/core/campaign.test.ts; sed -n 198,212p src/core/campaign.test.ts
+  ```
+- **Shell:** Replace the Spill schedule test with boss rotation tests
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/campaign.test.ts'; s=open(p).read()
+  s=s.replace("  chapterStars,\n  hasSpill,\n","  bossFor,\n  chapterStars,\n",1)
+  a="""  it('only brings the Spill once the basics are learned', () => {
+      expect(hasSpill(0)).toBe(false);
+      expect(hasSpill(APPRENTICE_CHAPTERS - 1)).toBe(true);
+    });"""
+  b="""  it('brings a boss once the basics are learned, a different one each chapter', () => {
+      const from = GAME_CONFIG.boss.fromApprenticeChapter;
+      expect(bossFor('apprentice', from - 1)).toBeNull();
+      const kinds = Array.from({ length: BOSS_KINDS.length }, (_, i) => bos
+  … (893 more characters)
+  ```
+- **Shell:** Typecheck and run tests
+
+  ```bash
+  sed -i '' "17s/.*/import { BOSS_KINDS, GAME_CONFIG } from '.\/config';/" src/core/campaign.test.ts && npx tsc --noEmit 2>&1 | head; timeout 100 npx vitest run 2>&1 | grep -E "×|Tests " | head -20
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The test run produced nothing, so something hangs. I'll find which file.
+
+<details><summary>8 tool calls</summary>
+
+- **Shell:** Find the hanging or failing test file
+
+  ```bash
+  for f in src/core/*.test.ts src/storage/*.test.ts src/content/*.test.ts; do out=$(timeout 20 npx vitest run $f 2>&1 | grep -E "Tests " ); [ -z "$out" ] && echo "HANG/FAIL: $f" ; echo "$out" | grep -q failed && echo "FAILED: $f $out"; done
+  ```
+- **Shell:** Read the boss tests
+
+  ```bash
+  grep -n "  it(" src/core/blotterBoss.test.ts; sed -n 60,140p src/core/blotterBoss.test.ts
+  ```
+- **Shell:** Find which boss test hangs
+
+  ```bash
+  for t in "appears first" "splits into" "costs extra" "must be dealt"; do echo "== $t: $(timeout 15 npx vitest run src/core/blotterBoss.test.ts -t "$t" 2>&1 | grep -E 'Tests ')"; done
+  ```
+- **Shell:** List unbounded loops in content and core
+
+  ```bash
+  grep -n "while\|for (;;)" src/content/*.ts src/core/*.ts | grep -v test
+  ```
+- **Shell:** Read generator loop
+
+  ```bash
+  sed -n 15,50p src/content/generator.ts
+  ```
+- **Shell:** Cap triple-letter re-picks in the generator
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/content/generator.ts'; s=open(p).read()
+  a="""  let out = '';
+    let useVowel = random() < 0.3;
+    while ([...out].length < length) {"""
+  b="""  let out = '';
+    let useVowel = random() < 0.3;
+    // Re-picks to avoid a triple letter are capped: with a single key (or an
+    // unlucky run) there may be nothing else to pick.
+    let repicks = 0;
+    while ([...out].length < length) {"""
+  c="""    // No triple letters: "aaa" isn't useful practice.
+      if (out.endsWith(ch + ch)) continue;"""
+  d="""    // No triple letters: "aaa" isn't useful practice.
+      if (out.endsWith(ch + ch) && re
+  … (445 more characters)
+  ```
+- **Shell:** Test the generator fix
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/content/generator.test.ts'; s=open(p).read()
+  s=s.replace("describe('generator', () => {","""describe('generator', () => {
+    it('finishes even with a single key, or a random source that always repeats', () => {
+      const blocklist = new Blocklist([]);
+      expect([...generateString(['f'], 6, () => 0.5, blocklist)].length).toBeGreaterThan(0);
+      expect([...generateString(['f', 'j'], 6, () => 0.5, blocklist)].length).toBeGreaterThan(0);
+    });
+  """,1)
+  open(p,'w').write(s)
+  EOF
+  grep -n "export function generateString" -A6 src/content/generator.ts; timeout 30 npx vitest run sr
+  … (60 more characters)
+  ```
+- **Shell:** Run all tests
+
+  ```bash
+  timeout 100 npx vitest run 2>&1 | grep -E "×|Tests |AssertionError" | head -20
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Tests pass. Now I'll wire the boss rules into typing (only startable parts can be locked) and the defeat handling.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Gate locking on boss rules and handle defeat
+
+  ```bash
+  grep -n "startsWith" src/core/input.ts; python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/input.ts',[
+  ("""/** Can this keystroke start on a target that isn't locked yet? */
+  function startsWith(target: Target, key: string): boolean {
+    // Ghost text can't be typed before it shows.
+    if (!isRevealed(target)) return false;""","""/** Can this keystroke start on a target that isn't locked yet? */
+  function startsWith(world: World, target: Target, key: string): boolean {
+    // Ghost te
+  … (812 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now briefings for each boss: mechanic ids, cards and banners.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add boss mechanics and strings
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/mechanics.ts',[
+  ("  | 'spill'\n","  | 'spill'\n  | 'bookworm'\n  | 'shuffler'\n  | 'squid'\n  | 'quill'\n"),
+  ("  'spill',\n","  'spill',\n  'bookworm',\n  'shuffler',\n  'squid',\n  'quill',\n"),
+  ("    spill: page.hasBoss,","    spill: page.bossKind === 'spill',\n    bookworm: page.bossKind === 'bookworm',\n    shuffler: page.bossKind === 'shuffler',\n    squid: page.bossKind === 'squid',\n    quill: page.bossKind === 'quill',")
+  … (1648 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Bosses are drawn bigger, but the core spacing ignores that, which would make worm segments overlap. I'll move the size factor into core so spacing and drawing agree.
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Find boss scale and width users
+
+  ```bash
+  grep -rn "BOSS_SCALE\|estimateWidth(" src | grep -v test | cut -c1-160
+  ```
+- **Shell:** Share boss size scale between core and render
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/world.ts',[("""export function estimateWidth(target: Pick<Target, 'kind' | 'text' | 'buffer'>, scale = 1): number {
+    if (target.kind === 'drip') return 58 * scale;""","""export function estimateWidth(
+    target: Pick<Target, 'kind' | 'text' | 'buffer'> & Partial<Pick<Target, 'boss' | 'bossKind' | 'partOf'>>,
+    baseScale = 1,
+  ): number {
+    const scale = baseScale * sizeScale(target);
+    if (target.kind === 'drip') return 58 * scal
+  … (1776 more characters)
+  ```
+- **Shell:** Read renderer imports and event handler
+
+  ```bash
+  sed -n 10,20p src/render/renderer.ts; sed -n 425,480p src/render/renderer.ts
+  ```
+- **Shell:** Find renderer layers and frame sync
+
+  ```bash
+  grep -n "Layer\b\|Layer =\|addChild(\|function build\|sync(world\|  sync(" src/render/renderer.ts | head -40
+  ```
+- **Shell:** Find creature container setup
+
+  ```bash
+  grep -n "creatures\.\|const creatures\|stage\|new Container" src/render/renderer.ts | head -30; grep -n "laneY\|FIRST_LINE_Y" src/render/renderer.ts | head
+  ```
+- **Shell:** Read build and sync in renderer
+
+  ```bash
+  sed -n 205,262p src/render/renderer.ts; sed -n 600,640p src/render/renderer.ts
+  ```
+- **Shell:** Render boss events and squid smudges
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/render/renderer.ts',[
+  ("""  WORLD_WIDTH,
+    renderX,
+    type GameEvent,""","""  WORLD_WIDTH,
+    laneY,
+    renderX,
+    sizeScale,
+    type GameEvent,"""),
+  ("""  let targetLayer!: Container;
+    let nib!: Container;""","""  let targetLayer!: Container;
+    /** Squid ink squirted over a lane, drawn on top of the creatures in it. */
+    let smudgeLayer!: Graphics;
+    let nib!: Container;"""),
+  ("""    targetLayer.sortableChildren = true;
+      nibStyle =
+  … (3245 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I'm partway through M19. The core rules for all four bosses are written, and I'm now wiring their effects into the renderer.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Use the existing punch method and typecheck
+
+  ```bash
+  sed -i '' 's/        reaction.punch.kick();/        reaction.punch.hit();/' src/render/renderer.ts && npx tsc --noEmit 2>&1 | head -20
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck passes. Next, each boss's look in the Scrawler drawing. I'll check how faces are laid out first.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Read drawFace layout
+
+  ```bash
+  grep -n "export function drawFace" -A30 src/render/creatures/common.ts | head -40
+  ```
+- **Shell:** Draw each boss's distinctive look
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/render/creatures/blotling.ts',[
+  ("""import type { Target } from '../../core/world';""","""import { GAME_CONFIG } from '../../core/config';
+  import type { Target } from '../../core/world';"""),
+  ("""  const pips = new Graphics();""","""  const pips = new Graphics();
+    /** Boss trimmings: the Shuffler's arrows, the Bookworm's neck and glasses, Squid tentacles, the Quill's race line. */
+    const extras = new Graphics();"""),
+  ("""  root.add
+  … (6751 more characters)
+  ```
+- **Shell:** Layer extras over the body; read portraits
+
+  ```bash
+  sed -i '' 's/  root.addChild(highlight, legs, extras, body, typedLabel, restLabel, face, pips);/  root.addChild(highlight, legs, body, extras, typedLabel, restLabel, face, pips);/' src/render/creatures/blotling.ts && grep -n "root.addChild" src/render/creatures/blotling.ts && sed -n 128,160p src/render/renderer.ts
+  ```
+- **Shell:** Add boss portraits and run tests
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/render/renderer.ts',[("""    case 'spill':
+        return { ...base, text: 'spill', lives: 3, maxLives: 3, boss: true };""","""    case 'spill':
+        return { ...base, text: 'spill', lives: 3, maxLives: 3, boss: true, bossKind: 'spill' };
+      case 'shuffler':
+        return { ...base, text: 'lsfhuef', lives: 3, maxLives: 3, boss: true, bossKind: 'shuffler' };
+      case 'bookworm':
+        return { ...base, text: 'book', boss: true, bossKin
+  … (578 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now unit tests for each boss's rules, in a new `src/core/bosses.test.ts`.
+
+<details><summary>2 tool calls</summary>
+
+- **Wrote** `src/core/bosses.test.ts`
+- **Shell:** Run the boss tests
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/bosses.test.ts'; s=open(p).read()
+  s=s.replace("""    expect([...target.text.slice(2)].sort().join('')).toBe('cilnn'.replace('nn', 'n') === 'ciln' ? 'ciln' : 'ciln');""","""    expect([...target.text.slice(2)].sort().join('')).toBe('ciln');""")
+  open(p,'w').write(s)
+  EOF
+  timeout 60 npx vitest run src/core/bosses.test.ts 2>&1 | grep -E "×|✓|Tests |AssertionError|Error:" | head -30
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Both failures are in the tests, not the bosses:
+- The Bookworm test needs time for the tail to slide onto the page.
+- The Quill test advanced time in one big step, which only used up its start delay.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Fix test timing and rerun boss tests
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/bosses.test.ts'; s=open(p).read()
+  a="""    for (const segment of segments.slice(1)) type(world, segment.text);
+      expect(world.targets).toEqual([]);"""
+  b="""    // The rest slide onto the page one by one; type each head as it shows.
+      for (const segment of segments.slice(1)) {
+        for (let i = 0; i < 2000 && segment.x + estimateWidth(segment, world.targetScale) > WORLD_WIDTH; i++) stepWorld(world, 16);
+        expect(segment.head).toBe(true);
+        type(world, segment.text);
+      }
+      expect(world.targets).toEqual([]);"""
+  assert a in s; s=s.replace(a,b)
+  a="""  
+  … (314 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+All nine boss tests pass. Next: How to Play gets a picture and a line for each boss.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add every boss to How to play; lint
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/i18n/en.ts',[("  'how.boss': 'From chapter 7, the last page of each Apprentice chapter brings the Spill, a big boss that needs three words and splits into quick little Inkmites when you beat it.',","""  'how.boss': 'The last page of each chapter starts with a boss (from chapter 2 in Free Write, chapter 3 in the Apprentice course), a different one each time. The Blotter can’t touch them.',
+    'how.boss.spill': 'The Spill: a big, slow w
+  … (1052 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the README text about bosses.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Find Spill mentions in docs
+
+  ```bash
+  grep -n "Spill" README.md docs/DESIGN.md | cut -c1-220
+  ```
+- **Shell:** Update README and DESIGN for all bosses
+
+  ```bash
+  python3 - <<'EOF'
+  import re
+  p='README.md'; s=open(p).read()
+  line=[l for l in s.split('\n') if l.startswith('- **The Spill:** from chapter 7')][0]
+  new="""- **Bosses:** the last page of each chapter starts with a boss, from chapter 2 in Free Write and chapter 3 in the Apprentice course. They take turns, one per chapter, and the Blotter can't touch any of them.
+    - **The Spill:** a big, slow word that needs three words in a row. It costs double ink if it reaches the margin and splits into three small Inkmites when blotted.
+    - **The Bookworm:** a chain of short-word segments in one line, wearing 
+  … (1264 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the 2.9.0 release entry, then the full check and build.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add 2.9.0 release, check and build
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  sub('src/core/releases.ts',[("""export const RELEASES: readonly Release[] = [
+  ""","""export const RELEASES: readonly Release[] = [
+    {
+      version: '2.9.0',
+      date: '2026-11-16',
+      notes: ['release.2.9.0.bosses', 'release.2.9.0.earlier'],
+      fixes: true,
+    },
+  """)])
+  sub('src/i18n/en.ts',[("  'release.2.8.0.zoom':","""  'release.2.9.0.bosses': 'Four new bosses: the Bookworm, the Shuffler, the Inkwell Squid and the Rival Quill.',
+    'releas
+  … (336 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Check and build pass (356 tests). Now I'll force each boss in the browser and look at it.
+
+<details><summary>8 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); 'ok'"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 2000));\nfor (const sel of ['[data-id=\"back\"]', '.wn-panel button', 'dialog button']) document.querySelector(sel)?.click();\nconst { store } = window.inkling;\nstore.update((s) => { s.keys = [...'abcdefghijklmnopqrstuvwxyz', 
+… (85 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":2}},{"name":"computer","input":{"action":"screenshot","scale":0.5}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[566,418],"action_summary":"Closes the player picker"}},{"name":"computer","input":{"action":"key","text":"f","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"key","text":"2","action_summary":"Picks
+… (177 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","text":"const w = window.inkling.world;\nwindow.forceBoss = (kind) => {\n  w.targets = []; w.lockedId = null; w.smudges = [];\n  w.page.hasBoss = true; w.page.bossKind = kind; w.page.bossSpawned = false;\n  w.page.spawned = w.page.params.size; // only the boss\n  w.ink = 
+… (82 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":3}},{"name":"computer","input":{"action":"screenshot","scale":0.7}}]}`
+- **computer** `{"action":"zoom","region":[540,240,800,320],"scale":0.8}`
+- **javascript_tool** `{"action":"javascript_exec","text":"const w = window.inkling.world; ({ keys: w.keys.join(''), pageCount: w.page.pageCount, worm: w.targets.map(t => [t.text, Math.round(t.x), t.head, t.entering]) })"}`
+
+</details>
+
+### 🤖 Claude
+
+The Bookworm looks right: segments in one line joined by necks, a face only on the head, and the tail still sliding in. I'll zoom in on the head for the glasses.
+
+<details><summary>4 tool calls</summary>
+
+- **computer** `{"action":"zoom","region":[540,240,680,320],"scale":1}`
+- **javascript_tool** `{"action":"javascript_exec","text":"for (const t of window.inkling.world.targets) t.speed = 0; const h = window.inkling.world.targets.find(t => t.head); ({ x: h.x, y: h.y })"}`
+- **computer** `{"action":"screenshot"}`
+- **computer** `{"action":"zoom","region":[170,250,260,310]}`
+
+</details>
+
+### 🤖 Claude
+
+The glasses are hidden under the eyes. I'll draw them on top, in red pen so they stand out.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Draw bookworm glasses over the eyes
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/creatures/blotling.ts'; s=open(p).read()
+  a="""          // Reading glasses: it is a bookworm.
+            for (const side of [-1, 1]) extras.circle(eyeX + side * eyeR * 1.25, eyeY, eyeR * 1.15).stroke({ width: 2.5 * scale, color: COLORS.ink });
+            extras.moveTo(eyeX - eyeR * 0.1, eyeY).lineTo(eyeX + eyeR * 0.1, eyeY).stroke({ width: 2.5 * scale, color: COLORS.ink });"""
+  b="""          // Reading glasses (it is a bookworm), drawn over the eyes in red pen.
+            for (const side of [-1, 1]) face.circle(eyeX + side * eyeR * 1.25, eyeY, eyeR * 1.2).stroke({ 
+  … (290 more characters)
+  ```
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 1500));\nconst w = window.inkling.world;\nwindow.forceBoss = window.forceBoss || ((kind) => { w.targets = []; w.lockedId = null; w.smudges = []; w.page.hasBoss = true; w.page.bossKind = kind; w.page.bossSpawned = false; w.page.
+… (110 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The edit reloaded the page, so I'll start Free Write again and bring on each boss in turn.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"screenshot","scale":0.4}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[566,418],"action_summary":"Closes the player picker"}},{"name":"computer","input":{"action":"key","text":"c","action_summary":"Continues the saved notebook"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name
+… (412 more characters)`
+- **computer** `{"action":"screenshot"}`
+
+</details>
+
+### 🤖 Claude
+
+The glasses show now. One problem: worm segments carry long words like "confined", because complexity 0 doesn't mean short. Segments and tentacles should get short words, so I'll pick short ones.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Give boss parts short words
+
+  ```bash
+  python3 - <<'EOF'
+  def sub(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,count)
+      open(p,'w').write(s)
+  p='src/core/bosses.ts'; s=open(p).read()
+  a="""/** The boss a part belongs to (a whole boss is its own group). */"""
+  b="""/** A short, easy word for a Bookworm segment or Squid tentacle. */
+  export function partWord(world: World): string {
+    const max = GAME_CONFIG.boss.partWordMax;
+    let best = world.content.nextWord(0, world.random);
+    for (let i = 0; i < 10 && [...best].length > max; i++) {
+      const next = world.content.nextWord(0, worl
+  … (752 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"left_click","coordinate":[566,418],"action_summary":"Closes the player picker"}},{"name":"computer","input":{"action":"key","text":"c","action_summary":"Continues the saved notebook"}},{"name
+… (919 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The Squid works: crimson body with tentacles underneath, three curling tentacle words around it, and a squirt hiding the body's line. Next the Shuffler and the Quill.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"window.forceBoss('shuffler'); 'ok'"}},{"name":"computer","input":{"action":"wait","duration":3}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const w = window.inkling.world; for (const t of w.t
+… (323 more characters)`
+- **Shell:** Fix the Shuffler's arrow path
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/creatures/blotling.ts'; s=open(p).read()
+  a="""        const cx = shake + width * 0.62;
+          const cy = -height / 2 - 16 * scale;
+          const r = 13 * scale;
+          const spin = ctx.reducedMotion ? 0 : ctx.timeMs * 0.002;
+          for (const start of [spin, spin + Math.PI]) {
+            extras.arc(cx, cy, r, start, start + Math.PI * 0.7).stroke({ width: 3.5 * scale, color: COLORS.margin, cap: 'round' });"""
+  b="""        const cx = shake + width - 14 * scale;
+          const cy = -height / 2 - 18 * scale;
+          const r = 12 * scale;
+          const spin = ctx.re
+  … (408 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":2}},{"name":"computer","input":{"action":"left_click","coordinate":[566,418],"action_summary":"Closes the player picker"}},{"name":"computer","input":{"action":"key","text":"c","action_summary":"Continues the saved notebook"}},{"name
+… (681 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The Shuffler looks right, with red arrows chasing round its back. Last, the Rival Quill.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"window.forceBoss('quill'); 'ok'"}},{"name":"computer","input":{"action":"wait","duration":4}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const q = window.inkling.world.targets[0]; q.speed = 0
+… (451 more characters)`
+- **read_console_messages** `{"onlyErrors":true}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Escape","action_summary":"Pauses the game"}},{"name":"computer","input":{"action":"key","text":"q","action_summary":"Quits to the main menu"}},{"name":"computer","input":{"action":"key","text":"h","action_summary":"Opens How to play"}},{
+… (102 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Those two console errors came from hot reload in the middle of an edit, before `world.ts` caught up. There have been none since. Scrolling to the Bosses section:
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"scroll_to","ref":"ref_30"}},{"name":"computer","input":{"action":"screenshot","scale":0.8}}]}`
+
+</details>
+
+### 🤖 Claude
+
+How to Play shows every boss with its picture. I'll add a snapshot step for this section, then run the check, build and M19 snapshots.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Add a boss snapshot step; check and build
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/snapshots.ts'; s=open(p).read()
+  a="""/** The next character the auto-typer should press, or '' to wait. */"""
+  b="""/** Scrolls How to play to its bosses, if it has a section for them (M19). */
+  const SHOW_BOSSES = `(() => {
+    const heading = [...document.querySelectorAll('.how-section h3')].find((h) => /boss/i.test(h.textContent));
+    if (heading) heading.scrollIntoView({ block: 'start' });
+    return 'ok';
+  })()`;
+
+  /** The next character the auto-typer should press, or '' to wait. */"""
+  assert a in s; s=s.replace(a,b,1)
+  a="""  { click: 'How to play' }, { eval: SCROLL_T
+  … (409 more characters)
+  ```
+- **Shell:** Capture m19 and latest snapshots
+
+  ```bash
+  (timeout 300 npm run snapshots -- m19 && timeout 300 npm run snapshots -- latest) > <temp file> 2>&1; echo EXIT $?; grep -i "skipped\|error" <temp file>
+  ```
+- **Read** `docs/progression/m19/how-to-play-bosses.png`
+
+</details>
+
+### 🤖 Claude
+
+Good. Now the M19 progression entry, keeping only the shot the page uses.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Add M19 progression entry and tidy shots
+
+  ```bash
+  (cd docs/progression/m19 && ls | grep -v '^how-to-play-bosses\.png$' | xargs rm) && git checkout -- docs/progression/latest && git clean -q -f docs/progression/latest/ && python3 - <<'EOF'
+  p='docs/progression/README.md'; s=open(p).read()
+  a="## Keeping this up to date"
+  b="""### M19: Bosses
+
+  <img src="m19/how-to-play-bosses.png" width="420" alt="How to play's Bosses section: the Spill, the Bookworm with red-pen glasses, the Shuffler with chasing arrows, the crimson Inkwell Squid and the Rival Quill with its red race line">
+
+  **New:** four bosses beside the Spill, taking turns on the last page of 
+  … (1491 more characters)
+  ```
+- **Shell:** Add 2.8.0 to release history and recheck
+
+  ```bash
+  python3 - <<'EOF'
+  p='docs/RELEASING.md'; s=open(p).read()
+  a="| 2.7.0 | `974e8bb` | M17 First impressions: Free Write first, no more Misprints |"
+  assert a in s
+  s=s.replace(a,a+"\n| 2.8.0 | `5fa294a` | M18 Waves and pacing: zoom-in, word-first chapters, symbol pages |")
+  open(p,'w').write(s)
+  EOF
+  timeout 120 npm run check 2>&1 | grep -E "Tests |error"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M19 is built on `feat/m19-bosses` as release 2.9.0, but not committed yet. `npm run check` (356 tests) and `npm run build` pass, the snapshots are taken, and I brought on each boss in the browser to check how it looks and plays.
+
+**When bosses come:** a boss now opens the last page of every chapter, from chapter 2 in Free Write (which had none before) and chapter 3 in the Apprentice course (was 7). They take turns: Spill, Bookworm, Shuffler, Squid, Quill, then round again.
+
+**The new bosses:**
+- **Bookworm:** short-word segments in one line, joined by necks, with red-pen reading glasses on the head. Only the head can be typed, and each segment you pop makes the rest a bit faster.
+- **Shuffler:** a three-word boss with red arrows chasing round its back. Every 2.6 seconds its untyped letters swap places ("tryst" became "stryt" in the browser).
+- **Inkwell Squid:** a crimson body with three curling tentacle words in nearby lines, which have to be typed first; Tab skips the body until then. A tentacle left alone squirts a band of ink that hides a line of words for about 3 seconds.
+- **Rival Quill:** a red line and a quill run under its word as the rival "writes" it. If the quill finishes first, it splashes you (100 → 88 ink in the browser) and starts a new word. Win three rounds to beat it.
+
+All bosses zoom in like other creatures, and the Blotter can't touch any part of them. Each one gets a briefing card, its own banner, and a picture and line in How to Play.
+
+**Changes to existing behavior:**
+- **Single-key freeze fixed:** picking just one key, such as only `f`, used to freeze the game on any word page. That bug was already there before this milestone; the test hang in M19 exposed it.
+- **Short words for boss parts:** worm segments and tentacles now get short words (5 letters or fewer when one exists). The first try gave a worm segment "confined".
+- **Snapshots:** the snapshot tour now also captures the How to Play bosses section. The M19 progression entry uses that shot.
+- **Release history:** RELEASING.md now lists 2.8.0.
+
+The Quill writes about 1.5 letters per second on early pages, and up to about 2.4 on fast later pages. It's worth a playtest to see whether that feels fair for the people you're sharing the game with.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  timeout 120 npm run transcript 2>&1 | tail -1; f=docs/transcripts/2026-11-16-inky-keys-milestones-95f6365a.md; grep -nEo "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $f | sort -u | head; grep -nEo "/(Users|home)/[^ )\`\"']*" $f | grep -v "\[removed\]" | head -3; grep -n "[removed]\|[removed]" $f | head -3; grep -nEo "private/tmp/claude[^ ]*" $f | head -3; git status --short docs/transcripts
   ```
 
 </details>
