@@ -1,6 +1,6 @@
 # Game name change feasibility
 
-Claude Code session started 2026-11-16. 20 prompts.
+Claude Code session started 2026-11-16. 25 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1055,6 +1055,435 @@ The repo is now **github.com/pwbrown/inky-keys**, and the game is live at **http
 
   ```bash
   npm run transcript 2>&1 | grep -c Wrote; git status --short; F=$(git status --short docs/transcripts | awk '{print $2}' | grep -v README); echo "$F"; grep -n -i -o -E ".{20}([a-z0-9._%+-]+@[a-z0-9.-]+\.(com|org|net)|/Users/[a-z]+|philip|[removed]|claude-501|ghp_|sk-[a-z0-9]{10}).{20}" $F | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The only hits are my own earlier search commands quoted in the transcript. One of them included part of your email address, so I'm checking for it.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Look for the email fragment in the transcripts
+
+  ```bash
+  F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; grep -n -o ".\{40\}[removed].\{20\}" $F; git grep -n "[removed]" -- docs/transcripts | wc -l
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Two lines contain a fragment of your email address, from my own search commands. I'm removing it before committing.
+
+<details><summary>10 tool calls</summary>
+
+- **Shell:** Remove the email fragment from the transcript
+
+  ```bash
+  F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; perl -pi -e 's/p?w[removed]|[removed]/[removed]/g' $F && git grep -c -E "[removed]" -- docs/transcripts || echo "clean"; git grep -c "pwbrown" -- $F
+  ```
+- **Shell:** Commit the link updates
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Point links at the renamed repo and site
+
+  - The GitHub repo is now pwbrown/inky-keys, and the site is served at
+    https://pwbrown.github.io/inky-keys/
+  - Update the in-game source and bug-report links (REPO_URL), the README, the
+    "Play" link in the issue template, the deploy workflow comment and the
+    REQUIREMENTS base-path example
+  - Update this session's transcript
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git log --oneline -1
+  ```
+- **Shell:** Fast-forward main and delete the branch
+
+  ```bash
+  git switch -q main && git merge --ff-only -q chore/repo-url && git branch -d chore/repo-url && git log --oneline -1
+  ```
+- **Shell:** Push main and wait for the deploy
+
+  ```bash
+  git push -q origin main 2>&1 | tail -2; sleep 6; RID=$(gh run list --workflow deploy.yml --limit 1 --json databaseId,headSha -q '.[0].databaseId'); gh run watch $RID --exit-status >/dev/null 2>&1; gh run view $RID --json headSha,status,conclusion -q '.headSha[0:7]+" "+.status+" "+.conclusion'; curl -s -o /dev/null -w "site %{http_code}\n" https://pwbrown.github.io/inky-keys/; git status -sb | head -1
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"https://pwbrown.github.io/inky-keys/?v=a9b3a8d","tabId":"tab-1"}},{"name":"computer","input":{"action":"wait","duration":3,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const js=[...document.scri
+… (240 more characters)`
+- **Shell:** Note in memory that the links are pushed
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && perl -pi -e 's/The link updates \(REPO_URL, README, issue template, deploy comment, REQUIREMENTS\) are on branch `chore\/repo-url`, uncommitted as of 2026-11-16\./The link updates were merged and pushed as a9b3a8d on 2026-11-16./; s/; link updates sit on chore\/repo-url$/; links updated and pushed/' rename-pending.md && perl -pi -e 's/; link fixes on chore\/repo-url$/; links pushed (a9b3a8d)/' MEMORY.md && cat MEMORY.md
+  ```
+- **Wrote** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory/transcript-scan-no-secrets.md`
+- **Shell:** Index the new memory and look at how the export removes details
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && echo '- [Transcript scans: no literal secrets](transcript-scan-no-secrets.md) — commands land in public transcripts; scan with generic patterns only' >> MEMORY.md && grep -n "redact\|\[removed\]" /Users/[removed]/projects/inkling/scripts/export-transcript.ts | head -5
+  ```
+- **Shell:** Show the transcript redaction code
+
+  ```bash
+  sed -n 55,80p scripts/export-transcript.ts
+  ```
+- **Shell:** Show how the private word list is built
+
+  ```bash
+  grep -n "privateWords" scripts/export-transcript.ts | head -3 && sed -n "$(grep -n 'const privateWords' scripts/export-transcript.ts | cut -d: -f1),+8p" scripts/export-transcript.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The link updates are committed, merged and pushed (`a9b3a8d`). I deleted `chore/repo-url`, and `main` now matches GitHub. The deploy succeeded, and the live game at **https://pwbrown.github.io/inky-keys/** links to `pwbrown/inky-keys` with no remaining links to `inkling`.
+
+**Transcript fix before committing:** my earlier privacy-check command for the transcript included part of your email address. That fragment ended up in this session's transcript twice. I replaced both with `[removed]` before committing. The export script already hides your full email username, but not a piece of it, which is why it got through.
+
+Two things to know:
+- Exporting this session's transcript again will bring the fragment back, so check for it at the next commit. I've added a memory note saying that.
+- In future privacy checks I'll only search for general patterns, never your actual details.
+
+The last step is still pointing **inkykeys.com** at the site once your DNS is set up.
+
+## 🧑 Prompt
+
+> help me set up DNS for inkykeys.com
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Look up the domain's current DNS and registrar
+
+  ```bash
+  for t in NS A AAAA; do echo "$t: $(dig +short $t inkykeys.com | tr '\n' ' ')"; done; echo "www: $(dig +short CNAME www.inkykeys.com)"; whois inkykeys.com | grep -i -E -m4 "Registrar:|Name Server|Creation Date"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+You bought inkykeys.com through **Cloudflare**, which also runs its DNS, so everything happens in the Cloudflare dashboard. There are no records yet. Here's the setup:
+
+**1. Verify the domain on GitHub** (stops anyone else pointing it at their own GitHub site)
+- Go to **github.com/settings/pages**, then **Add a domain**, and enter `inkykeys.com`.
+- GitHub shows a TXT record, named something like `_github-pages-challenge-pwbrown`, with a random value.
+- Add that in Cloudflare (step 2), then click **Verify** on GitHub. It can take a few minutes.
+
+**2. Add the records in Cloudflare** (inkykeys.com, then **DNS → Records**)
+
+| Type | Name | Content |
+|---|---|---|
+| A | `@` | `185.199.108.153` |
+| A | `@` | `185.199.109.153` |
+| A | `@` | `185.199.110.153` |
+| A | `@` | `185.199.111.153` |
+| AAAA | `@` | `2606:50c0:8000::153` |
+| AAAA | `@` | `2606:50c0:8001::153` |
+| AAAA | `@` | `2606:50c0:8002::153` |
+| AAAA | `@` | `2606:50c0:8003::153` |
+| CNAME | `www` | `pwbrown.github.io` |
+| TXT | *(from step 1)* | *(from step 1)* |
+
+**Set every record to "DNS only" (grey cloud), not "Proxied" (orange).** GitHub has to reach the domain directly to issue the HTTPS certificate, and Cloudflare's proxy blocks that.
+
+**3. Then I take over:**
+- Point the build at `/` instead of `/inky-keys/`.
+- Set the custom domain on the repo.
+- Push, then wait for the certificate.
+- Turn on **Enforce HTTPS**.
+- Check the live site, including offline play.
+
+**⚠️ Back up saves first.** Moving to inkykeys.com counts as moving to a different website, so the browser treats the saved data as belonging to the old site. Once the domain is set, the old address forwards to the new one, so players can't get back to export their old progress. Before step 3, open the game at pwbrown.github.io/inky-keys/ on each device your kids use, then press **B** (Manage saves) and **Export** for each player. After the move, they can **Import** those files at inkykeys.com. If that's too fiddly, I could build a one-time handover that moves saves across automatically, but it would delay the switch.
+
+You can add the records yourself, or I can do it in the browser pane: you sign in to Cloudflare and GitHub there, and I fill everything in.
+
+## 🧑 Prompt
+
+> Do it in browser
+
+<details><summary>4 tool calls</summary>
+
+- **Skill** `{"skill":"anthropic-skills:built-in-browser"}`
+- **preview_start** `{"url":"https://github.com/settings/pages"}`
+- **get_page_text** `{"tabId":"tab-2","max_chars":2000}`
+- **tabs_context** `{}`
+
+</details>
+
+### 🤖 Claude
+
+I need you to sign in before I can continue. The browser pane is showing GitHub's sign-in page at **github.com**, so please sign in there, including any two-factor step. After you sign in, it will return to the Pages settings. Then I'll add inkykeys.com and copy the verification record GitHub gives.
+
+I'll need you to sign in to Cloudflare the same way after that.
+
+## 🧑 Prompt
+
+> Signed in
+
+<details><summary>1 tool call</summary>
+
+- **get_page_text** `{"tabId":"tab-2","max_chars":3000}`
+
+</details>
+
+### 🤖 Claude
+
+inkykeys.com already shows as **Verified** on GitHub, so that step is done. Checking what's in DNS now.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Query Cloudflare's nameserver for the domain's records
+
+  ```bash
+  for n in inkykeys.com _github-pages-challenge-pwbrown.inkykeys.com; do echo "$n TXT: $(dig +short TXT $n @scott.ns.cloudflare.com | tr '\n' ' ')"; done; echo "A: $(dig +short A inkykeys.com @scott.ns.cloudflare.com | tr '\n' ' ')"; echo "AAAA: $(dig +short AAAA inkykeys.com @scott.ns.cloudflare.com | tr '\n' ' ')"; echo "www: $(dig +short CNAME www.inkykeys.com @scott.ns.cloudflare.com)"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The verification record is already in place. Next: the site records in Cloudflare.
+
+<details><summary>2 tool calls</summary>
+
+- **preview_start** `{"url":"https://dash.cloudflare.com/"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":3,"tabId":"tab-3"}},{"name":"get_page_text","input":{"tabId":"tab-3","max_chars":1500}},{"name":"tabs_context","input":{}}]}`
+
+</details>
+
+### 🤖 Claude
+
+It looks like you've already done the GitHub part: inkykeys.com shows as **Verified** there, and its verification record is in Cloudflare. I didn't need to change anything on GitHub.
+
+Next, please sign in to Cloudflare in the browser pane. Cloudflare sends you to Google to sign in, and the pane is showing that page at **accounts.google.com**. Once you're in, I'll add the four A records, four AAAA records and the `www` CNAME, all set to "DNS only".
+
+## 🧑 Prompt
+
+> Signed in
+
+<details><summary>5 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"get_page_text","input":{"tabId":"tab-3","max_chars":2500}}]}`
+- **find** `{"query":"inkykeys.com","tabId":"tab-3"}`
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"https://dash.cloudflare.com/[account id]/inkykeys.com/dns/records","tabId":"tab-3"}},{"name":"computer","input":{"action":"wait","duration":3,"tabId":"tab-3"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-3","scale"
+… (8 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[400,494],"tabId":"tab-3","action_summary":"Dismisses the new DNS experience welcome dialog"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-3"}},{"name":"find","input":{"query":"Add record","tabId":"t
+… (9 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_1106","tabId":"tab-3","action_summary":"Opens the add DNS record form"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-3"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-3"}},{"name":"re
+… (77 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+I'm in the inkykeys.com DNS settings in Cloudflare. Next I'm opening the form to add the first record.
+
+<details><summary>3 tool calls</summary>
+
+- **computer** `{"action":"screenshot","tabId":"tab-3"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[441,430],"tabId":"tab-3","action_summary":"Opens the add DNS record form"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-3"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-3"}},{"nam
+… (83 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[444,202],"tabId":"tab-3","action_summary":"Focuses the record name field"}},{"name":"computer","input":{"action":"type","text":"@","tabId":"tab-3","action_summary":"Sets the record name to the root domain"}},{"name":"compute
+… (503 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The first record shows "DNS only" and is correct. Saving it.
+
+<details><summary>2 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the first A record for inkykeys.com"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"screenshot","tabId":"ta
+… (20 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"tabId":"tab-3","action_summary":"Opens the add DNS record form"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[444,202],
+… (738 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+This works reliably, so I'll save each record and set up the next in the same step, checking each form before saving.
+
+<details><summary>2 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the second A record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"tab
+… (948 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the third A record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"tabI
+… (948 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Saving the last A record. Next come the AAAA records, which need a different record type.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the fourth A record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"tab
+… (563 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+All four A records are saved. Choosing AAAA from the list.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[140,264],"tabId":"tab-3","action_summary":"Chooses the AAAA record type"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[444,202],"
+… (740 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The proxy switch is still on for this record. Clicking it again.
+
+<details><summary>4 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[397,262],"tabId":"tab-3","action_summary":"Switches the proxy status to DNS only"}},{"name":"computer","input":{"action":"zoom","region":[88,50,712,400],"scale":0.6,"tabId":"tab-3"}}]}`
+- **find** `{"query":"Proxy","tabId":"tab-3"}`
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-3","text":"const s=document.querySelector('[role=\"switch\"]'); ({checked: s?.getAttribute('aria-checked'), label: s?.closest('div')?.parentElement?.innerText})"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_1345","tabId":"tab-3","action_summary":"Switches the proxy status to DNS only"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-3"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"
+… (169 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Now "DNS only". Checking the whole form before saving.
+
+<details><summary>4 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-3","text":"const d=document.querySelector('[role=\"dialog\"]'); ({inputs:[...d.querySelectorAll('input')].map(i=>i.name+'='+i.value), text: d.innerText.slice(0,160)})"}`
+- **find** `{"query":"Save","tabId":"tab-3"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_1357","tabId":"tab-3","action_summary":"Saves the first AAAA record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"tabId":
+… (1482 more characters)`
+- **computer** `{"action":"screenshot","tabId":"tab-3","scale":0.7}`
+
+</details>
+
+### 🤖 Claude
+
+Form is right. Saving with the Save button's on-screen position and doing the next AAAA record.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the first AAAA record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"t
+… (1469 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the second AAAA record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"
+… (1469 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the third AAAA record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"t
+… (1469 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Saving the last AAAA record. Then the `www` CNAME.
+
+<details><summary>2 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the fourth AAAA record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"computer","input":{"action":"left_click","coordinate":[443,504],"
+… (1445 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[153,356],"tabId":"tab-3","action_summary":"Saves the www CNAME record"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"get_page_text","input":{"tabId":"tab-3","max_chars":1500}}]}`
+
+</details>
+
+### 🤖 Claude
+
+Everything is saved. Checking the records through public DNS lookups.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Check the new records on Cloudflare and public resolvers
+
+  ```bash
+  for ns in scott.ns.cloudflare.com 1.1.1.1 8.8.8.8; do echo "== $ns"; echo "A: $(dig +short A inkykeys.com @$ns | sort | tr '\n' ' ')"; echo "AAAA: $(dig +short AAAA inkykeys.com @$ns | sort | tr '\n' ' ')"; echo "www: $(dig +short CNAME www.inkykeys.com @$ns)"; done
+  ```
+- **Shell:** Record in memory that DNS is done
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && perl -0pi -e 's/I don.t know where they registered inkykeys\.com, so ask before assuming AWS Route 53\./It is registered with Cloudflare, which also hosts its DNS. As of 2026-11-16 the DNS is done and checked: 4 A and 4 AAAA records for GitHub Pages, a `www` CNAME to pwbrown.github.io (all DNS only, no proxy), and the `_github-pages-challenge-pwbrown` TXT record. The domain is verified on GitHub. Still to do: switch the site over./; s/\*\*How to apply:\*\* when the user says DNS is set up:/**How to apply:** fo
+  … (567 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+DNS for inkykeys.com is set up, and Cloudflare's servers and public DNS lookups (1.1.1.1 and 8.8.8.8) all return the new records:
+
+| Record | Points to |
+|---|---|
+| `inkykeys.com` A ×4 | 185.199.108–111.153 (GitHub Pages) |
+| `inkykeys.com` AAAA ×4 | 2606:50c0:8000–8003::153 (GitHub Pages) |
+| `www.inkykeys.com` CNAME | pwbrown.github.io |
+
+All of them are **DNS only**, which the lookups confirm because they return GitHub's addresses directly. GitHub needs that to issue the HTTPS certificate. The verification record was already there, and GitHub shows the domain as verified, so I didn't change anything on GitHub. I did have to switch the proxy off by hand on the first AAAA record, because the toggle didn't respond the first time; I checked each record before saving it.
+
+**The game itself hasn't moved yet**, and inkykeys.com won't show it until it does. The switch is:
+- Build the game for `/` instead of `/inky-keys/`.
+- Set inkykeys.com as the custom domain on the repo.
+- Push, and wait for the certificate.
+- Turn on Enforce HTTPS.
+
+**Back up saves before switching.** After the switch, pwbrown.github.io/inky-keys/ forwards to inkykeys.com, which the browser treats as a separate website, so progress saved at the old address stays behind. Before I switch, export each player's save on every device (**B**, then **Export**) so you can import it at inkykeys.com. Or I can first build a one-time handover that carries saves across automatically.
+
+## 🧑 Prompt
+
+> Saves exported, switch
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Branch, then compare the old stash with the current deploy setup
+
+  ```bash
+  git switch -q -c chore/custom-domain && git stash show -p stash@{0}; echo ======; cat .github/workflows/deploy.yml; sed -n 1,10p vite.config.ts; git grep -n "pwbrown.github.io\|INKY_KEYS_BASE" -- . ':!docs/transcripts'
+  ```
+- **Shell:** Show the current deploy workflow and URL mentions
+
+  ```bash
+  sed -n 1,45p .github/workflows/deploy.yml; sed -n 1,8p vite.config.ts; git grep -n "pwbrown.github.io\|INKY_KEYS_BASE" -- . ':!docs/transcripts'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I'll set the custom domain and push straight after, so the site is only briefly broken while the deploy runs (about two minutes).
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Build for the root path and point links at inkykeys.com
+
+  ```bash
+  set -e
+  perl -0pi -e 's|# at https://pwbrown.github.io/inky-keys/. It can also be run by hand from the\n# Actions tab \("Run workflow"\).\n# One-time setup: repo Settings → Pages → Source: "GitHub Actions".|# at https://inkykeys.com/. It can also be run by hand from the Actions tab\n# ("Run workflow").\n# One-time setup: repo Settings → Pages → Source: "GitHub Actions", and\n# Custom domain: inkykeys.com (with Enforce HTTPS). The custom domain is set\n# there, not with a CNAME file, which Actions deploys ignore.\n# The site is served from the domain\x27s root, so the build uses the default\n# b
+  … (1566 more characters)
+  ```
+- **Shell:** Run checks and build for the root path
+
+  ```bash
+  npm run check 2>&1 | grep -E "Tests |error"; npm run build 2>&1 | grep -E "error|built in"; grep -o 'src="[^"]*index[^"]*"' dist/index.html; grep -o '"start_url":"[^"]*","scope":"[^"]*"' dist/manifest.webmanifest
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Builds for `/`. Before committing: exporting the transcript and scanning it with general patterns only, then re-removing the email fragment, which the export brings back.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export the transcript and remove private details
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; U=$(git config user.email | cut -d@ -f1); perl -pi -e "s/\Q${U:2}\E/[removed]/g" $F; echo "fragment left: $(grep -c "${U:2}" $F)"; echo "emails: $(grep -c -E '[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook|hotmail)\.com' $F)"; grep -n -o -E ".{15}(/Users/[a-z]+|ghp_[A-Za-z0-9]{6}|sk-[A-Za-z0-9]{10}).{10}" $F | head -5; git status --short
   ```
 
 </details>

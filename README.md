@@ -119,11 +119,11 @@ npm run words:build  # regenerate the bundled word pack and blocklist
 npm run preview    # serve the production build locally
 ```
 
-Build for a GitHub Pages project site with `INKY_KEYS_BASE=/inky-keys/ npm run build`.
+To serve the game from a sub-path, set the base path when building, e.g. `INKY_KEYS_BASE=/inky-keys/ npm run build`.
 
 ### Deploying
 
-The game is published to **https://pwbrown.github.io/inky-keys/** by `.github/workflows/deploy.yml`, which builds and deploys to GitHub Pages on every push to `main`. You can also run it by hand from **Actions → Deploy → Run workflow**. One-time setup: **Settings → Pages → Source: GitHub Actions**. The build is a static site, so any static host works too: serve the `dist/` folder from `npm run build` over HTTPS, with `INKY_KEYS_BASE` set to the path it's served from.
+The game is published to **https://inkykeys.com/** by `.github/workflows/deploy.yml`, which builds and deploys to GitHub Pages on every push to `main`. You can also run it by hand from **Actions → Deploy → Run workflow**. One-time setup: **Settings → Pages → Source: GitHub Actions**, and **Custom domain: inkykeys.com** with **Enforce HTTPS**. The domain is registered with Cloudflare, whose DNS (set to DNS only, not proxied) points it at GitHub Pages. The build is a static site, so any static host works too: serve the `dist/` folder from `npm run build` over HTTPS, with `INKY_KEYS_BASE` set to the path it's served from.
 
 The service worker is only registered in production builds. Use `npm run build && npm run preview` to try offline mode locally.
 

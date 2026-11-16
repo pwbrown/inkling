@@ -2,7 +2,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 // `base` must match the deploy path (REQUIREMENTS §12). The deploy workflow
-// sets INKY_KEYS_BASE=/<repo>/ for GitHub Pages; locally it's `/`.
+// can set INKY_KEYS_BASE (e.g. /inky-keys/ for a GitHub Pages project URL);
+// the live site at inkykeys.com and local builds use `/`.
 const base = process.env.INKY_KEYS_BASE ?? '/';
 
 export default defineConfig({

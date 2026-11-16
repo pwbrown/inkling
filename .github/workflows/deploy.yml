@@ -1,9 +1,14 @@
 name: Deploy
 
 # Publishes the game to GitHub Pages on every push to main (REQUIREMENTS §12),
-# at https://pwbrown.github.io/inky-keys/. It can also be run by hand from the
-# Actions tab ("Run workflow").
-# One-time setup: repo Settings → Pages → Source: "GitHub Actions".
+# at https://inkykeys.com/. It can also be run by hand from the Actions tab
+# ("Run workflow").
+# One-time setup: repo Settings → Pages → Source: "GitHub Actions", and
+# Custom domain: inkykeys.com (with Enforce HTTPS). The custom domain is set
+# there, not with a CNAME file, which Actions deploys ignore.
+# The site is served from the domain's root, so the build uses the default
+# base path `/`. To serve it from https://pwbrown.github.io/inky-keys/ again,
+# remove the custom domain and set INKY_KEYS_BASE: /inky-keys/ on the build step.
 
 on:
   push:
@@ -30,10 +35,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      - name: Build for the Pages project path
-        run: npm run build
-        env:
-          INKY_KEYS_BASE: /${{ github.event.repository.name }}/
+      - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
