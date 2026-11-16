@@ -236,7 +236,7 @@ Inky Keys is **open source** and will be **publicly hosted** as a static web app
 - **Good first contributions:** translations, keyboard layout files and word/phrase content packs (§11). These need contribution guidelines covering format, licensing and the blocklist check.
 
 ### Naming
-- Local folder: `~/projects/inkling`.
+- Local folder: `~/projects/inky-keys` (named after the repo; it was `~/projects/inkling` until 2026-11-16).
 - Public identifier: **Inky Keys**, at inkykeys.com (see DESIGN.md §9).
 - Do a trademark search before any commercial use.
 

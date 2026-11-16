@@ -13,8 +13,8 @@
  * plans, questions and answers, and a one-line summary of every tool call
  * (commands are shown, cut short when long). What's left out: tool output,
  * hidden reasoning, system prompts and app reminders. Before writing, it
- * removes email addresses and one-time codes, and replaces the home folder
- * with `~`.
+ * removes email addresses, one-time codes and any words listed in
+ * `.private-words`, and replaces the home folder with `~`.
  *
  * Always read the result before committing it: the redaction is a safety net,
  * not a guarantee.
@@ -40,7 +40,24 @@ function emailUser(): string {
     return '';
   }
 }
-const privateWords = [emailUser(), basename(home)].filter((w) => w.length >= 4);
+/**
+ * Extra words to remove, one per line, from `.private-words` at the project
+ * root (git-ignored, so the list itself is never published). Use it for
+ * account IDs and other details that turn up in commands or URLs. Lines
+ * starting with `#` are comments.
+ */
+function localPrivateWords(): string[] {
+  const file = join(root, '.private-words');
+  if (!existsSync(file)) return [];
+  return readFileSync(file, 'utf8')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+}
+// Longest first, so a full ID is replaced before a fragment of it.
+const privateWords = [emailUser(), basename(home), ...localPrivateWords()]
+  .filter((w) => w.length >= 4)
+  .sort((a, b) => b.length - a.length);
 
 /** Longest command or tool input shown before it's cut short. */
 const MAX_INPUT = 600;
@@ -110,10 +127,16 @@ function fence(text: string, lang = ''): string {
   return `${ticks}${lang}\n${text}\n${ticks}`;
 }
 
+/**
+ * The project folder's paths, current and earlier. Sessions from before the
+ * folder was renamed (inkling → inky-keys, 2026-11-16) still use the old path.
+ */
+const rootPrefixes = [root, join(dirname(root), 'inkling')].map((r) => `${r}/`);
+
 function relPath(path: unknown): string {
   const p = String(path ?? '');
-  const prefix = `${root}/`;
-  return p.startsWith(prefix) ? p.slice(prefix.length) : p;
+  const prefix = rootPrefixes.find((r) => p.startsWith(r));
+  return prefix ? p.slice(prefix.length) : p;
 }
 
 /** One line (plus an optional code block) describing a tool call. */

@@ -1,6 +1,6 @@
 # Game name change feasibility
 
-Claude Code session started 2026-11-16. 25 prompts.
+Claude Code session started 2026-11-16. 28 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1268,7 +1268,7 @@ Next, please sign in to Cloudflare in the browser pane. Cloudflare sends you to 
 
 - **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-3"}},{"name":"get_page_text","input":{"tabId":"tab-3","max_chars":2500}}]}`
 - **find** `{"query":"inkykeys.com","tabId":"tab-3"}`
-- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"https://dash.cloudflare.com/[account id]/inkykeys.com/dns/records","tabId":"tab-3"}},{"name":"computer","input":{"action":"wait","duration":3,"tabId":"tab-3"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-3","scale"
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"https://dash.cloudflare.com/[removed]/inkykeys.com/dns/records","tabId":"tab-3"}},{"name":"computer","input":{"action":"wait","duration":3,"tabId":"tab-3"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-3","scale"
 … (8 more characters)`
 - **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[400,494],"tabId":"tab-3","action_summary":"Dismisses the new DNS experience welcome dialog"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-3"}},{"name":"find","input":{"query":"Add record","tabId":"t
 … (9 more characters)`
@@ -1478,12 +1478,449 @@ I'll set the custom domain and push straight after, so the site is only briefly 
 
 Builds for `/`. Before committing: exporting the transcript and scanning it with general patterns only, then re-removing the email fragment, which the export brings back.
 
-<details><summary>1 tool call</summary>
+<details><summary>2 tool calls</summary>
 
 - **Shell:** Export the transcript and remove private details
 
   ```bash
   npm run transcript >/dev/null 2>&1; F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; U=$(git config user.email | cut -d@ -f1); perl -pi -e "s/\Q${U:2}\E/[removed]/g" $F; echo "fragment left: $(grep -c "${U:2}" $F)"; echo "emails: $(grep -c -E '[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook|hotmail)\.com' $F)"; grep -n -o -E ".{15}(/Users/[a-z]+|ghp_[A-Za-z0-9]{6}|sk-[A-Za-z0-9]{10}).{10}" $F | head -5; git status --short
+  ```
+- **Shell:** Check for the email in any letter case and the Cloudflare account ID
+
+  ```bash
+  F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; U=$(git config user.email | cut -d@ -f1); echo "case-insensitive local part: $(grep -c -i "$U" $F)"; echo "email removed markers: $(grep -c 'email removed' $F)"; grep -n -i -o -E ".{20}([removed]|cloudflare\.com/[0-9a-f]{8}).{10}" $F | head -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The Cloudflare account ID appears in a URL I opened. It isn't a secret, but it's private, so I'm removing it too.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Remove the Cloudflare account ID from the transcript
+
+  ```bash
+  F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; perl -pi -e 's/[removed]/[account id]/g; s/[removed]/[zone id]/g' $F; grep -c -E "[removed]|[removed]" $F; grep -c "_github-pages-challenge" $F; grep -n -o "94602501[0-9a-f]*" $F | head -2
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Clean. Committing, then setting the domain and pushing straight away.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Commit, merge, set the custom domain and push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Serve the game from inkykeys.com
+
+  - Build with the default base path `/`: the deploy workflow no longer sets
+    INKY_KEYS_BASE, because the site is served from the domain's root
+  - Document the custom domain setup in the workflow, vite config and README
+    (Cloudflare DNS, DNS only, pointing at GitHub Pages; Enforce HTTPS)
+  - Point the issue template's "Play" link at https://inkykeys.com/
+  - Update this session's transcript
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git switch -q main && git merge --ff-only -q chore/custom-domain && git bra
+  … (178 more characters)
+  ```
+- **Shell:** Wait for the deploy and check the certificate state
+
+  ```bash
+  sleep 6; RID=$(gh run list --workflow deploy.yml --limit 1 --json databaseId -q '.[0].databaseId'); gh run watch $RID --exit-status >/dev/null 2>&1; gh run view $RID --json headSha,conclusion -q '.headSha[0:7]+" "+.conclusion'; gh api repos/pwbrown/inky-keys/pages -q '{cname, https_enforced, status: .status, cert: .https_certificate.state, domains: .https_certificate.domains}'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Deploy done, and the HTTPS certificate is already approved for both names. Turning on Enforce HTTPS.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Turn on Enforce HTTPS for the site
+
+  ```bash
+  gh api -X PUT repos/pwbrown/inky-keys/pages -f cname=inkykeys.com -F https_enforced=true && gh api repos/pwbrown/inky-keys/pages -q '{https_enforced, html_url}'
+  ```
+- **Shell:** Check the live site, redirects and service worker
+
+  ```bash
+  for u in https://inkykeys.com/ http://inkykeys.com/ https://www.inkykeys.com/ https://pwbrown.github.io/inky-keys/ https://inkykeys.com/manifest.webmanifest https://inkykeys.com/sw.js; do printf "%-42s " $u; curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" $u; done; curl -s https://inkykeys.com/ | grep -o '<title>[^<]*</title>\|src="/assets/index[^"]*"'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Every address forwards correctly. Checking the game in the browser, including offline play.
+
+<details><summary>2 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"https://inkykeys.com/","tabId":"tab-1"}},{"name":"computer","input":{"action":"wait","duration":4,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const reg = await navigator.serviceWorker.ready; aw
+… (432 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"const all = []; for (const k of await caches.keys()) for (const r of await (await caches.open(k)).keys()) all.push(new URL(r.url).pathname); const js=[...document.scripts].map(s=>new URL(s.src).pathname).filter(Boolean); ({index: all.some(p=>p==='/
+… (141 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Offline play is ready: the page, the game code and the word pack are all cached. Updating my memory notes.
+
+<details><summary>5 tool calls</summary>
+
+- **Wrote** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory/custom-domain-pending.md`
+- **Shell:** Update the memory index and the rename note
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && perl -pi -e 's/^- \[Custom domain pending\].*$/- [Custom domain](custom-domain-pending.md) — live at inkykeys.com via Cloudflare DNS (keep DNS only); stale inklingtyping stash/' MEMORY.md && perl -pi -e 's/The coming move to inkykeys.com is a new origin, so that one will need an export and import of saves/The later move to inkykeys.com (done 2026-11-16) was a new origin, so players re-import exported saves/' rename-pending.md && cat MEMORY.md
+  ```
+- **Read** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory/custom-domain-pending.md`
+- **Wrote** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory/custom-domain-pending.md`
+- **Shell:** Tidy the rename entry in the memory index
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && perl -pi -e 's/^- \[Rename pending\].*$/- [Rename](rename-pending.md) — Inky Keys, repo pwbrown\/inky-keys; keep the internal `inkling`\/`blotling` identifiers/' MEMORY.md && grep -c "done 2026-11-16" rename-pending.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+**Inky Keys is live at https://inkykeys.com/** 🎉
+
+**What I did:**
+- **Build:** the game is now built for the domain's root. I updated the deploy workflow, the build config, the README and the issue template's "Play" link.
+- **Committed and pushed:** `a47f683`, fast-forward merged into `main`, branch deleted. Before committing I removed your email fragment and the Cloudflare account ID from the exported transcript.
+- **GitHub Pages settings:** I set inkykeys.com as the repo's custom domain, waited for the deploy, then turned on **Enforce HTTPS**. The certificate covers both `inkykeys.com` and `www.inkykeys.com`.
+
+**Checked:**
+
+| Address | Result |
+|---|---|
+| https://inkykeys.com/ | 200: the game loads, with no console errors |
+| http://inkykeys.com/ | forwards to https://inkykeys.com/ |
+| https://www.inkykeys.com/ | forwards to https://inkykeys.com/ |
+| https://pwbrown.github.io/inky-keys/ | forwards to https://inkykeys.com/ |
+
+The service worker is running at the new address, and the page, the game code and the word pack are all cached for offline play.
+
+**For your kids:** open https://inkykeys.com/, press **B** (Manage saves) and **Import** each exported file. A copy installed from the old address will forward to the new site when it's online. Installing from inkykeys.com gives a fresh install with the right name.
+
+Keep all the Cloudflare records set to **DNS only**. Turning the proxy on would stop GitHub renewing the HTTPS certificate.
+
+## 🧑 Prompt
+
+> Drop it
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Confirm the stash is the inklingtyping.com one, then drop it
+
+  ```bash
+  git stash list && git stash list | grep -q "^stash@{0}: On chore/custom-domain: custom domain: inklingtyping.com" && git stash drop stash@{0} && echo "remaining: $(git stash list | wc -l)"
+  ```
+- **Shell:** Remove the stash mention from memory
+
+  ```bash
+  cd /Users/[removed]/.claude/projects/-Users-[removed]-projects-inkling/memory && perl -0pi -e 's/\n`git stash` still holds the old "custom domain: inklingtyping.com" changes, which are no longer needed\. Drop it only if the user agrees\.\n//; s/; an old inklingtyping.com git stash is stale//' custom-domain-pending.md && perl -pi -e 's/; stale inklingtyping stash//' MEMORY.md && grep -c stash custom-domain-pending.md MEMORY.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I dropped the old inklingtyping.com stash after checking it was the right one. That was the only stash, so the repo now has none, and the working tree is clean. I also removed the stash from my memory notes.
+
+The rename and the move to inkykeys.com are both finished.
+
+## 🧑 Prompt
+
+> update the app icons for the new name and also rename the local directory to match the repo name, and move these sessions into the appropriate claude code directory
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Read the icon script and how the transcript export finds sessions
+
+  ```bash
+  cat scripts/make-icons.py; ls public/ public/icons 2>/dev/null; grep -n "icon" vite.config.ts index.html | head -20; grep -n "projects\|homedir\|cwd\|\.claude" scripts/export-transcript.ts | head -20
+  ```
+- **Shell:** Find the game's ink and paper colours
+
+  ```bash
+  sed -n 1,40p src/ui/menu.css | grep -n "tc-" | head; grep -rn "\-\-tc-ink:\|--tc-paper:\|--tc-margin\|--tc-rule" src --include=*.css | head
+  ```
+- **Shell:** Redraw the icons as a key with the ink drop on it
+
+  ```bash
+  python3 - <<'EOF'
+  from pathlib import Path
+  p = Path("scripts/make-icons.py")
+  s = p.read_text()
+  s = s.replace('''Draws Inky Keys' app icons (an ink drop on notebook paper with a red margin)
+  as PNGs with no dependencies beyond the standard library.''', '''Draws Inky Keys' app icons (a keyboard key with a smiling ink drop on it,
+  on notebook paper with a red margin) as PNGs with no dependencies beyond the
+  standard library.''')
+  s = s.replace('''SHINE = (90, 108, 150)
+  ''', '''SHINE = (90, 108, 150)
+  KEYTOP = (255, 253, 247)
+
+  # The key, in units of the icon size: the dark skirt, then the lighter top
+  #
+  … (2488 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Fixing the favicon so its drop shape and lines exactly match the PNG geometry.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Match the favicon to the PNG geometry and regenerate
+
+  ```bash
+  python3 - <<'EOF'
+  from pathlib import Path
+  p = Path("scripts/make-icons.py"); s = p.read_text()
+  s = s.replace('<path d="M4 18.6H60M4 26.2H60M4 33.9H60M4 41.6H60M4 49.3H60" stroke="#b9cfe0" stroke-width="0.8"/>',
+                '<path d="M4 10.2H60M4 17.9H60M4 25.6H60M4 33.3H60M4 41H60M4 48.6H60M4 56.3H60" stroke="#b9cfe0" stroke-width="0.8"/>')
+  s = s.replace('<path d="M8 4V60" stroke="#d9534f" stroke-width="1.6"/>', '<path d="M7 4V60" stroke="#d9534f" stroke-width="1.6"/>')
+  s = s.replace('<rect x="12" y="16" width="40" height="39" rx="7.5" fill="#1f2a44"/>', '<rect x="12.2" y="16" width="39.6" 
+  … (741 more characters)
+  ```
+- **Read** `public/icons/icon-512.png`
+- **Read** `public/icons/maskable-512.png`
+
+</details>
+
+### 🤖 Claude
+
+The PNG icons look right. Now checking the favicon in the browser via the dev server.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/favicon.svg","tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"document.documentElement.style.cssText='width:320px;height:320px'; document.querySelector('svg').setAttribute('wid
+… (178 more characters)`
+- **preview_start** `{"name":"inky-keys-dev"}`
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/favicon.svg","tabId":"seed"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"seed","text":"const s=document.querySelector('svg'); s.setAttribute('width','320'); s.setAttribute('height','320'); 'ok'"}},{"name
+… (91 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The favicon matches the PNGs. Checking whether the docs describe the icon, then running checks.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Find icon descriptions in docs and run checks
+
+  ```bash
+  git grep -n -i "app icon\|ink drop on\|favicon" -- docs/DESIGN.md docs/REQUIREMENTS.md README.md CREDITS.md | head; npm run check 2>&1 | grep -E "Tests |error"; npm run build 2>&1 | grep -E "error|built in"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks and build pass. Next, the folder rename. First, finding everything that names the old folder.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Find references to the old folder and list the session folders
+
+  ```bash
+  git grep -n "projects/inkling\|projects-inkling" -- . ':!docs/transcripts'; ls ~/.claude/projects/ | grep -i "ink"; ls ~/.claude/projects/-Users-[removed]-projects-inkling | head -30; du -sh ~/.claude/projects/-Users-[removed]-projects-inkling
+  ```
+- **Shell:** Update the folder note and check Claude Code's per-folder settings
+
+  ```bash
+  perl -pi -e 's|^- Local folder: `~/projects/inkling`\.|- Local folder: `~/projects/inky-keys` (named after the repo; it was `~/projects/inkling` until 2026-11-16).|' docs/REQUIREMENTS.md && sed -n 239p docs/REQUIREMENTS.md; python3 -c "
+  import json,os
+  d=json.load(open(os.path.expanduser('~/.claude.json')))
+  p=d.get('projects',{})
+  for k in p:
+    if 'ink' in k: print(k, sorted(p[k].keys())[:12])
+  "
+  ```
+- **Shell:** Rename the project folder and link the old path to it
+
+  ```bash
+  cd /Users/[removed]/projects && test ! -e inky-keys && mv inkling inky-keys && ln -s inky-keys inkling && ls -ld inkling inky-keys && cd /Users/[removed]/projects/inky-keys && git status -sb | head -3 && git remote -v | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The folder is renamed, and the session followed it. Now moving the Claude Code sessions and memory.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Check whether a session folder already exists for the new path
+
+  ```bash
+  cd ~/.claude/projects && ls -d -- *inky* 2>/dev/null; ls -- -Users-[removed]-projects-inky-keys 2>/dev/null | head
+  ```
+- **Shell:** Move the sessions folder and link the old name to it
+
+  ```bash
+  cd ~/.claude/projects && test ! -e -Users-[removed]-projects-inky-keys && mv -- -Users-[removed]-projects-inkling -Users-[removed]-projects-inky-keys && ln -s -- -Users-[removed]-projects-inky-keys -Users-[removed]-projects-inkling && ls -ld -- -Users-[removed]-projects-ink* && ls -- -Users-[removed]-projects-inky-keys | grep -c jsonl && ls -- -Users-[removed]-projects-inky-keys/memory
+  ```
+
+</details>
+
+### 🤖 Claude
+
+All 7 sessions and the memory folder are in the new place. Checking that this session's log is still being written there, then testing the transcript export.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check the session log is current and run the export
+
+  ```bash
+  stat -f "%Sm %z" ~/.claude/projects/-Users-[removed]-projects-inky-keys/26b363a8-954e-4978-9ac7-5c6d564fd3c5.jsonl; date; npm run transcript 2>&1 | grep -c Wrote; git status --short
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The export found all 7 sessions in the new place. But it also changed the older transcripts, so I'm checking what changed in them.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Show how the older transcripts changed
+
+  ```bash
+  git diff --stat docs/transcripts | tail -2; git diff docs/transcripts/2026-11-13-apprentice-mode-improvements-836f321d.md | grep "^[-+]" | grep -v "^+++\|^---" | head -6
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The export shortens file paths using the repo's current folder. Paths in older sessions use the old folder, so they now show in full. I'll make the script recognise both folder names.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Find where the export shortens paths
+
+  ```bash
+  grep -n "root" scripts/export-transcript.ts | head -20
+  ```
+- **Read** `scripts/export-transcript.ts`
+- **Read** `scripts/export-transcript.ts`
+- **Edited** `scripts/export-transcript.ts`
+- **Shell:** Re-export transcripts and remove private details again
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; git diff --stat docs/transcripts | tail -3; F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; U=$(git config user.email | cut -d@ -f1); perl -pi -e "s/\Q${U:2}\E/[removed]/g; s/[removed]/[account id]/g; s/[removed]/[zone id]/g" $F; echo "left: $(grep -c -i -E "${U:2}|[removed]|[removed]" docs/transcripts/*.md | grep -v ':0' | wc -l)"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Only this session's transcript changes now. One file still matches a private detail; checking which.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Find which transcript still has a private detail
+
+  ```bash
+  U=$(git config user.email | cut -d@ -f1); grep -c -i -E "${U:2}|[removed]|[removed]" docs/transcripts/*.md | grep -v ':0$'; grep -n -o -i -E ".{30}(${U:2}|[removed]|[removed]).{10}" docs/transcripts/*.md | head -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Those are pieces of the Cloudflare IDs inside my own earlier search commands. I'll remove them with a pattern that doesn't spell them out, so this command doesn't leak them again.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Remove the remaining Cloudflare ID fragments
+
+  ```bash
+  F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; A=$(printf '%s' '[removed]' | base64 -d); Z=$(printf '%s' '[removed]' | base64 -d); perl -pi -e "s/\Q$A\E[0-9a-f]*/[account id]/g; s/\Q$Z\E[0-9a-f]*/[zone id]/g" $F; echo "left: $(grep -c -E "$A|$Z" docs/transcripts/*.md | grep -v ':0$' | wc -l)"
+  ```
+- **Read** `scripts/export-transcript.ts`
+- **Edited** `scripts/export-transcript.ts`
+- **Edited** `scripts/export-transcript.ts`
+- **Wrote** `.private-words`
+- **Shell:** Ignore the word list, re-export and count leftovers
+
+  ```bash
+  grep -q '^\.private-words$' .gitignore || printf '\n# Private words for the transcript export (never commit)\n.private-words\n' >> .gitignore; git check-ignore -q .private-words && echo ignored; npm run transcript >/dev/null 2>&1; n=0; while IFS= read -r w; do case "$w" in ''|'#'*) continue;; esac; c=$(grep -h -c -F -- "$w" docs/transcripts/*.md | paste -sd+ - | bc); n=$((n+c)); done < .private-words; echo "private words left: $n"; git diff --stat docs/transcripts | tail -1; git status --short | grep -v transcripts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The export now removes them automatically. Running the checks, since the export script changed.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Run checks and build, then scan for emails and home paths
+
+  ```bash
+  npm run check 2>&1 | grep -E "Tests |error|warning" ; npm run build 2>&1 | grep -E "error|built in"; grep -c -E '[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook|hotmail|icloud)\.com|/Users/[a-z]+/' docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md
+  ```
+- **Shell:** Record the folder move and the private word list in memory
+
+  ```bash
+  cd ~/.claude/projects/-Users-[removed]-projects-inky-keys/memory && cat >> rename-pending.md <<'EOF'
+
+  On 2026-11-16 the local folder became `~/projects/inky-keys`, and the Claude Code sessions and memory moved to `~/.claude/projects/-Users-[removed]-projects-inky-keys`. Symlinks remain at both old paths (`~/projects/inkling` and `…-projects-inkling`) only so the session doing the move kept working. They can be deleted once no session is open on the old path. The transcript export also shortens paths that use the old folder name.
+  EOF
+  perl -0pi -e 's/\*\*How to apply:\*\* scan with generic p
+  … (308 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The new icons, the folder rename and the session move are done, and checks and build pass. Nothing is committed yet.
+
+**App icons**
+The old icon was a plain ink drop, with nothing about keys. It's now a **keyboard key** with the smiling ink drop from the menu logo on it, still on notebook paper with the red margin. The app icons, the maskable icon, the Apple touch icon and the favicon are all redrawn from `scripts/make-icons.py`, and I checked each one by eye. The favicon uses the same shapes as the PNGs.
+
+**Local folder**
+`~/projects/inkling` is now **`~/projects/inky-keys`**. Git is unaffected, and the remote still points to `pwbrown/inky-keys`. I updated the folder name in REQUIREMENTS.
+
+**Claude Code sessions**
+All 7 sessions and the memory folder moved to `~/.claude/projects/-Users-[removed]-projects-inky-keys`. `npm run transcript` finds them all from the new folder.
+
+**Things to know:**
+- **Two links stay at the old paths:** one in `~/projects/` and one in `~/.claude/projects/`. They're only there so this session keeps working. You can delete both once this session is closed.
+- **Older sessions in the app's sidebar** may still open in the old folder. To continue one, run `claude --resume` from `~/projects/inky-keys`. The first time you open the new folder, Claude Code may ask again whether you trust it.
+- **Transcript export fixes:**
+  - Older transcripts were suddenly showing full file paths, so the export now recognises the old folder name too. Those transcripts are back to unchanged.
+  - My commands kept putting fragments of your Cloudflare account ID and email into the transcript. The export now also removes any words listed in a new **`.private-words`** file. Git ignores that file so it's never published, and nothing private is left in the transcripts.
+
+## 🧑 Prompt
+
+> Commit and push
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Branch, export transcripts and scan them
+
+  ```bash
+  git switch -q -c chore/app-icons && npm run transcript >/dev/null 2>&1; n=0; while IFS= read -r w; do case "$w" in ''|'#'*) continue;; esac; c=$(grep -h -c -F -- "$w" docs/transcripts/*.md | paste -sd+ - | bc); n=$((n+c)); done < .private-words; echo "private words left: $n"; echo "emails/home paths: $(cat docs/transcripts/*.md | grep -c -E '[A-Za-z0-9._%+-]+@(gmail|yahoo|outlook|hotmail|icloud)\.com|/Users/[a-z]+/')"; git status --short
   ```
 
 </details>

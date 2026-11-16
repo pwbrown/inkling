@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect x="4" y="4" width="56" height="56" rx="11" fill="#f7f1e3"/>
-  <g stroke="#b9cfe0" stroke-width="0.8">
-    <path d="M4 18.5H60M4 26.2H60M4 33.9H60M4 41.6H60M4 49.3H60"/>
-  </g>
-  <path d="M15.4 4V60" stroke="#d9534f" stroke-width="1.6"/>
-  <path d="M35.8 10.3L24.3 34.1A12.8 12.8 0 1 0 47.3 34.1Z" fill="#1f2a44"/>
-  <circle cx="31" cy="38.4" r="2" fill="#5a6c96"/>
+  <path d="M4 10.2H60M4 17.9H60M4 25.6H60M4 33.3H60M4 41H60M4 48.6H60M4 56.3H60" stroke="#b9cfe0" stroke-width="0.8"/>
+  <path d="M7 4V60" stroke="#d9534f" stroke-width="1.6"/>
+  <rect x="12.2" y="16" width="39.6" height="39" rx="7.7" fill="#1f2a44"/>
+  <rect x="16" y="17.9" width="32" height="29.5" rx="5.1" fill="#fffdf7"/>
+  <path d="M32 18.8L25.07 33.1A7.7 7.7 0 1 0 38.93 33.1Z" fill="#1f2a44"/>
+  <circle cx="29.5" cy="38" r="1.15" fill="#f7f1e3"/>
+  <circle cx="34.5" cy="38" r="1.15" fill="#f7f1e3"/>
+  <circle cx="28.5" cy="34.2" r="1" fill="#5a6c96"/>
 </svg>
