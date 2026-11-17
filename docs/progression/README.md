@@ -272,15 +272,28 @@ No new screens this time: everything changed is in motion and in which pages com
 
 Stickers arrive the moment they're earned, with a toast in the corner that doesn't stop play and a line on the page card. New ones are marked until the book is opened. Progress from before stickers existed (level, the Apprentice course) earns its stickers on the next visit (save version 10).
 
+### M22: Challenges
+
+| Challenge link | Daily Page |
+|---|---|
+| <img src="m22/challenge.png" width="420" alt="A challenge screen: Pip scored 5,230 on Daily Page #1, with Pip's page grades and a Take the challenge button"> | <img src="m22/daily.png" width="420" alt="The Daily Page screen with the result text ending in a challenge link, a Sign my challenge link checkbox and a Share picture button"> |
+| Opening a friend's link. (Sample data from the snapshot script.) | The copied result now ends with a link, and there's a **Share picture** button. |
+
+**New:**
+- **Challenge links:** the copied Daily result ends with "Beat my score:" and a link. The part after `#` carries the day, layout, score and page grades (and the player's name only if they tick **Sign my challenge link**), and browsers never send it to the server. Opening one offers the same seeded notebook, with a **To beat** target at the top of the page that ticks once it's passed, and the result on the last card. Today's Daily Page still counts toward the streak if it hasn't been played.
+- **Share picture:** the result drawn as a 1200 × 630 notebook page (score, WPM, accuracy, page tiles, the streak flame), sent to the system share sheet, the clipboard, or a saved file.
+
+**Changed:** links are checked field by field; names are cut to letters, numbers and spaces and dropped if the word filter objects. PRIVACY.md says what links and pictures contain.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m21
+npm run snapshots -- m22
 ```
 
-That writes a standard set of shots to `docs/progression/m21/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m22/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

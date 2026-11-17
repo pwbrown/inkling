@@ -417,11 +417,19 @@ export function startPractice(world: World, difficulty: Difficulty = world.selec
  * from `seed`. The content (its keys and words) must already be set.
  * `counted` is false for a replay after the day's result is in.
  */
-export function startDaily(world: World, id: number, seed: number, counted: boolean): void {
+export function startDaily(
+  world: World,
+  id: number,
+  seed: number,
+  counted: boolean,
+  /** A friend's score to beat, when playing from a challenge link. */
+  challenge: World['challenge'] = null,
+): void {
   resetWorld(world, 'normal');
   world.mode = 'daily';
   world.seed = seed;
   world.daily = { id, counted };
+  world.challenge = challenge;
   world.page = pageFor(world, GAME_CONFIG.daily.chapter, 0);
   markPageStart(world);
   beginPage(world);

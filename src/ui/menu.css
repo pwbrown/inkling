@@ -671,6 +671,8 @@
 
 .daily-share {
   width: 100%;
+  overflow: hidden;
+  word-break: break-all;
   box-sizing: border-box;
   resize: none;
   font: 14px/1.4 ui-monospace, Menlo, monospace;
@@ -782,4 +784,17 @@
 
 .daily-streak:not(.daily-streak-lit) .daily-streak-count {
   color: var(--tc-ink-light);
+}
+
+.daily-sign {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.daily-sign input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
 }

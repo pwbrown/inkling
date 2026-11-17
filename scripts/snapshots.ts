@@ -119,6 +119,18 @@ const SAMPLE_STICKERS = `(() => {
   return 'ok';
 })()`;
 
+/**
+ * Open a sample challenge link (M22): the same as a friend's link would,
+ * through the address's #c=… part. The game reads it and shows the challenge.
+ */
+const SAMPLE_CHALLENGE = `(() => {
+  const now = new Date();
+  const today = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(2026, 10, 17)) / 86400000) + 1;
+  const json = JSON.stringify({ v: 1, d: today, l: 'us-qwerty', s: 5230, g: 'A+,A,B', n: 'Pip' });
+  location.hash = 'c=' + btoa(json).replace(/[+]/g, '-').replace(/[/]/g, '_').replace(/=+$/, '');
+  return 'ok';
+})()`;
+
 /** The next character the auto-typer should press, or '' to wait. */
 const NEXT_KEY = (maxX: number) => `(() => {
   const w = window.inkling && window.inkling.world;
@@ -148,6 +160,8 @@ const TOUR: Step[] = [
   { eval: SAMPLE_DAILY }, { click: 'Daily Page' }, { eval: SCROLL_TOP }, { shot: 'daily' }, { key: 'Escape' },
   // The sticker book (M21), with some sample stickers.
   { eval: SAMPLE_STICKERS }, { click: 'Sticker book' }, { eval: SCROLL_TOP }, { shot: 'stickers' }, { key: 'Escape' },
+  // A challenge link from a friend (M22).
+  { eval: SAMPLE_CHALLENGE }, { wait: 500 }, { shot: 'challenge' }, { click: 'Not now' },
   { click: FREE_WRITE }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },
   // A fresh player gets the "New on this page" briefing before their first page.

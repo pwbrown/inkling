@@ -18,7 +18,19 @@ import { artElement, badgeSvg, cosmeticSvg, dayDropSvg, streakDropSvg } from './
 import { stickerArt } from './stickerToast';
 import { h } from './dom';
 
-export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk' | 'players' | 'playerEdit' | 'about' | 'daily' | 'stickers';
+export type MenuScreen =
+  | 'title'
+  | 'contents'
+  | 'newNotebook'
+  | 'howToPlay'
+  | 'pause'
+  | 'desk'
+  | 'players'
+  | 'playerEdit'
+  | 'about'
+  | 'daily'
+  | 'stickers'
+  | 'challenge';
 
 /** Inky Keys' source code and issue forms. */
 export const REPO_URL = 'https://github.com/pwbrown/inky-keys';
@@ -72,6 +84,22 @@ export interface StickerShelf {
   /** e.g. "Bosses". */
   title: string;
   stickers: StickerEntry[];
+}
+
+/** A challenge from a link, before it's taken on. */
+export interface ChallengeView {
+  id: number;
+  name: string | null;
+  /** Formatted. */
+  score: string;
+  pages: { page: number; grade: Grade | null; mark: PageMark }[];
+  /** It's today's Daily Page and not played yet, so it counts. */
+  counts: boolean;
+  /** How many days ago that Daily Page was (0 for today, negative if ahead). */
+  daysAgo: number;
+  /** The layout it was played on, if not the player's. */
+  otherLayout: string | null;
+  myLayout: string;
 }
 
 /** The Daily Page screen. */
@@ -151,6 +179,17 @@ export interface MenuHooks {
   /** e.g. "#3 · not played yet" for the title screen. */
   dailyDetail(): string;
   onPlayDaily(): void;
+  /** Whether challenge links are signed with the player's name. */
+  dailySigned(): boolean;
+  /** The name a signed link would carry, or null if the player's name has none to show. */
+  signName(): string | null;
+  onSignDaily(on: boolean): void;
+  /** A challenge from a link waiting to be taken on, or null. */
+  challenge(): ChallengeView | null;
+  onTakeChallenge(): void;
+  onDismissChallenge(): void;
+  /** Share today's result as a picture: share sheet, clipboard or a saved file. */
+  onShareImage(): Promise<'shared' | 'copied' | 'saved' | 'cancelled'>;
   /** Copy the share text. Resolves false if the clipboard isn't available. */
   onCopyDaily(): Promise<boolean>;
   /** e.g. "7 of 26 stickers · 2 new!". */
@@ -272,6 +311,9 @@ export class Menu {
       case 'stickers':
         this.panel.replaceChildren(...this.stickers());
         break;
+      case 'challenge':
+        this.panel.replaceChildren(...this.challengeScreen());
+        break;
       default:
         return;
     }
@@ -282,7 +324,12 @@ export class Menu {
   }
 
   /** A big menu button with an optional detail line and shortcut hint. */
-  private button(id: string, label: string, onClick: () => void, opts: { detail?: string | null; key?: string; primary?: boolean } = {}) {
+  private button(
+    id: string,
+    label: string,
+    onClick: () => void,
+    opts: { detail?: string | null; key?: string; primary?: boolean; autofocus?: boolean } = {},
+  ) {
     return h(
       'button',
       {
@@ -290,6 +337,7 @@ export class Menu {
         className: `menu-btn${opts.primary ? ' menu-primary' : ''}`,
         'data-id': id,
         'data-key': opts.key,
+        'data-autofocus': opts.autofocus ? true : undefined,
         onClick,
       },
       [
@@ -598,6 +646,80 @@ export class Menu {
     ];
   }
 
+  /** "Sign my challenge link as Pip": off unless ticked, so a name is only shared on purpose. */
+  private signToggle(): HTMLElement {
+    const name = this.hooks.signName();
+    const box = h('input', { type: 'checkbox', 'data-id': 'sign' });
+    box.checked = this.hooks.dailySigned();
+    box.disabled = name === null;
+    box.addEventListener('change', () => {
+      this.hooks.onSignDaily(box.checked);
+      this.render(false);
+    });
+    return h('label', { className: 'daily-sign' }, [box, name ? t('daily.sign', { name }) : t('daily.signNoName')]);
+  }
+
+  /** A challenge from a link: who, what score, and whether it counts. */
+  private challengeScreen(): HTMLElement[] {
+    const c = this.hooks.challenge();
+    if (!c) {
+      queueMicrotask(() => this.show('title'));
+      return [];
+    }
+    const args = { id: c.id, name: c.name ?? '', score: c.score };
+    const when = c.counts
+      ? t('challenge.counts')
+      : c.daysAgo === 0
+        ? t('challenge.played')
+        : c.daysAgo < 0
+          ? t('challenge.future')
+          : c.daysAgo === 1
+            ? t('challenge.yesterday')
+            : t('challenge.past', { days: c.daysAgo });
+    const dismiss = () => {
+      this.hooks.onDismissChallenge();
+      this.show('title');
+    };
+    return [
+      h('h2', { id: 'menu-title' }, [t('challenge.title')]),
+      h('p', { className: 'tc-intro' }, [c.name ? t('challenge.from', args) : t('challenge.fromAnon', args)]),
+      c.pages.length > 0 ? this.pageTiles(c.pages) : null,
+      h('p', { className: 'tc-intro' }, [when]),
+      c.otherLayout ? h('p', { className: 'tc-intro' }, [t('challenge.otherLayout', { theirs: c.otherLayout, mine: c.myLayout })]) : null,
+      h('nav', { className: 'menu-list' }, [
+        this.button('take', t('challenge.take'), () => this.hooks.onTakeChallenge(), {
+          detail: t('challenge.takeDetail', { pages: DAILY_PAGES }),
+          key: 'p',
+          primary: true,
+        }),
+      ]),
+      h('div', { className: 'tc-actions' }, [
+        h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'back', onClick: dismiss }, [t('challenge.notNow')]),
+      ]),
+    ].filter((el): el is HTMLElement => el !== null);
+  }
+
+  /** One tile per page, coloured by its grade, with the page number and grade on it. */
+  private pageTiles(pages: { page: number; grade: Grade | null; mark: PageMark }[]): HTMLElement {
+    return h(
+      'ol',
+      { className: 'daily-pages' },
+      pages.map((p) =>
+        h(
+          'li',
+          {
+            className: `daily-page daily-${p.mark}`,
+            'aria-label': p.grade ? t('daily.pageGrade', { page: p.page, grade: p.grade }) : t('daily.pageNotReached', { page: p.page }),
+          },
+          [
+            h('span', { className: 'daily-page-label', 'aria-hidden': 'true' }, [t('daily.pageLabel', { page: p.page })]),
+            h('span', { className: 'daily-page-grade', 'aria-hidden': 'true' }, [p.grade ?? t('daily.notReached')]),
+          ],
+        ),
+      ),
+    );
+  }
+
   /** The sticker book: every sticker by shelf, earned or not. Opening it marks new ones seen. */
   private stickers(): HTMLElement[] {
     const book = this.hooks.stickerBook();
@@ -643,7 +765,14 @@ export class Menu {
     const share = shareText
       ? h('textarea', { className: 'daily-share', readonly: true, rows: shareText.split('\n').length, 'aria-label': t('daily.shareLabel'), 'data-id': 'share-text' })
       : null;
-    if (share && shareText) share.value = shareText;
+    if (share && shareText) {
+      share.value = shareText;
+      // Grow to fit the text once it's on screen, wrapped link and all.
+      requestAnimationFrame(() => {
+        share.style.height = 'auto';
+        share.style.height = `${share.scrollHeight + 2}px`;
+      });
+    }
     const copy = async () => {
       const ok = await this.hooks.onCopyDaily();
       if (!ok && share) share.select();
@@ -653,35 +782,32 @@ export class Menu {
       h('h2', { id: 'menu-title' }, [t('daily.title', { id: d.id })]),
       h('p', { className: 'tc-intro' }, [t('daily.intro')]),
       this.streakStrip(d.streak, d.week),
-      d.pages
-        ? h(
-            'ol',
-            { className: 'daily-pages' },
-            d.pages.map((p) =>
-              h(
-                'li',
-                {
-                  className: `daily-page daily-${p.mark}`,
-                  'aria-label': p.grade ? t('daily.pageGrade', { page: p.page, grade: p.grade }) : t('daily.pageNotReached', { page: p.page }),
-                },
-                [
-                  h('span', { className: 'daily-page-label', 'aria-hidden': 'true' }, [t('daily.pageLabel', { page: p.page })]),
-                  h('span', { className: 'daily-page-grade', 'aria-hidden': 'true' }, [p.grade ?? t('daily.notReached')]),
-                ],
-              ),
-            ),
-          )
-        : null,
+      d.pages ? this.pageTiles(d.pages) : null,
       h('p', { className: 'daily-status' }, [d.status]),
       share,
+      share ? this.signToggle() : null,
       h('nav', { className: 'menu-list' }, [
         d.played
-          ? this.button('copy', t('daily.copy'), () => void copy(), { key: 'c', primary: true })
+          ? this.button('copy', t('daily.copy'), () => void copy(), { key: 'c', primary: true, autofocus: true })
+          : null,
+        d.played
+          ? this.button(
+              'share-image',
+              t('daily.shareImage'),
+              () =>
+                void this.hooks.onShareImage().then((how) => {
+                  if (how !== 'cancelled') {
+                    copied.textContent = t(how === 'shared' ? 'daily.imageShared' : how === 'copied' ? 'daily.imageCopied' : 'daily.imageSaved');
+                  }
+                }),
+              { detail: t('daily.shareImageDetail'), key: 'i' },
+            )
           : null,
         this.button('play-daily', d.played ? t('daily.playAgain') : t('daily.play'), () => this.hooks.onPlayDaily(), {
           detail: d.played ? t('daily.playAgainDetail') : t('daily.playDetail', { pages: DAILY_PAGES }),
           key: 'p',
           primary: !d.played,
+          autofocus: !d.played,
         }),
       ]),
       copied,

@@ -20,6 +20,8 @@ export class Hud {
   readonly root = new Container();
   private readonly inkFill = new Graphics();
   private readonly score: Text;
+  /** A friend's score to beat, from a challenge link. */
+  private readonly target: Text;
   private readonly combo: Text;
   /** The multiplier just lost, falling away. */
   private readonly comboLost: Text;
@@ -60,6 +62,11 @@ export class Hud {
     this.score.anchor.set(1, 0);
     this.score.position.set(WORLD_WIDTH - 24, 14);
 
+    this.target = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 18, fontWeight: '700', fill: COLORS.margin } });
+    this.target.anchor.set(0.5, 0);
+    // Below the ability labels along the top, in the clear middle of the page.
+    this.target.position.set(WORLD_WIDTH / 2, 42);
+
     const comboStyle = { fontFamily: TEXT_FONT, fontSize: 18, fontWeight: '700' as const, fill: COLORS.margin };
     this.combo = new Text({ text: '', style: comboStyle });
     this.combo.anchor.set(1, 0.5);
@@ -72,7 +79,7 @@ export class Hud {
     this.page.anchor.set(0.5, 1);
     this.page.position.set(WORLD_WIDTH / 2, WORLD_HEIGHT - 12);
 
-    this.root.addChild(label, this.inkFill, frame, this.chargeDrops, this.abilityLayer, this.timers, this.score, this.comboBar, this.comboLost, this.combo, this.page);
+    this.root.addChild(label, this.inkFill, frame, this.chargeDrops, this.abilityLayer, this.timers, this.score, this.target, this.comboBar, this.comboLost, this.combo, this.page);
   }
 
   /** Where charge drop `index` is drawn, for effects that land on it. */
@@ -91,6 +98,7 @@ export class Hud {
     this.updateInk(world, dtMs, reducedMotion);
     this.updateScore(world, dtMs, reducedMotion);
     this.updateCombo(world, dtMs, reducedMotion);
+    this.updateTarget(world);
 
     const { spawned, params, chapter, index, pageCount } = world.page;
     const progress = {
@@ -218,6 +226,26 @@ export class Hud {
     }
   }
   private lastGlow = 0;
+
+  /** "To beat: 4,820 (Pip)" at the top while playing a challenge, then a tick once it's beaten. */
+  private updateTarget(world: World): void {
+    const c = world.challenge;
+    if (!c) {
+      setText(this.target, '');
+      return;
+    }
+    const beaten = world.stats.score > c.score;
+    const score = formatNumber(c.score);
+    const text = beaten
+      ? c.name
+        ? t('hud.challengeBeatenBy', { name: c.name, score })
+        : t('hud.challengeBeaten', { score })
+      : c.name
+        ? t('hud.challengeBy', { name: c.name, score })
+        : t('hud.challenge', { score });
+    setText(this.target, text);
+    this.target.style.fill = beaten ? COLORS.ink : COLORS.margin;
+  }
 
   /** The score counts up to its new value and gives a little kick as it grows. */
   private updateScore(world: World, dtMs: number, reducedMotion: boolean): void {

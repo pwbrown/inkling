@@ -145,6 +145,16 @@ describe('startDaily', () => {
     expect(canRestart(world)).toBe(true);
   });
 
+  it('carries a friend’s score to beat, until another notebook starts', () => {
+    const world = createWorld({ content: createContentSource({ keys: LETTERS }) });
+    startDaily(world, 3, 42, false, { score: 4820, name: 'Pip' });
+    expect(world.challenge).toEqual({ score: 4820, name: 'Pip' });
+    expect(world.daily).toEqual({ id: 3, counted: false });
+    world.phase = 'ready';
+    confirm(world);
+    expect(world.challenge).toBeNull();
+  });
+
   it('clears the seed when another notebook starts', () => {
     const world = daily();
     world.phase = 'ready';

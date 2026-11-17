@@ -286,6 +286,8 @@ export interface World {
   seed: number | null;
   /** The Daily Page being played (id = its number), or null. `counted` until its result is recorded. */
   daily: { id: number; counted: boolean } | null;
+  /** A friend's score to beat, from a challenge link (core/challenge.ts), or null. */
+  challenge: { score: number; name: string | null } | null;
 }
 
 /**
@@ -435,6 +437,7 @@ export function createWorld(options: WorldOptions = {}): World {
     random: options.random ?? Math.random,
     seed: null,
     daily: null,
+    challenge: null,
   };
 }
 

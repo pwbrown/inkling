@@ -3,7 +3,7 @@ import 'pixi.js/unsafe-eval';
 import './style.css';
 import { countTypeableWords, createContentSource, MIN_WORD_POOL } from './content/contentSource';
 import { loadEnglishPack } from './content/en';
-import { layoutById } from './content/layouts';
+import { isLayoutId, layoutById } from './content/layouts';
 import type { LayoutId } from './content/layouts/types';
 import {
   autoPause,
@@ -33,6 +33,7 @@ import { accuracy, wpm } from './core/stats';
 import { APPRENTICE_CHAPTERS, NEW_KEY_WEIGHT, lessonsFor, apprenticeKeys, apprenticePlan, chapterStars, starsForGrade, totalStars } from './core/campaign';
 import { pageGrade, type Grade } from './core/grade';
 import { DAILY_PAGES, MARK_SQUARES, dailyId, dailyKeys, dailyPages, dailySeed, streakWeek } from './core/daily';
+import { cleanChallengeName, decodeChallenge, encodeChallenge, type Challenge } from './core/challenge';
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, getLocale, setLocale, t, type MessageKey } from './i18n';
 import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel } from './core/rewards';
@@ -74,12 +75,10 @@ import { openUnlockDialog, type UnlockedItem } from './ui/unlockDialog';
 import { openWordLists } from './ui/wordLists';
 import { openWhatsNewDialog } from './ui/whatsNewDialog';
 import { showStickerToast } from './ui/stickerToast';
+import { shareCard } from './ui/shareCard';
 import { STICKERS, type StickerFacts, type StickerGroup } from './core/stickers';
 import { RELEASES, compareVersions, releasesToAnnounce, MAX_NEW_RELEASES_SHOWN, type Release } from './core/releases';
 import { APP_VERSION, loadSeenVersion, saveSeenVersion } from './version';
-
-/** Where shared results point people. */
-const SHARE_URL = 'inkykeys.com';
 
 async function main(): Promise<void> {
   const host = document.getElementById('app');
@@ -180,6 +179,7 @@ async function main(): Promise<void> {
           return lines;
         }
         if (w.mode === 'daily' && (w.phase === 'gameOver' || w.phase === 'notebookComplete')) {
+          if (game.challenge) return challengeLines(game.challenge, game.stats.score);
           if (!dailyOutcome) return [t('overlay.daily.practice')];
           const lines = [
             dailyOutcome.newBest ? t('overlay.daily.newBest') : t('overlay.daily.best', { score: formatNumber(dailyOutcome.best) }),
@@ -200,6 +200,19 @@ async function main(): Promise<void> {
           return lines;
         }
         return [];
+  }
+
+  /** How a challenge went: beaten, and by how much, or how far short. Then the day's record, if it counted. */
+  function challengeLines(challenge: { score: number; name: string | null }, score: number): string[] {
+    const args = { name: challenge.name ?? '', score: formatNumber(challenge.score), gap: formatNumber(Math.abs(score - challenge.score)) };
+    const won = score > challenge.score;
+    const line = challenge.name
+      ? t(won ? 'overlay.challenge.wonBy' : 'overlay.challenge.shortOf', args)
+      : t(won ? 'overlay.challenge.won' : 'overlay.challenge.short', args);
+    const lines = [line];
+    if (dailyOutcome?.newBest) lines.push(t('overlay.daily.newBest'));
+    if (dailyOutcome && dailyOutcome.streak > 1) lines.push(t('overlay.daily.streak', { streak: dailyOutcome.streak }));
+    return lines;
   }
 
   /** "New sticker: Gold Star!" on the card that ends a page or notebook. */
@@ -324,12 +337,23 @@ async function main(): Promise<void> {
     loop.reset();
   };
 
-  /** Today's Daily Page. Only the first go of the day counts. */
-  const playDaily = () => {
+  /**
+   * Today's Daily Page, or the one a challenge link is for. Only the first
+   * go at today's counts; a challenge for another day is just for fun.
+   */
+  const playDaily = (challenge: Challenge | null = null) => {
     if (dialogOpen || game.phase !== 'ready') return;
-    const id = dailyId(new Date());
+    const today = dailyId(new Date());
+    const id = challenge?.daily ?? today;
+    const counted = id === today && store.data.daily.results[id] === undefined;
     setContent(game, dailyContent());
-    startDaily(game, id, dailySeed(id, store.data.layout), store.data.daily.results[id] === undefined);
+    startDaily(
+      game,
+      id,
+      dailySeed(id, challenge?.layout ?? store.data.layout),
+      counted,
+      challenge ? { score: challenge.score, name: challenge.name } : null,
+    );
     dailyGrades = [];
     dailyOutcome = null;
     loop.reset();
@@ -377,8 +401,38 @@ async function main(): Promise<void> {
         .map((p) => t('daily.sharePage', { page: p.page, square: MARK_SQUARES[p.mark], grade: p.grade ?? t('daily.notReached') }))
         .join(' · '),
       streak: streak > 1 ? t('daily.shareStreak', { streak }) : '',
-      url: SHARE_URL,
+      url: challengeLink({
+        daily: id,
+        layout: store.data.layout,
+        score: result.score,
+        grades: result.grades,
+        name: signDaily ? cleanChallengeName(players.active.name) : null,
+      }),
     });
+  };
+
+  /** The link a friend opens to take on a result: this page's address, with the challenge after the #. */
+  const challengeLink = (challenge: Challenge) => `${location.origin}${location.pathname}#${encodeChallenge(challenge)}`;
+
+  /** Sign challenge links with the player's name (off unless they tick it; only for this visit). */
+  let signDaily = false;
+
+  /** A challenge from a link, waiting for the player to take it on. */
+  let pendingChallenge: Challenge | null = null;
+
+  /**
+   * Read a challenge from the address (#c=…), then clear it from the address
+   * bar so a reload doesn't bring it back. A name that the word filter
+   * wouldn't allow is dropped.
+   */
+  const readChallenge = () => {
+    const challenge = decodeChallenge(location.hash, isLayoutId);
+    if (!location.hash.includes('c=')) return;
+    history.replaceState(null, '', `${location.pathname}${location.search}`);
+    if (!challenge) return;
+    if (challenge.name && pack.blocklistFor('family').blocksString(challenge.name)) challenge.name = null;
+    pendingChallenge = challenge;
+    if (game.phase === 'ready' && !dialogOpen) menu.show('challenge');
   };
 
   const continueSaved = () => {
@@ -671,7 +725,8 @@ async function main(): Promise<void> {
     quitToMenu(game);
     loop.reset();
     void store.flush();
-    if (wasDaily) menu.show('daily');
+    if (wasDaily && game.challenge === null) menu.show('daily');
+    game.challenge = null;
   };
 
   // Game-over card links.
@@ -804,7 +859,36 @@ async function main(): Promise<void> {
       const result = store.data.daily.results[id];
       return result ? t('menu.dailyDone', { id, score: formatNumber(result.score) }) : t('menu.dailyNew', { id });
     },
-    onPlayDaily: () => after(playDaily),
+    onPlayDaily: () => after(() => playDaily()),
+    dailySigned: () => signDaily,
+    signName: () => cleanChallengeName(players.active.name),
+    onSignDaily: (on) => {
+      signDaily = on;
+    },
+    challenge: () => {
+      const c = pendingChallenge;
+      if (!c) return null;
+      const today = dailyId(new Date());
+      return {
+        id: c.daily,
+        name: c.name,
+        score: formatNumber(c.score),
+        pages: dailyPages(c.grades),
+        counts: c.daily === today && store.data.daily.results[today] === undefined,
+        daysAgo: today - c.daily,
+        otherLayout: c.layout === store.data.layout ? null : t(`layout.${c.layout}` as MessageKey),
+        myLayout: t(`layout.${store.data.layout}` as MessageKey),
+      };
+    },
+    onTakeChallenge: () =>
+      after(() => {
+        const c = pendingChallenge;
+        pendingChallenge = null;
+        if (c) playDaily(c);
+      }),
+    onDismissChallenge: () => {
+      pendingChallenge = null;
+    },
     onCopyDaily: async () => {
       const text = dailyShareText();
       if (!text) return false;
@@ -814,6 +898,20 @@ async function main(): Promise<void> {
       } catch {
         return false;
       }
+    },
+    onShareImage: async () => {
+      const id = dailyId(new Date());
+      const result = store.data.daily.results[id];
+      if (!result) return 'cancelled';
+      return shareCard({
+        id,
+        score: result.score,
+        wpm: result.wpm,
+        accuracy: result.accuracy,
+        pages: dailyPages(result.grades),
+        streak: currentStreak(store.data.daily, id),
+        site: location.host,
+      });
     },
     canRestart: () => canRestart(game),
     stickerDetail: () => {
@@ -1171,6 +1269,10 @@ async function main(): Promise<void> {
 
   // Progress made before stickers existed (or in another version) earns its stickers now, quietly.
   giveStickers({}, false);
+
+  // Opened from a challenge link (or one pasted into the address bar while here).
+  readChallenge();
+  window.addEventListener('hashchange', readChallenge);
 
   renderer.app.ticker.add((ticker) => {
     const alpha = loop.advance(ticker.deltaMS);

@@ -279,12 +279,14 @@ Inky Keys is **open source** and will be **publicly hosted** as a static web app
 | 19 | **Bosses** | Four new bosses (Shuffler, Bookworm, Inkwell Squid, Rival Quill) beside the Spill, rotating at the end of each chapter, earlier in the Apprentice course and in Free Write |
 | 20 | **Score that matters** | The Daily Page: a seeded three-page notebook, the same for everyone on a layout each day, on Normal with a boss that changes daily; only the first go counts; streaks; copy a short text result to share (no network). Graded pages break the score down (keys, combo, highlighter) and compare with the best score for that page; Apprentice chapters show their best (save version 9) |
 | 21 | **Stickers** | A sticker book (K on the menu) of 26 achievements on six shelves: pages, speed, bosses, the Apprentice course and ranks, the Daily Page, and two secrets. Earned when they happen, with a toast and a line on the card; progress made earlier counts. Thresholds in `GAME_CONFIG.stickers` (save version 10) |
+| 22 | **Challenges** | Copied Daily results end with a challenge link (`#c=…`: the day, layout, score, page grades and, only if ticked, the player's name). Opening one offers the same seeded notebook with a "To beat" target on the HUD and the result on the card; today's counts toward the streak if not yet played. A share picture of the result is drawn on a canvas and sent to the share sheet, the clipboard or a file |
 
 ### Daily Page and sharing (milestone 20)
 - **Same for everyone:** the Daily Page's seed comes from its number (days since the first one, by the player's local date) and the keyboard layout. Each spawn, extra life and boss word draws from its own seeded stream, so how a player plays (bottles, misses) never changes what comes next. Its words come from the bundled list at the strictest filter, with every key the Apprentice course teaches and no weak-key weighting or downloaded words.
 - **One go:** the first finish of the day counts, including running out of ink or leaving part way; restarting a page is off on that go. Later goes are practice.
 - **Sharing:** the result is plain text copied to the clipboard; nothing is sent anywhere. Scores aren't verified, so there are no public leaderboards.
-- **Later:** stickers (achievements), a share-card image and challenge links (seed and score in the URL fragment), and a device-to-device transfer link for saves.
+- **Challenge links (milestone 22):** everything after `#` stays in the browser. Links are checked field by field when opened, names are cut to letters, numbers and spaces and dropped if the word filter objects, and a name is only included when the player ticks the box.
+- **Later:** a device-to-device transfer link for saves.
 
 ## 14. Open Questions / TODO
 

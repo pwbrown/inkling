@@ -1,6 +1,6 @@
 # Game competitiveness and sharing
 
-Claude Code session started 2026-11-17. 11 prompts.
+Claude Code session started 2026-11-17. 14 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -2413,6 +2413,646 @@ I'll add your first name to `.private-words`, taking it from your git config so 
 
   ```bash
   first=$(git config user.name | awk '{print $1}'); grep -qx "$first" .private-words || printf '%s\n' "$first" >> .private-words; low=$(printf '%s' "$first" | tr 'A-Z' 'a-z'); grep -qx "$low" .private-words || printf '%s\n' "$low" >> .private-words; sed -n 44,70p scripts/export-transcript.ts | grep -n "gi\|toLowerCase\|RegExp" | head -3; npm run transcript >/dev/null 2>&1; f=docs/transcripts/2026-11-17-game-competitiveness-and-sharing-c10c68be.md; grep -ci "$first" $f
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The re-export now removes your first name everywhere, in this session's transcript and in older ones. Updating the memory note:
+
+<details><summary>2 tool calls</summary>
+
+- **Edited** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/memory/transcript-scan-no-secrets.md`
+- **Shell:** Show transcript changes; run check and build
+
+  ```bash
+  git status --short docs/transcripts; npm run check 2>&1 | grep -E "error|Tests|FAIL" | head -3 && npm run build 2>&1 | tail -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Older transcripts changed too, because the new private word now applies to them. Making sure those changes are only redactions:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Review older transcript changes
+
+  ```bash
+  git diff --stat docs/transcripts | tail -3; git diff -U0 docs/transcripts/2026-11-12-typer-shark-game-brainstorm-eeb06805.md | grep '^[-+][^-+]' | head -6 | cut -c1-160
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The only changes in older transcripts are swaps like a quoted copyright line becoming "[removed] Brown". That's harmless, since the real LICENSE file is unchanged. Committing:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit, merge to main, delete branch, tag
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Milestone 21: Stickers (2.11.0)
+
+  - Sticker book (K on the menu): 26 stickers on six shelves (pages, speed, bosses, Apprentice and ranks, Daily Page, secrets), rules in core/stickers.ts with thresholds in GAME_CONFIG.stickers
+  - Stickers are awarded after each page, the Daily Page and the end of the course, with a corner toast and a line on the card; earlier progress earns its stickers quietly on load
+  - New stickers are marked until the book is opened; secrets show as "?" until earned
+  - Save version 10: earned stickers, unseen list and bosses beaten, with
+  … (535 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M21 is committed as `40465c3`, fast-forwarded into `main` and tagged `v2.11.0`, and the feature branch is deleted. Nothing has been pushed. `npm run check` (394 tests) and `npm run build` passed before the commit.
+
+What went in alongside the code:
+- **Snapshots:** I added a sticker book step to the snapshot tour, filled with sample stickers for the shot. I committed `m21/stickers.png` and the updated `latest/` shots.
+- **Progression notes:** a new M21 section, plus the sticker book noted on the Latest menu screenshot.
+- **Release:** version 2.11.0 with one "What's new" line.
+
+The snapshot caught one problem, which I fixed before committing: the sticker book's heading drew a red focus box. It only takes focus so the book opens at the top, so I hid the outline.
+
+**One privacy issue I need to tell you about.** While scanning the transcript, I found that some of my earlier scan commands had your first name typed in as a search pattern. One of those commands is in the M20 transcript that's already pushed to GitHub. Your full name is already public there as the commit author and in the LICENSE, so the risk is low, but it shouldn't have happened. What I did:
+- I added your first name to the git-ignored `.private-words` file, taking it from your git config rather than typing it. Every export now removes it, in this transcript and in the older ones.
+- The older transcripts in this commit therefore changed slightly. For example, a quoted copyright line now reads "[removed] Brown". The real LICENSE file is unchanged.
+- I updated my saved notes so I won't type your name, email or handle in a command again, not even as a search pattern.
+- Pushing `main` will replace the published copies with the scrubbed ones. The name will still be in the git history of the M20 commit.
+
+Pushing `v2.11.0` will publish the GitHub Release, and pushing `main` will deploy the site.
+
+## 🧑 Prompt
+
+> Push both
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Push main and tag; list started workflows
+
+  ```bash
+  git push origin main 2>&1 | tail -1 && git push origin v2.11.0 2>&1 | tail -1 && sleep 15 && gh run list --limit 3 2>&1 | head -3
+  ```
+- **Shell:** Wait for Deploy and CI
+
+  ```bash
+  gh run watch 44152363207 --exit-status >/dev/null 2>&1; echo "deploy $?"; gh run watch 44152363014 --exit-status >/dev/null 2>&1; echo "ci $?"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` and the `v2.11.0` tag, and all three GitHub workflows passed:
+
+- **Release:** the GitHub Release for v2.11.0 is published.
+- **CI:** passed on `main`.
+- **Deploy:** finished, so stickers should now be on inkykeys.com, though I didn't open the site to check. Returning players will see the "What's new" card about the sticker book.
+
+The published transcripts are now the copies with your name scrubbed. The M20 commit in the git history still has the old version.
+
+Next in the plan is M22: a share-card image and challenge links.
+
+## 🧑 Prompt
+
+> let's start M22
+
+### 🤖 Claude
+
+Starting M22: a share-card image and challenge links. Here's how I'll build it:
+- **Challenge links ride on the Daily Page,** the one mode where everyone gets the same seeded page. When you copy your Daily result, its last line becomes a link like `inkykeys.com/#c=…`. The part after `#` holds the day, layout and score, and browsers never send it to the server.
+- **Opening a link** shows "Pip challenges you: beat 4,820 on Daily #12". You then play that exact seeded notebook with a "Beat 4,820" target at the top of the screen.
+- **Names in links are off by default.** A checkbox lets you sign the link with your player name, since this is a kids' game.
+- **Share image:** a notebook-page result card drawn on a canvas in the browser. It goes to your device's share sheet where that's supported, otherwise you can copy or save it.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Create branch; read name cleaning and HUD layout
+
+  ```bash
+  git checkout -q -b feat/m22-challenges && grep -n "export function cleanName\|MAX_NAME_LENGTH =" -A8 src/storage/profiles.ts | head -20; grep -n "this.page = \|this.page.position\|this.timers\b.*position\|WORLD_WIDTH / 2" src/render/hud.ts | head
+  ```
+- **Shell:** Add challenge link encoding module
+
+  ```bash
+  cat > src/core/challenge.ts <<'EOF'
+  /**
+   * Challenge links: a Daily Page result packed into the part of a URL after
+   * `#`, which browsers never send to the server. Opening one lets a friend
+   * play the same seeded notebook and try to beat the score. Nothing is
+   * checked against a server, so a challenge is a friendly dare, not a record.
+   *
+   * Links come from anywhere, so decoding checks every field.
+   */
+  import { MAX_NAME_LENGTH } from './names';
+  import type { Grade } from './grade';
+
+  export interface Challenge {
+    /** The Daily Page number. */
+    daily: number;
+    /** The keyboard layout it was
+  … (2842 more characters)
+  ```
+- **Shell:** Write challenge link tests and run them
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/challenge.ts'
+  s=open(p).read()
+  s=s.replace("import { MAX_NAME_LENGTH } from './names';\n","",1)
+  s=s.replace("const MAX_SCORE = 10_000_000;","const MAX_SCORE = 10_000_000;\n/** The longest name shown, as for player names (storage/profiles.ts). */\nconst MAX_NAME_LENGTH = 20;",1)
+  open(p,'w').write(s)
+  EOF
+  cat > src/core/challenge.test.ts <<'EOF'
+  import { describe, expect, it } from 'vitest';
+  import { cleanChallengeName, decodeChallenge, encodeChallenge, type Challenge } from './challenge';
+
+  const isLayout = (id: string) => ['us-qwerty', 'dvorak', 'colemak'].includes(
+  … (2108 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Link encoding round-trips and rejects bad input. Next, challenge play: a `challenge` field on the world, a target on the HUD, and the result on the end card.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Read HUD construction
+
+  ```bash
+  sed -n 56,95p src/render/hud.ts
+  ```
+- **Shell:** Add challenge to world, startDaily and HUD target
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/core/world.ts',[
+  ("""  /** The Daily Page being played (id = its number), or null. `counted` until its result is recorded. */
+    daily: { id: number; counted: boolean } | null;
+  }""","""  /** The Daily Page being played (id = its number), or null. `counted` until its result is recorded. */
+    daily: { id: number; counted: boolean } | null;
+    /** A friend's score to beat, from a challenge link (core/challenge.ts), or null. */
+    challen
+  … (2971 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+HUD target typechecks. Now the end-card lines and opening links. Checking the blocklist API first, since a name from a link is untrusted and this is a kids' game:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Read blocklist checking methods
+
+  ```bash
+  grep -n "^  [a-zA-Z]*(.*): boolean" src/content/blocklist.ts; sed -n 78,92p src/content/blocklist.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I'll check names from links against the strict blocklist and drop any that fail. Now the main-flow wiring:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Find how layouts are named in the UI
+
+  ```bash
+  grep -n "name\b\|name:" src/content/layouts/types.ts | head -5; grep -n "layout\.\(name\|label\)\|layoutName" src/ui/settingsDialog.ts | head -3; grep -n "'layout\.\|layout.us" src/i18n/en.ts | head -5
+  ```
+- **Shell:** Wire challenge links into the game flow
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+
+  edit('src/main.ts',[
+  ("import { DAILY_PAGES, MARK_SQUARES, dailyId, dailyKeys, dailyPages, dailySeed, streakWeek } from './core/daily';",
+   "import { DAILY_PAGES, MARK_SQUARES, dailyId, dailyKeys, dailyPages, dailySeed, streakWeek } from './core/daily';\nimport { cleanChallengeName, decodeChallenge, encodeChallenge, type Challenge } from './core/challenge';"),
+  ("import { layoutById } from './content/layouts';","import { isLayoutId, layoutByI
+  … (5938 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Expected errors, since the strings and menu screen aren't written yet. Adding them:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add challenge screen, sign toggle and strings
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+
+  edit('src/i18n/en.ts',[
+  ("  'daily.title': 'Daily Page #{id}',\n","""  'daily.title': 'Daily Page #{id}',
+    'daily.sign': 'Sign my challenge link as {name}',
+    'daily.signNoName': 'Sign my challenge link with my name',
+    'challenge.title': 'A challenge!',
+    'challenge.from': '{name} scored {score} on Daily Page #{id}. Can you beat it?',
+    'challenge.fromAnon': 'Someone scored {score} on Daily Page #{id}. Can you beat it?',
+    'challenge.coun
+  … (7294 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck and lint pass. Next is the share-card image: a 1200×630 notebook page drawn in the browser with the score, page tiles, streak flame and link domain.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add share card drawing and Share picture button
+
+  ```bash
+  cat > src/ui/shareCard.ts <<'EOF'
+  /**
+   * The Daily Page result as a picture: a page of the notebook with the score,
+   * each page's grade, and the streak. Drawn on a canvas right here, so it
+   * works offline and nothing is sent anywhere; the player decides where it
+   * goes (the system share sheet, the clipboard, or a saved file).
+   */
+  import type { Grade } from '../core/grade';
+  import type { PageMark } from '../core/daily';
+  import { formatNumber, t } from '../i18n';
+
+  export interface ShareCardData {
+    id: number;
+    score: number;
+    wpm: number;
+    accuracy: number;
+    pages: { page: number; grade:
+  … (8426 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck and lint pass. Now tests, the release entry, the requirements row, and a PRIVACY.md note, since links can now carry a player's name if they choose:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Add tests, release entry and requirements notes
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/core/daily.test.ts',[
+  ("""  it('clears the seed when another notebook starts', () => {""","""  it('carries a friend’s score to beat, until another notebook starts', () => {
+      const world = createWorld({ content: createContentSource({ keys: LETTERS }) });
+      startDaily(world, 3, 42, false, { score: 4820, name: 'Pip' });
+      expect(world.challenge).toEqual({ score: 4820, name: 'Pip' });
+      expect(world.daily).toEqual({ id: 3, cou
+  … (1914 more characters)
+  ```
+- **Shell:** Document sharing in PRIVACY.md and run check
+
+  ```bash
+  python3 - <<'EOF'
+  p='PRIVACY.md'
+  s=open(p).read()
+  a="## Links to GitHub"
+  assert a in s
+  s=s.replace(a,"""## Sharing your Daily Page result
+
+  On the **Daily Page** screen you can copy your result or share it as a picture. Both are made on your device; the game sends nothing.
+
+  - **Copy result** puts a short text on your clipboard: your score, words per minute, accuracy, each page's grade, your streak and a **challenge link**.
+  - The challenge link holds the day's page number, your keyboard layout, your score and page grades after a `#` in the address. Browsers never send that part to the website, s
+  … (606 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Those two failures are just the version bump I hadn't done yet:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Bump version, rerun check and build
+
+  ```bash
+  npm version 2.12.0 --no-git-tag-version >/dev/null && npm run check 2>&1 | grep -E "error|Tests|FAIL|×" | head -5 && npm run build 2>&1 | tail -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Check (400 tests) and build pass. Checking it in the browser, starting with the Daily screen's share text:
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); 'reloading'","tabId":"seed"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 2500)); window.inkling.menu.show('daily'); const a = document.querySelector('.daily-share').value; document.querySelector('[data-id=sign]').click(); await new Promise(r => setTimeout(r, 200)); ({unsigned: a, signed: document.qu
+… (110 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The link appears in the share text, and ticking the box adds the name. The screen:
+
+<details><summary>1 tool call</summary>
+
+- **computer** `{"action":"screenshot","tabId":"seed","scale":0.7}`
+
+</details>
+
+### 🤖 Claude
+
+The share box is clipped again, because the long link wraps onto extra lines. I'll size the box to its content after it renders, and let the link break anywhere:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Auto-size the share text box
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/ui/menu.ts',[
+  ("""    if (share && shareText) share.value = shareText;""","""    if (share && shareText) {
+        share.value = shareText;
+        // Grow to fit the text once it's on screen, wrapped link and all.
+        requestAnimationFrame(() => {
+          share.style.height = 'auto';
+          share.style.height = `${share.scrollHeight + 2}px`;
+        });
+      }"""),
+  ])
+  edit('src/ui/menu.css',[
+  (""".daily-share {
+    width: 100%;""",""".d
+  … (117 more characters)
+  ```
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 2000)); window.inkling.menu.show('daily'); await new Promise(r => setTimeout(r, 300)); const ta = document.querySelector('.daily-share'); ({client: ta.clientHeight, scroll: ta.scrollHeight})","tabId":"seed"}`
+- **computer** `{"action":"zoom","region":[140,420,660,620],"tabId":"seed","scale":0.8}`
+
+</details>
+
+### 🤖 Claude
+
+The whole link fits now. Next, the share picture. I'll draw it onto the page to look at it, rather than pressing the button, which would copy to your clipboard or save a file:
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const m = await import('/src/ui/shareCard.ts'); const c = document.createElement('canvas'); m.drawShareCard(c, {id: 1, score: 13385, wpm: 41, accuracy: 55, pages: [{page:1,grade:'A+',mark:'good'},{page:2,grade:'B',mark:'fair'},{page:3,grade:null,mark:'notReached'}
+… (202 more characters)`
+- **computer** `{"action":"zoom","region":[0,0,800,420],"tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+The picture looks right: notebook paper, big score, page tiles, flame streak. Now opening a challenge link, made with the game's own encoder and signed "Pip":
+
+<details><summary>4 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"document.getElementById('__card')?.remove(); const m = await import('/src/core/challenge.ts'); const frag = m.encodeChallenge({daily: 1, layout: 'us-qwerty', score: 900, grades: ['A', 'B', 'A'], name: 'Pip'}); location.hash = frag; await new Promise(r => setTimeou
+… (157 more characters)`
+- **computer** `{"action":"screenshot","tabId":"seed","scale":0.7}`
+- **javascript_tool** `{"action":"javascript_exec","text":"document.querySelector('[data-id=take]').click(); await new Promise(r => setTimeout(r, 300));\nwindow.__bot = setInterval(() => {\n  const w = window.inkling.world;\n  const send = (key) => window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
+… (929 more characters)`
+- **computer** `{"action":"zoom","region":[0,230,800,300],"tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+The "To beat" target shows, but it overlaps the ability labels at the top. Moving it down a line to the empty middle of the page top:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Move challenge target below ability labels
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/hud.ts'
+  s=open(p).read()
+  a="this.target.position.set(WORLD_WIDTH / 2, 16);"
+  assert a in s
+  s=s.replace(a,"// Below the ability labels along the top, in the clear middle of the page.\n    this.target.position.set(WORLD_WIDTH / 2, 42);",1)
+  open(p,'w').write(s)
+  EOF
+  echo ok
+  ```
+- **javascript_tool** `{"action":"javascript_exec","text":"clearInterval(window.__bot); await new Promise(r => setTimeout(r, 2500)); const m = await import('/src/core/challenge.ts'); location.hash = m.encodeChallenge({daily: 1, layout: 'us-qwerty', score: 900, grades: ['A', 'B', 'A'], name: 'Pip'}); await new Promise(r =>
+… (1223 more characters)`
+- **computer** `{"action":"zoom","region":[0,230,800,300],"tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+Clear of the labels now. Waiting for the script to pass 900 to see the "beaten" state:
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":10,"tabId":"seed"}},{"name":"computer","input":{"action":"wait","duration":6,"tabId":"seed"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const w = window.inkling.world; ({score: w.stats.score, phase: w.phas
+… (109 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The script paused the game at 1,015 points, so the pause menu covers the HUD. Resuming for a moment to see the beaten target:
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"document.querySelector('[data-id=resume]').click(); 'resumed'","tabId":"seed"}},{"name":"computer","input":{"action":"zoom","region":[0,230,800,300],"tabId":"seed"}},{"name":"javascript_tool","input":{"action":"javascr
+… (406 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Quitting worked: it returned to the title screen, cleared the challenge and left your recorded Daily result alone. The screenshot lagged behind the resume, so I'll read the HUD text directly instead:
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const m = await import('/src/core/challenge.ts'); location.hash = m.encodeChallenge({daily: 1, layout: 'us-qwerty', score: 900, grades: ['A'], name: 'Pip'}); await new Promise(r => setTimeout(r, 400)); document.querySelector('[data-id=take]').click(); await new Pr
+… (719 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The beaten state reads "Beaten Pip’s 900! ✓". Final check and build:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Run check and build
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL|×" | head -5 && npm run build 2>&1 | tail -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M22 is working on `feat/m22-challenges` as version 2.12.0. `npm run check` (400 tests) and `npm run build` pass, and I tried each part in the browser. Nothing is committed yet, and there are no snapshots.
+
+**Challenge links**
+- **Copying a link:** the copied Daily result now ends with "Beat my score:" and a link. Everything after the `#` holds the day, layout, score and page grades. Browsers never send that part to the server.
+- **Name:** off by default. A "Sign my challenge link as …" checkbox on the Daily screen adds your player name, and it resets each visit.
+- **Opening a link:** you get a challenge screen, for example "Pip scored 900 on Daily Page #1. Can you beat it?", with Pip's page grades.
+  - It says whether this go counts. It only counts if it's today's Daily and you haven't played yet; otherwise it's just for fun.
+  - It warns you if the sender used a different keyboard layout, since your words will differ.
+  - The game removes the link from the address bar so a reload doesn't bring the challenge back.
+- **During play:** a red "To beat: 900 (Pip)" sits at the top. Once you pass it, it turns to "Beaten Pip’s 900! ✓". The end card says how much you won by or how far short you were.
+- **Safety:** links are checked field by field, so anything malformed is ignored. Names are cut down to letters, numbers and spaces, and dropped if the word filter objects.
+
+**Share picture**
+- The Daily screen gets a Share picture button (I). It makes a 1200×630 notebook-page image with the score, WPM, accuracy, page tiles, streak flame and site name, all drawn in the browser.
+- It opens your device's share menu where there is one. Otherwise it copies the image to the clipboard, or failing that saves it to your downloads.
+- I checked the image by drawing it onto the page. I didn't press the button, because that would have copied to your clipboard or saved a file.
+
+**Fixes along the way**
+- The share text box clipped the long link, so it now grows to fit its text.
+- The "To beat" target overlapped the ability labels, so I moved it down a line.
+
+**Docs**
+- `PRIVACY.md` has a new "Sharing your Daily Page result" section covering exactly what links and pictures contain.
+- The requirements doc has an M22 row.
+
+One thing to know: in development the links point at `localhost`. On the live site they'll be `https://inkykeys.com/#c=…`, because they use whatever address the game is running on.
+
+## 🧑 Prompt
+
+> Yes, finish M22
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Add challenge screen to snapshot tour
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/snapshots.ts'
+  s=open(p).read()
+  a="""/** The next character the auto-typer should press, or '' to wait. */"""
+  s=s.replace(a,"""/**
+   * Open a sample challenge link (M22): the same as a friend's link would,
+   * through the address's #c=… part. The game reads it and shows the challenge.
+   */
+  const SAMPLE_CHALLENGE = `(() => {
+    const now = new Date();
+    const today = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(2026, 10, 17)) / 86400000) + 1;
+    const json = JSON.stringify({ v: 1, d: today, l: 'us-qwerty', s: 5230, g: 'A+,A,B', n: 'Pip
+  … (620 more characters)
+  ```
+- **Shell:** Run m22 and latest snapshots
+
+  ```bash
+  npx tsc --noEmit -p . && npm run snapshots -- m22 2>&1 | grep -E "challenge|daily|Error|error" ; npm run snapshots -- latest 2>&1 | tail -1
+  ```
+- **Read** `docs/progression/m22/challenge.png`
+- **Read** `docs/progression/m22/daily.png`
+
+</details>
+
+### 🤖 Claude
+
+Both shots look right, apart from one problem in the Daily shot: keyboard focus now starts on the new checkbox instead of the Copy result button. I'll make the main button take focus:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Focus the main Daily button; reshoot
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/ui/menu.ts',[
+  ("""  private button(id: string, label: string, onClick: () => void, opts: { detail?: string | null; key?: string; primary?: boolean } = {}) {""",
+   """  private button(
+      id: string,
+      label: string,
+      onClick: () => void,
+      opts: { detail?: string | null; key?: string; primary?: boolean; autofocus?: boolean } = {},
+    ) {"""),
+  ("""        'data-key': opts.key,
+          onClick,""","""        'data-key': opts.ke
+  … (640 more characters)
+  ```
+- **Read** `docs/progression/m22/daily.png`
+
+</details>
+
+### 🤖 Claude
+
+Copy result has focus again. Trimming to the shots the page uses and writing the M22 notes:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Trim snapshots and write M22 notes
+
+  ```bash
+  git status --short docs/progression/latest | grep '^??' | awk '{print $2}' | xargs rm -f; find docs/progression/m22 -type f ! -name challenge.png ! -name daily.png -delete; ls docs/progression/m22; python3 - <<'EOF'
+  p='docs/progression/README.md'
+  s=open(p).read()
+  def rep(a,b):
+      global s
+      assert a in s, a; s=s.replace(a,b,1)
+  rep("""## Keeping this up to date""","""### M22: Challenges
+
+  | Challenge link | Daily Page |
+  |---|---|
+  | <img src="m22/challenge.png" width="420" alt="A challenge screen: Pip scored 5,230 on Daily Page #1, with Pip's page grades and a Take the challenge button"> | <im
+  … (1504 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Exporting the transcript and scanning with general patterns only:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; f=docs/transcripts/2026-11-17-game-competitiveness-and-sharing-c10c68be.md; first=$(git config user.name | awk '{print $1}'); printf 'name: %s\n' "$(grep -ci "$first" $f)"; for p in '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' '/Users/[A-Za-z]+' '(ghp|gho|github_pat|xox[bp])[-_][A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}'; do printf '%s: %s\n' "$p" "$(grep -Eoc "$p" $f)"; done; git status --short docs/transcripts
   ```
 
 </details>
