@@ -39,7 +39,7 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 | M9 | M12 | M13 | M14 | Latest |
 |---|---|---|---|---|
 | <img src="m09/menu.png" width="170" alt="M9 main menu"> | <img src="m12/menu.png" width="170" alt="M12 menu with Apprentice and Practice"> | <img src="m13/menu.png" width="170" alt="M13 menu with Desk and rank"> | <img src="m14/menu.png" width="170" alt="M14 menu with player badge and About"> | <img src="latest/menu.png" width="170" alt="Latest menu"> |
-| A real **main menu** with a logo replaces the card. | **Apprentice** and **Practice** replace New notebook and Choose keys. | **Desk** button, and your rank and ink along the bottom. | **Player** badge and **About**. The course is now 27 chapters long. | **Free Write** (formerly Practice) comes first; new players start on letters, capitals and space. |
+| A real **main menu** with a logo replaces the card. | **Apprentice** and **Practice** replace New notebook and Choose keys. | **Desk** button, and your rank and ink along the bottom. | **Player** badge and **About**. The course is now 27 chapters long. | **Free Write** (formerly Practice) comes first; new players start on letters, capitals and space. A **Daily Page** button (M20). |
 
 ### Type Case (choosing keys)
 
@@ -50,10 +50,10 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 
 ### End of a page
 
-| M2 | M7 | M12 | M13 | M15 | M17 |
-|---|---|---|---|---|---|
-| <img src="m02/page-done.png" width="140" alt="M2 page complete card"> | <img src="m07/page-done.png" width="140" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="140" alt="M12 page with stars"> | <img src="m13/page-done.png" width="140" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="140" alt="M15 page with handwritten title, drawn stars and best run"> | <img src="m17/page-done.png" width="140" alt="M17 page card with a Main menu (M) link"> |
-| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. | A **Main menu (M)** link, so you can stop without starting the next page. |
+| M2 | M7 | M12 | M13 | M15 | M17 | M20 |
+|---|---|---|---|---|---|---|
+| <img src="m02/page-done.png" width="140" alt="M2 page complete card"> | <img src="m07/page-done.png" width="140" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="140" alt="M12 page with stars"> | <img src="m13/page-done.png" width="140" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="140" alt="M15 page with handwritten title, drawn stars and best run"> | <img src="m17/page-done.png" width="140" alt="M17 page card with a Main menu (M) link"> | <img src="m20/page-done.png" width="140" alt="M20 page card with a points line: 490 for keys + 175 combo"> |
+| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. | A **Main menu (M)** link, so you can stop without starting the next page. | A **points** line: what came from the keys, the combo and the Highlighter. |
 
 ### Starting a chapter
 
@@ -242,15 +242,29 @@ No new screens this time: everything changed is in motion and in which pages com
 
 **Changed:** bosses arrive much sooner: from chapter 3 in the Apprentice course (was 7) and from chapter 2 in Free Write (which had none). Boss parts are sized and spaced in the core, so drawing and spacing agree. Also fixed: a key set of a single letter could freeze the game on a word page.
 
+### M20: Score that matters
+
+<img src="m20/daily.png" width="420" alt="The Daily Page screen: a flaming ink drop with a 3 day streak, this week's boxes with Monday and Tuesday filled, page tiles A+, B and C, and the result text to copy">
+
+(The streak in this shot is sample data, filled in by the snapshot script.)
+
+**New:**
+- **The Daily Page** (T on the menu): a three-page notebook that's the same for everyone on a keyboard layout each day, always on Normal, ending with a boss that changes daily. Only the first go counts; later goes are practice, and Restart page is off on the counted one.
+- **Streaks:** an ink drop that turns into a flame while a streak is going (and sleeps when it's broken), with this week's days filled in where you played.
+- **Copy result:** a short text with the score, each page's grade and colour, and the streak, for pasting anywhere. Nothing is sent over the network.
+- **Best score per page:** the graded page says "New best for this page!" or how far short you were, and Apprentice chapters show their best in Contents.
+
+**Changed:** graded pages break the score down into points for keys, the combo and the Highlighter. Seeded pages draw each creature from its own stream, so how you play never changes what comes next (save version 9).
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m19
+npm run snapshots -- m20
 ```
 
-That writes a standard set of shots to `docs/progression/m19/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m20/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

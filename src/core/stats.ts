@@ -10,6 +10,15 @@ export interface Stats {
   bestCombo: number;
   /** Points lost to wrong keys. */
   penalty: number;
+  /**
+   * Where the points came from, for the breakdown on the graded page:
+   * score = basePoints + comboPoints + bonusPoints − penalty.
+   */
+  basePoints: number;
+  /** Extra from the combo multiplier. */
+  comboPoints: number;
+  /** Extra from the Highlighter's double points. */
+  bonusPoints: number;
   /** Targets destroyed. */
   destroyed: number;
   /** Targets that reached the margin. */
@@ -26,7 +35,7 @@ export interface Stats {
 }
 
 export function createStats(): Stats {
-  return { correct: 0, errors: 0, score: 0, combo: 0, bestCombo: 0, penalty: 0, destroyed: 0, leaks: 0, playMs: 0, missedKeys: {}, hitKeys: {} };
+  return { correct: 0, errors: 0, score: 0, combo: 0, bestCombo: 0, penalty: 0, basePoints: 0, comboPoints: 0, bonusPoints: 0, destroyed: 0, leaks: 0, playMs: 0, missedKeys: {}, hitKeys: {} };
 }
 
 /** Accuracy from 0 to 1. Returns 1 before any keys are pressed. */
@@ -48,4 +57,12 @@ export function topMissedKeys(stats: Pick<Stats, 'missedKeys'>, count = 3): stri
     .sort(([a, x], [b, y]) => y - x || a.localeCompare(b))
     .slice(0, count)
     .map(([key]) => key);
+}
+
+/** Add points to `stats`: `per` points, times the combo multiplier, times a bonus factor (the Highlighter). */
+export function earnPoints(stats: Stats, per: number, multiplier = 1, factor = 1): void {
+  stats.score += per * multiplier * factor;
+  stats.basePoints += per;
+  stats.comboPoints += per * (multiplier - 1);
+  stats.bonusPoints += per * multiplier * (factor - 1);
 }

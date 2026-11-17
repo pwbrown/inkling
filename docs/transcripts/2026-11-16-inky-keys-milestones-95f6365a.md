@@ -1,6 +1,6 @@
 # Inky Keys milestones
 
-Claude Code session started 2026-11-16. 6 prompts.
+Claude Code session started 2026-11-16. 7 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -2855,3 +2855,54 @@ The Quill writes about 1.5 letters per second on early pages, and up to about 2.
   ```
 
 </details>
+
+### 🤖 Claude
+
+The scan is clean (the one match is my own search pattern). Committing, merging and tagging:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit M19, merge, delete branch, tag
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Milestone 19: Bosses (2.9.0)
+
+  - Four new bosses beside the Spill: Bookworm, Shuffler, Inkwell Squid, Rival Quill (src/core/bosses.ts)
+  - Bosses take turns on each chapter's last page, from chapter 2 in Free Write and chapter 3 in the Apprentice course
+  - Only a Bookworm's head and an unguarded Squid body can be started; Tab follows the same rule
+  - Squid squirts smudge a lane; the Quill races you and splashes ink if it wins
+  - Boss looks, banners, events and squid smudges in the renderer; briefings, portraits and How to play entries
+  - Boss sizes live in cor
+  … (484 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M19 is committed (`b490f45`), merged into `main`, and tagged `v2.9.0`. Its branch is deleted. The build transcript is in the commit, and I checked it first: no emails or private paths.
+
+All three Round 3 milestones are now on `main`: M17 First impressions (2.7.0), M18 Waves and pacing (2.8.0) and M19 Bosses (2.9.0). Nothing has been pushed yet; this would publish `main` and all three tags:
+
+```bash
+git push origin main v2.7.0 v2.8.0 v2.9.0
+```
+
+## 🧑 Prompt
+
+> Push them
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main and release tags
+
+  ```bash
+  git push origin main v2.7.0 v2.8.0 v2.9.0 2>&1 | tail -8
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` (`47fe7f2..b490f45`) and the tags `v2.7.0`, `v2.8.0` and `v2.9.0` to `pwbrown/inky-keys`, so Round 3 is now public. The deploy workflow should publish 2.9.0 to inkykeys.com, but I haven't checked that it finished. Players will get the What's new card for the new versions the next time they open the game.

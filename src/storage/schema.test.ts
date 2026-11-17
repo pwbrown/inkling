@@ -102,6 +102,34 @@ describe('save schema', () => {
     expect(defaultSave().layout).toBe('us-qwerty');
   });
 
+  it('gives version 8 saves page bests and Daily records, keeping their other records', () => {
+    const save = migrate({ version: 8, records: { bestScore: { normal: 1200 }, furthestChapter: { normal: 3 } } });
+    expect(save.records).toEqual({ bestScore: { normal: 1200 }, furthestChapter: { normal: 3 }, pageBest: {} });
+    expect(save.daily).toEqual({ lastId: null, streak: 0, bestStreak: 0, best: 0, results: {} });
+  });
+
+  it('checks page bests and Daily results', () => {
+    const save = migrate({
+      ...defaultSave(),
+      records: { bestScore: {}, furthestChapter: {}, pageBest: { 'practice:hard:2-0': 900, 'bogus': 5, 'daily:normal:0-0': 3, 'apprentice:normal:1-1': -4 } },
+      daily: {
+        lastId: 4,
+        streak: 2,
+        bestStreak: 'lots',
+        best: 800,
+        results: { 4: { score: 800, grades: ['A', 'Z', 'F'], wpm: 50, accuracy: 140, finished: true }, x: { score: 1 } },
+      },
+    });
+    expect(save.records.pageBest).toEqual({ 'practice:hard:2-0': 900 });
+    expect(save.daily).toEqual({
+      lastId: 4,
+      streak: 2,
+      bestStreak: 0,
+      best: 800,
+      results: { 4: { score: 800, grades: ['A', 'F'], wpm: 50, accuracy: 100, finished: true } },
+    });
+  });
+
   it('drops unknown tutorial ids and keeps the tips choice', () => {
     const save = migrate({ version: 7, tutorials: { enabled: false, seen: ['basics', 'nonsense', 'basics', 4] } });
     expect(save.tutorials).toEqual({ enabled: false, seen: ['basics'] });

@@ -6,15 +6,17 @@
 import './dialog.css';
 import './menu.css';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
+import { DAILY_PAGES, type PageMark, type StreakDay } from '../core/daily';
+import type { Grade } from '../core/grade';
 import type { MechanicId } from '../core/mechanics';
 import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
-import { t, type MessageKey } from '../i18n';
+import { getLocale, t, type MessageKey } from '../i18n';
 import { CONTENT_LEVELS, type ContentLevel } from '../content/contentFilter';
 import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage/profiles';
-import { artElement, badgeSvg, cosmeticSvg } from './art';
+import { artElement, badgeSvg, cosmeticSvg, dayDropSvg, streakDropSvg } from './art';
 import { h } from './dom';
 
-export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk' | 'players' | 'playerEdit' | 'about';
+export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk' | 'players' | 'playerEdit' | 'about' | 'daily';
 
 /** Inky Keys' source code and issue forms. */
 export const REPO_URL = 'https://github.com/pwbrown/inky-keys';
@@ -47,6 +49,27 @@ export interface ChapterEntry {
   newKeys: string;
   stars: { earned: number; max: number };
   locked: boolean;
+  /** e.g. "best 1,240" at the selected difficulty, or null before any page is cleared. */
+  best: string | null;
+}
+
+/** The Daily Page screen. */
+export interface DailyView {
+  /** Today's Daily Page number. */
+  id: number;
+  /** e.g. "Not played yet" or "Score 4,820 · 62 WPM · 97%". */
+  status: string;
+  /** Days in a row, as of today. */
+  streak: number;
+  /** This week, Monday to Sunday, with the days played. */
+  week: StreakDay[];
+  /** Each page's grade and colour, once today's is played. */
+  pages: { page: number; grade: Grade | null; mark: PageMark }[] | null;
+  /** e.g. "Streak: 3 days · best 5 · best score 6,120". */
+  record: string;
+  /** Text to copy and share, once today's is played. */
+  shareText: string | null;
+  played: boolean;
 }
 
 export interface MenuHooks {
@@ -103,6 +126,14 @@ export interface MenuHooks {
   appVersion(): string;
   /** Open the release notes. */
   onWhatsNew(): void;
+  daily(): DailyView;
+  /** e.g. "#3 · not played yet" for the title screen. */
+  dailyDetail(): string;
+  onPlayDaily(): void;
+  /** Copy the share text. Resolves false if the clipboard isn't available. */
+  onCopyDaily(): Promise<boolean>;
+  /** Off on the day's counted Daily Page, which gets one go. */
+  canRestart(): boolean;
 }
 
 /** The GitHub mark, for the About page's link to the source. */
@@ -209,6 +240,9 @@ export class Menu {
       case 'about':
         this.panel.replaceChildren(...this.about());
         break;
+      case 'daily':
+        this.panel.replaceChildren(...this.daily());
+        break;
       default:
         return;
     }
@@ -269,6 +303,7 @@ export class Menu {
           detail: this.hooks.apprenticeDetail(),
           key: 'a',
         }),
+        this.button('daily', t('menu.daily'), () => this.show('daily'), { detail: this.hooks.dailyDetail(), key: 't' }),
         this.button('words', t('menu.wordLists'), () => this.hooks.onWordLists(), { key: 'w' }),
         this.button('desk', t('menu.desk'), () => this.show('desk'), { detail: t('menu.deskDetail'), key: 'd' }),
         h('div', { className: 'menu-row' }, [
@@ -401,7 +436,10 @@ export class Menu {
               },
               [
                 h('span', { className: 'menu-label' }, [t('contents.chapter', { chapter: c.chapter + 1 })]),
-                h('span', { className: 'menu-detail' }, [c.locked ? t('contents.locked') : t('contents.keys', { keys: c.newKeys })]),
+                h('span', { className: 'menu-detail' }, [
+                  c.locked ? t('contents.locked') : t('contents.keys', { keys: c.newKeys }),
+                  !c.locked && c.best ? ` · ${c.best}` : '',
+                ]),
                 h('span', { className: 'menu-stars', 'aria-hidden': 'true' }, [
                   c.locked ? '🔒' : `★ ${c.stars.earned}/${c.stars.max}`,
                 ]),
@@ -519,7 +557,7 @@ export class Menu {
       h('p', { className: 'tc-intro' }, [this.hooks.pauseSummary()]),
       h('nav', { className: 'menu-list' }, [
         this.button('resume', t('pause.resume'), () => this.hooks.onResume(), { key: 'Esc', primary: true }),
-        this.button('restart', t('pause.restart'), () => this.hooks.onRestart(), { key: 'r' }),
+        this.hooks.canRestart() ? this.button('restart', t('pause.restart'), () => this.hooks.onRestart(), { key: 'r' }) : null,
         this.hooks.canPracticeChapterKeys()
           ? this.button('practice', t('pause.practice'), () => this.hooks.onPracticeChapterKeys(), { detail: t('pause.practiceDetail'), key: 'f' })
           : null,
@@ -528,6 +566,98 @@ export class Menu {
       ]),
       h('p', { className: 'menu-best' }, [t('pause.note')]),
     ];
+  }
+
+  /** Today's Daily Page: play it, or see and copy the result. */
+  private daily(): HTMLElement[] {
+    const d = this.hooks.daily();
+    const copied = h('span', { className: 'daily-copied', role: 'status', 'aria-live': 'polite' });
+    const shareText = d.shareText;
+    const share = shareText
+      ? h('textarea', { className: 'daily-share', readonly: true, rows: shareText.split('\n').length, 'aria-label': t('daily.shareLabel'), 'data-id': 'share-text' })
+      : null;
+    if (share && shareText) share.value = shareText;
+    const copy = async () => {
+      const ok = await this.hooks.onCopyDaily();
+      if (!ok && share) share.select();
+      copied.textContent = ok ? t('daily.copied') : t('daily.copyManually');
+    };
+    const parts: (HTMLElement | null)[] = [
+      h('h2', { id: 'menu-title' }, [t('daily.title', { id: d.id })]),
+      h('p', { className: 'tc-intro' }, [t('daily.intro')]),
+      this.streakStrip(d.streak, d.week),
+      d.pages
+        ? h(
+            'ol',
+            { className: 'daily-pages' },
+            d.pages.map((p) =>
+              h(
+                'li',
+                {
+                  className: `daily-page daily-${p.mark}`,
+                  'aria-label': p.grade ? t('daily.pageGrade', { page: p.page, grade: p.grade }) : t('daily.pageNotReached', { page: p.page }),
+                },
+                [
+                  h('span', { className: 'daily-page-label', 'aria-hidden': 'true' }, [t('daily.pageLabel', { page: p.page })]),
+                  h('span', { className: 'daily-page-grade', 'aria-hidden': 'true' }, [p.grade ?? t('daily.notReached')]),
+                ],
+              ),
+            ),
+          )
+        : null,
+      h('p', { className: 'daily-status' }, [d.status]),
+      share,
+      h('nav', { className: 'menu-list' }, [
+        d.played
+          ? this.button('copy', t('daily.copy'), () => void copy(), { key: 'c', primary: true })
+          : null,
+        this.button('play-daily', d.played ? t('daily.playAgain') : t('daily.play'), () => this.hooks.onPlayDaily(), {
+          detail: d.played ? t('daily.playAgainDetail') : t('daily.playDetail', { pages: DAILY_PAGES }),
+          key: 'p',
+          primary: !d.played,
+        }),
+      ]),
+      copied,
+      h('p', { className: 'menu-best' }, [d.record]),
+      h('div', { className: 'tc-actions' }, [
+        h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'back', onClick: () => this.show('title') }, [t('menu.back')]),
+      ]),
+    ];
+    return parts.filter((el): el is HTMLElement => el !== null);
+  }
+
+  /** The streak: an ink drop on fire with the number, and this week's days, filled in where played. */
+  private streakStrip(streak: number, week: StreakDay[]): HTMLElement {
+    const day = new Intl.DateTimeFormat(getLocale(), { weekday: 'narrow' });
+    const dayName = new Intl.DateTimeFormat(getLocale(), { weekday: 'long' });
+    return h('section', { className: `daily-streak${streak > 0 ? ' daily-streak-lit' : ''}`, 'aria-label': t('daily.streakLabel', { streak }) }, [
+      h('div', { className: 'daily-streak-head', 'aria-hidden': 'true' }, [
+        artElement(streakDropSvg(streak > 0), 'daily-streak-drop'),
+        h('span', { className: 'daily-streak-number' }, [
+          h('span', { className: 'daily-streak-count' }, [String(streak)]),
+          h('span', { className: 'daily-streak-unit' }, [t('daily.streakUnit')]),
+        ]),
+      ]),
+      h(
+        'ol',
+        { className: 'daily-week' },
+        week.map((w) => {
+          const name = dayName.format(w.date);
+          const label = w.played
+            ? t('daily.dayPlayed', { day: name })
+            : w.today
+              ? t('daily.dayToday', { day: name })
+              : w.future
+                ? t('daily.dayLater', { day: name })
+                : t('daily.dayMissed', { day: name });
+          const state = w.played ? 'played' : w.today ? 'today' : w.future ? 'later' : 'missed';
+          return h('li', { className: `daily-day daily-day-${state}`, 'aria-label': label }, [
+            h('span', { className: 'daily-day-box', 'aria-hidden': 'true' }, [w.played ? artElement(dayDropSvg(), 'daily-day-drop') : null]),
+            h('span', { className: 'daily-day-name', 'aria-hidden': 'true' }, [day.format(w.date)]),
+          ]);
+        }),
+      ),
+    ]);
   }
 
   /** Pick who's playing, or add and edit players. */

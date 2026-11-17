@@ -9,7 +9,7 @@
  * started, and what happens when a part is beaten.
  */
 import { DIFFICULTY_PROFILES, GAME_CONFIG, type BossKind } from './config';
-import { SPAWN_X, WORLD_WIDTH, estimateWidth, laneCount, laneY, spawnTarget, type Target, type World } from './world';
+import { SPAWN_X, WORLD_WIDTH, estimateWidth, laneCount, laneY, rngFor, spawnTarget, type Target, type World } from './world';
 
 /** The word complexity bosses use: a notch above the page. */
 function bossComplexity(world: World): number {
@@ -18,17 +18,19 @@ function bossComplexity(world: World): number {
 
 /** A fresh word for a boss, different from `previous` when possible. */
 export function bossWord(world: World, previous = '', complexity = bossComplexity(world)): string {
-  let word = world.content.nextWord(complexity, world.random);
-  for (let i = 0; i < 12 && word === previous; i++) word = world.content.nextWord(complexity, world.random);
+  const random = rngFor(world, 'boss', world.page.chapter, world.page.index, previous);
+  let word = world.content.nextWord(complexity, random);
+  for (let i = 0; i < 12 && word === previous; i++) word = world.content.nextWord(complexity, random);
   return word;
 }
 
-/** A short, easy word for a Bookworm segment or Squid tentacle. */
-export function partWord(world: World): string {
+/** A short, easy word for a Bookworm segment or Squid tentacle (`part` numbers them, for seeded pages). */
+export function partWord(world: World, part = 0): string {
   const max = GAME_CONFIG.boss.partWordMax;
-  let best = world.content.nextWord(0, world.random);
+  const random = rngFor(world, 'part', world.page.chapter, world.page.index, part);
+  let best = world.content.nextWord(0, random);
   for (let i = 0; i < 10 && [...best].length > max; i++) {
-    const next = world.content.nextWord(0, world.random);
+    const next = world.content.nextWord(0, random);
     if ([...next].length < [...best].length) best = next;
   }
   return best;
@@ -85,7 +87,7 @@ function spawnBookworm(world: World, lane: number): Target {
       x,
       prevX: x,
       y: laneY(lane, world.laneStep),
-      text: partWord(world),
+      text: partWord(world, i),
       lives: 1,
       ghost: false,
       boss: true,
@@ -130,7 +132,7 @@ function spawnSquid(world: World, middle: number): Target {
       x,
       prevX: x,
       y: laneY(lane, world.laneStep),
-      text: partWord(world),
+      text: partWord(world, made),
       lives: 1,
       ghost: false,
       boss: true,

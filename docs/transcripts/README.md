@@ -15,3 +15,4 @@ Each file is exported from the session log with `npm run transcript` (see `scrip
 - [2026-11-16-game-release-system-with-versioning-e31c68db](2026-11-16-game-release-system-with-versioning-e31c68db.md)
 - [2026-11-16-inky-keys-milestones-95f6365a](2026-11-16-inky-keys-milestones-95f6365a.md)
 - [2026-11-16-inkykeys-com-connection-security-error-1a386715](2026-11-16-inkykeys-com-connection-security-error-1a386715.md)
+- [2026-11-17-game-competitiveness-and-sharing-c10c68be](2026-11-17-game-competitiveness-and-sharing-c10c68be.md)

@@ -109,7 +109,9 @@ export class Hud {
             chapters: APPRENTICE_CHAPTERS,
             keys: newKeysFor(world.layout, chapter).map(keyLabel).join(' '),
           })
-        : t('hud.page', progress),
+        : world.mode === 'daily' && world.daily
+          ? t('hud.daily', { ...progress, id: world.daily.id })
+          : t('hud.page', progress),
     );
   }
 

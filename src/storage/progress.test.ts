@@ -4,8 +4,14 @@ import { US_QWERTY } from '../content/layouts';
 import { APPRENTICE_CHAPTERS, apprenticeKeys } from '../core/campaign';
 import { createStats } from '../core/stats';
 import { createPage, createWorld } from '../core/world';
+import { GAME_CONFIG } from '../core/config';
 import {
+  chapterBest,
   continueNotebook,
+  currentStreak,
+  pageBestKey,
+  recordDaily,
+  recordPageBest,
   recordApprenticePage,
   keyWeights,
   mergeKeyStats,
@@ -118,5 +124,63 @@ describe('continuing an Apprentice notebook', () => {
     expect(resumed.mode).toBe('apprentice');
     expect(resumed.page.chapter).toBe(4);
     expect(resumed.keys).toEqual(apprenticeKeys(US_QWERTY, 4));
+  });
+});
+
+describe('page bests', () => {
+  it('keeps the best score per page', () => {
+    const save = defaultSave();
+    const key = pageBestKey('apprentice', 'normal', 2, 1);
+    expect(key).toBe('apprentice:normal:2-1');
+    expect(recordPageBest(save, key, 300)).toEqual({ previous: 0, isNew: true });
+    expect(recordPageBest(save, key, 200)).toEqual({ previous: 300, isNew: false });
+    expect(recordPageBest(save, key, 450)).toEqual({ previous: 300, isNew: true });
+    expect(save.records.pageBest[key]).toBe(450);
+  });
+
+  it('adds up a chapter’s page bests', () => {
+    const save = defaultSave();
+    expect(chapterBest(save, 'normal', 0, 3)).toBeNull();
+    recordPageBest(save, pageBestKey('apprentice', 'normal', 0, 0), 100);
+    recordPageBest(save, pageBestKey('apprentice', 'normal', 0, 2), 50);
+    recordPageBest(save, pageBestKey('apprentice', 'hard', 0, 1), 999);
+    expect(chapterBest(save, 'normal', 0, 3)).toBe(150);
+  });
+});
+
+describe('recordDaily', () => {
+  const result = (score: number) => ({ score, grades: ['A' as const], wpm: 40, accuracy: 95, finished: true });
+
+  it('counts only the first result of a day', () => {
+    const save = defaultSave();
+    expect(recordDaily(save, 3, result(500))).toBe(true);
+    expect(recordDaily(save, 3, result(900))).toBe(false);
+    expect(save.daily.results[3]!.score).toBe(500);
+    expect(save.daily.best).toBe(500);
+  });
+
+  it('keeps a streak of days in a row, and the longest', () => {
+    const save = defaultSave();
+    recordDaily(save, 1, result(1));
+    recordDaily(save, 2, result(1));
+    recordDaily(save, 3, result(1));
+    expect(save.daily.streak).toBe(3);
+    expect(currentStreak(save.daily, 3)).toBe(3);
+    expect(currentStreak(save.daily, 4)).toBe(3);
+    // A missed day breaks it.
+    expect(currentStreak(save.daily, 5)).toBe(0);
+    recordDaily(save, 5, result(1));
+    expect(save.daily.streak).toBe(1);
+    expect(save.daily.bestStreak).toBe(3);
+  });
+
+  it('drops the oldest results', () => {
+    const save = defaultSave();
+    const keep = GAME_CONFIG.daily.keepResults;
+    for (let id = 1; id <= keep + 5; id++) recordDaily(save, id, result(id));
+    expect(Object.keys(save.daily.results)).toHaveLength(keep);
+    expect(save.daily.results[1]).toBeUndefined();
+    expect(save.daily.best).toBe(keep + 5);
+    expect(save.daily.streak).toBe(keep + 5);
   });
 });

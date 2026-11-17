@@ -22,6 +22,37 @@ const HUES: Record<Badge | Cosmetics['splatter'], string> = {
 const svg = (viewBox: string, body: string, className: string) =>
   `<svg class="${className}" viewBox="${viewBox}" aria-hidden="true" focusable="false">${body}</svg>`;
 
+/**
+ * The streak mascot: while a streak is going, the ink drop *is* a flame,
+ * with flickering tips and a bright core where its face is. With no streak
+ * it's a plain ink drop, asleep, with a wisp of smoke where the flame was.
+ */
+export function streakDropSvg(lit: boolean): string {
+  if (!lit) {
+    return svg(
+      '0 0 48 64',
+      `<path d="M25 11 q-4 -3 -1 -6 q3 -3 0 -5" fill="none" stroke="var(--tc-ink-light)" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+       <path d="M24 14 L10 42 A15 15 0 1 0 38 42 Z" fill="var(--tc-ink)"/>
+       <circle cx="17" cy="41" r="2.4" fill="var(--tc-paper)" opacity="0.5"/>
+       <path d="M16.5 49 h5 M26.5 49 h5 M21.5 55 h5" stroke="var(--tc-paper)" stroke-width="2" stroke-linecap="round"/>`,
+      'art art-streak',
+    );
+  }
+  return svg(
+    '0 0 48 64',
+    `<path d="M24 62 C12 62 6 53 8 43 C10 34 16 30 14 14 C20 20 22 24 22 27 C21 17 22 9 24 2 C29 11 30 18 28 26 C31 22 33 17 35 12 C38 24 41 32 40 43 C42 53 36 62 24 62 Z" fill="#e8611a"/>
+     <path d="M24 58 C16 58 12 52 13 45 C14 39 18 36 19 30 C21 34 23 36 24 38 C25 34 27 31 29 28 C31 34 35 39 35 46 C35 52 31 58 24 58 Z" fill="#f8c537"/>
+     <circle cx="19.5" cy="47" r="2.6" fill="var(--tc-ink)"/><circle cx="28.5" cy="47" r="2.6" fill="var(--tc-ink)"/>
+     <path d="M20.5 52.5 q3.5 3 7 0" fill="none" stroke="var(--tc-ink)" stroke-width="2" stroke-linecap="round"/>`,
+    'art art-streak',
+  );
+}
+
+/** A small ink drop, for a day played on the streak strip. */
+export function dayDropSvg(): string {
+  return svg('0 0 24 30', `<path d="M12 1 L3.5 18 A9.2 9.2 0 1 0 20.5 18 Z" fill="var(--tc-ink)"/>`, 'art art-day');
+}
+
 /** A player's badge: a little ink drop with a face, in their color. */
 export function badgeSvg(badge: Badge): string {
   const fill = HUES[badge];

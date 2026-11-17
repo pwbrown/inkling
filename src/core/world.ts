@@ -32,6 +32,7 @@ import {
 import { bossNextLife, costsBossInk, spawnBoss as spawnBossOf, stepBosses } from './bosses';
 import { ABILITIES, type AbilityId, type ActiveAbility } from './abilities';
 import { guidedSpawn, pendingBriefings, type MechanicId } from './mechanics';
+import { seeded } from './rng';
 import { createStats, type Stats } from './stats';
 
 /** Logical play-field size. The renderer scales this to fit the window. */
@@ -277,6 +278,24 @@ export interface World {
   nextId: number;
   /** Injected so tests are deterministic. Returns [0, 1). */
   random: () => number;
+  /**
+   * Set on a seeded page (the Daily Page): what comes onto the page is drawn
+   * from it (see rngFor), so every player meets the same words in the same
+   * order. Null otherwise.
+   */
+  seed: number | null;
+  /** The Daily Page being played (id = its number), or null. `counted` until its result is recorded. */
+  daily: { id: number; counted: boolean } | null;
+}
+
+/**
+ * Randomness for one decision about what comes onto the page. On a seeded
+ * page each decision gets its own stream from the seed and `salt`, so how
+ * the player plays (which can add bottles or re-rolls) never shifts what
+ * comes next. Otherwise it's just `world.random`.
+ */
+export function rngFor(world: Pick<World, 'seed' | 'random'>, ...salt: readonly (string | number)[]): () => number {
+  return world.seed === null ? world.random : seeded(world.seed, ...salt);
 }
 
 /**
@@ -303,6 +322,8 @@ export function createPage(
   index: number,
   content?: Pick<ContentSource, 'supports'> & Partial<Pick<ContentSource, 'keys' | 'poolSize'>>,
   mode: GameMode = 'practice',
+  /** Shifts which boss comes (the Daily Page's number, so it changes day to day). */
+  bossTurn = 0,
 ): PageState {
   const apprentice = mode === 'apprentice';
   // Digits and symbols get their own Free Write pages when there are enough
@@ -312,7 +333,7 @@ export function createPage(
     content?.poolSize !== undefined &&
     content.poolSize('letters') > 0 &&
     content.poolSize('symbols') >= GAME_CONFIG.symbolPages.minKeys;
-  const fullPlan = apprentice ? apprenticePlan(chapter) : chapterPlan(chapter);
+  const fullPlan = apprentice ? apprenticePlan(chapter) : mode === 'daily' ? GAME_CONFIG.daily.plan : chapterPlan(chapter);
   const plan = separate ? fullPlan : fullPlan.filter((kind) => kind !== 'symbols');
   const canUse = content ? (kind: TargetKind) => content.supports(kind) : undefined;
   let params: PageParams;
@@ -333,7 +354,7 @@ export function createPage(
     const { keysMinus, min } = GAME_CONFIG.targetsPerKeys;
     params.maxOnScreen = Math.min(params.maxOnScreen, Math.max(min, keyCount - keysMinus));
   }
-  const boss = index === plan.length - 1 ? bossFor(mode, chapter) : null;
+  const boss = index === plan.length - 1 ? bossFor(mode, chapter, bossTurn) : null;
   return {
     chapter,
     index,
@@ -412,7 +433,14 @@ export function createWorld(options: WorldOptions = {}): World {
     targetScale: 1,
     nextId: 1,
     random: options.random ?? Math.random,
+    seed: null,
+    daily: null,
   };
+}
+
+/** A page of the notebook being played, in its mode (and, on the Daily Page, with its boss). */
+export function pageFor(world: World, chapter: number, index: number): PageState {
+  return createPage(world.difficulty, chapter, index, world.content, world.mode, world.daily?.id ?? 0);
 }
 
 /** Load the keys for an Apprentice chapter, its new keys weighted up. */
@@ -581,10 +609,15 @@ export function isBufferKind(kind: TargetKind): boolean {
  * target already on the page. That keeps targeting unambiguous: the first
  * keystroke picks exactly the target you meant.
  */
-function payloadFor(world: World, kind: TargetKind, maxLives = 1): Pick<Target, 'text' | 'buffer' | 'cursor'> {
+function payloadFor(
+  world: World,
+  kind: TargetKind,
+  maxLives = 1,
+  random: () => number = world.random,
+): Pick<Target, 'text' | 'buffer' | 'cursor'> {
   // Creatures with several lives carry shorter words.
   const complexity = world.page.params.complexity * (GAME_CONFIG.variants.complexityScale[maxLives] ?? 1);
-  const { content, random } = world;
+  const { content } = world;
   const taken = new Set(world.targets.map((t) => t.text[t.typed]));
   const next = () =>
     kind === 'drip'
@@ -607,33 +640,35 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
   if (lanes.length === 0 && overrides.lane === undefined) return null;
 
   const params = world.page.params;
-  const sprinkle = overrides.kind === undefined ? sprinkleKind(world) : null;
+  // Ordinary spawns are numbered, so a seeded page brings the same creatures in the same order.
+  const random = rngFor(world, 'spawn', world.page.chapter, world.page.index, world.page.spawned, overrides.bottle ? 'bottle' : '');
+  const sprinkle = overrides.kind === undefined ? sprinkleKind(world, random) : null;
   const kind = overrides.kind ?? sprinkle ?? params.kind;
   const sprinkled = sprinkle !== null;
   // A sprinkled Run-on moves at its own kind's pace.
   const speed = params.speed * (kind === params.kind ? 1 : GAME_CONFIG.base[kind].speed / GAME_CONFIG.base[params.kind].speed);
   const jitter = GAME_CONFIG.speedJitter;
-  const lane = overrides.lane ?? pick(lanes, world.random);
+  const lane = overrides.lane ?? pick(lanes, random);
   // Tougher variants (config.variants): roll lives, then ghost.
   const { crimson, violet, ghost } = sprinkled ? { crimson: 0, violet: 0, ghost: 0 } : params.variants;
-  const roll = world.random();
+  const roll = random();
   const lives = roll < violet ? 3 : roll < violet + crimson ? 2 : 1;
   const startLives = overrides.lives ?? lives;
-  const isGhost = world.random() < ghost;
+  const isGhost = random() < ghost;
   // While the Highlighter is on, ghosts arrive already showing.
-  const revealX = isGhost ? (world.highlightMs > 0 ? REVEALED_X : ghostRevealX(world.random())) : undefined;
+  const revealX = isGhost ? (world.highlightMs > 0 ? REVEALED_X : ghostRevealX(random())) : undefined;
   // Never faster than the target ahead in the same lane, so they can't overlap.
   const leaderSpeed = Math.min(...world.targets.filter((t) => t.lane === lane).map((t) => t.speed));
   const target: Target = {
     id: world.nextId++,
     kind,
-    ...payloadFor(world, kind, startLives),
+    ...payloadFor(world, kind, startLives, random),
     typed: 0,
     x: SPAWN_X,
     prevX: SPAWN_X,
     y: laneY(lane, world.laneStep),
     lane,
-    speed: Math.min(leaderSpeed, speed * (1 + (world.random() * 2 - 1) * jitter)),
+    speed: Math.min(leaderSpeed, speed * (1 + (random() * 2 - 1) * jitter)),
     lives,
     ghost: isGhost,
     ...(revealX === undefined ? {} : { revealX }),
@@ -651,13 +686,13 @@ export function spawnTarget(world: World, overrides: Partial<Target> = {}): Targ
  * Maybe sprinkle a Run-on into this page instead of its usual
  * type (GAME_CONFIG.sprinkles). Returns null for an ordinary spawn.
  */
-function sprinkleKind(world: World): TargetKind | null {
+function sprinkleKind(world: World, random: () => number): TargetKind | null {
   const { sprinkles } = world.page.params;
   if (sprinkles.runon <= 0) return null;
   const s = GAME_CONFIG.sprinkles;
   if (world.page.sprinkled >= s.maxPerPage) return null;
   if (world.targets.filter((t) => isBufferKind(t.kind)).length >= s.maxOnScreen) return null;
-  return world.random() < sprinkles.runon ? 'runon' : null;
+  return random() < sprinkles.runon ? 'runon' : null;
 }
 
 function updateSpawner(world: World, stepMs: number): void {
@@ -736,6 +771,8 @@ export function restoreInk(world: World, amount: number, source: 'streak' | 'bot
 export function nextLife(world: World, target: Target): void {
   target.lives = Math.max(1, target.lives - 1);
   const previous = target.text;
+  // Seeded by the word just finished, so the same creature goes on the same way for everyone.
+  const random = rngFor(world, 'life', world.page.chapter, world.page.index, previous, target.lives);
   // Never the same word (or character) twice in a row on one creature.
   const fresh = (make: () => string) => {
     let text = make();
@@ -745,11 +782,11 @@ export function nextLife(world: World, target: Target): void {
   if (target.boss) {
     // Bosses keep throwing longer words.
     const complexity = Math.min(1, world.page.params.complexity + GAME_CONFIG.boss.complexityBonus);
-    Object.assign(target, { text: fresh(() => world.content.nextWord(complexity, world.random)), typed: 0 });
+    Object.assign(target, { text: fresh(() => world.content.nextWord(complexity, random)), typed: 0 });
     bossNextLife(target);
     return;
   }
-  const make = () => payloadFor(world, target.kind, target.maxLives ?? 1);
+  const make = () => payloadFor(world, target.kind, target.maxLives ?? 1, random);
   let payload = make();
   for (let i = 0; i < NEXT_LIFE_TRIES && payload.text === previous; i++) payload = make();
   Object.assign(target, payload, { typed: 0 });
@@ -775,7 +812,7 @@ export function splitBoss(world: World, boss: Target): void {
       x: boss.x + i * 40,
       prevX: boss.x + i * 40,
       y: laneY(lane, world.laneStep),
-      text: world.content.nextWord(0, world.random),
+      text: world.content.nextWord(0, rngFor(world, 'split', world.page.chapter, world.page.index, i)),
       lives: 1,
       ghost: false,
       boss: false,

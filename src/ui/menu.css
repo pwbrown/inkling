@@ -620,3 +620,166 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* The Daily Page screen. */
+/* One tile per page, coloured by its grade, with the page number and grade written on it. */
+.daily-pages {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.daily-page {
+  display: grid;
+  justify-items: center;
+  min-width: 72px;
+  padding: 6px 10px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: #1d2433;
+}
+
+.daily-page-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.daily-page-grade {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.daily-good { background: #7cc47a; }
+.daily-fair { background: #f1d25a; }
+.daily-poor { background: #f0a24f; }
+.daily-failed { background: #e06a5c; }
+.daily-notReached {
+  background: transparent;
+  border-color: var(--tc-ink-light);
+  border-style: dashed;
+  color: inherit;
+}
+
+.daily-status {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+}
+
+.daily-share {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  font: 14px/1.4 ui-monospace, Menlo, monospace;
+  padding: 8px 10px;
+  border: 1px solid var(--tc-ink-light);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+}
+
+.daily-copied {
+  min-height: 1.2em;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* Streak: the ink drop on fire with the count, then this week's days. */
+.daily-streak {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.daily-streak-head {
+  display: flex;
+  /* The drawing is mostly flame on top: line the number up with the drop below it. */
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* The count and "day streak" share a baseline, resting at the bottom of the drop. */
+.daily-streak-number {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.daily-streak-drop .art-streak {
+  display: block;
+  width: 42px;
+  height: 56px;
+}
+
+.daily-streak-count {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.daily-streak-unit {
+  color: var(--tc-ink-light);
+  font-weight: 600;
+}
+
+.daily-week {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.daily-day {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+}
+
+.daily-day-box {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  box-sizing: border-box;
+  border: 2px solid var(--tc-ink-light);
+  border-radius: 8px;
+}
+
+.daily-day-played .daily-day-box {
+  border-color: #ef7d22;
+  background: color-mix(in srgb, #f8c537 35%, transparent);
+}
+
+.daily-day-today .daily-day-box {
+  border-style: dashed;
+  border-color: var(--tc-ink);
+}
+
+.daily-day-later .daily-day-box {
+  opacity: 0.4;
+}
+
+.daily-day-drop .art-day {
+  display: block;
+  width: 14px;
+  height: 18px;
+}
+
+.daily-day-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tc-ink-light);
+}
+
+.daily-day-today .daily-day-name {
+  color: var(--tc-ink);
+}
+
+.daily-streak:not(.daily-streak-lit) .daily-streak-count {
+  color: var(--tc-ink-light);
+}

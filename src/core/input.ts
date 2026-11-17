@@ -13,7 +13,7 @@ import { DIFFICULTIES, GAME_CONFIG, mistakeInk, streakKeys, type Difficulty } fr
 import { applyEdit, correctPrefix, isTextEdit, type EditAction } from './editing';
 import { canStart, onBossPartDone } from './bosses';
 import { applyBriefings } from './mechanics';
-import { createStats, type Stats } from './stats';
+import { createStats, earnPoints, type Stats } from './stats';
 import {
   REVEALED_X,
   WORLD_WIDTH,
@@ -24,6 +24,7 @@ import {
   isRevealed,
   markPageStart,
   nextLife,
+  pageFor,
   restoreInk,
   splitBoss,
   resetWorld,
@@ -106,7 +107,7 @@ function registerHit(world: World, key: string): void {
     s.hitKeys[key] = (s.hitKeys[key] ?? 0) + 1;
     s.combo++;
     s.bestCombo = Math.max(s.bestCombo, s.combo);
-    s.score += GAME_CONFIG.points.perChar * multiplier(s.combo) * pointsFactor(world);
+    earnPoints(s, GAME_CONFIG.points.perChar, multiplier(s.combo), pointsFactor(world));
   });
   // A clean run of keys wins a little ink back.
   world.cleanRun++;
@@ -174,7 +175,7 @@ export function useAbility(world: World, id: ActiveAbility): boolean {
     for (const target of victims) {
       const points = Math.round((perTarget + perChar * [...target.text].length) * config.blotter.pointsShare);
       bothStats(world, (s) => {
-        s.score += points;
+        earnPoints(s, points);
         s.destroyed++;
       });
       world.events.push({ type: 'destroyed', target, points, blotted: true });
@@ -200,7 +201,7 @@ export function useBlotter(world: World): boolean {
  */
 function destroyTarget(world: World, target: Target, scoreBefore: number): void {
   bothStats(world, (s) => {
-    s.score += GAME_CONFIG.points.perTarget * multiplier(s.combo) * pointsFactor(world);
+    earnPoints(s, GAME_CONFIG.points.perTarget, multiplier(s.combo), pointsFactor(world));
   });
   if (target.lives > 1) {
     nextLife(world, target);
@@ -272,7 +273,7 @@ function editBuffer(world: World, target: Target, action: EditAction): void {
     if (char) registerHit(world, char);
     else
       bothStats(world, (s) => {
-        s.score += GAME_CONFIG.points.perChar * multiplier(s.combo) * pointsFactor(world);
+        earnPoints(s, GAME_CONFIG.points.perChar, multiplier(s.combo), pointsFactor(world));
       });
   } else if (action.type === 'insert') {
     registerError(world, char ?? action.type, target, expected);
@@ -375,9 +376,7 @@ function turnPage(world: World): void {
   const newChapter = isLastPageOfChapter(world.page);
   // A new Apprentice chapter brings its new keys.
   if (newChapter && world.mode === 'apprentice') useApprenticeKeys(world, chapter + 1);
-  world.page = newChapter
-    ? createPage(world.difficulty, chapter + 1, 0, world.content, world.mode)
-    : createPage(world.difficulty, chapter, index + 1, world.content, world.mode);
+  world.page = newChapter ? pageFor(world, chapter + 1, 0) : pageFor(world, chapter, index + 1);
   world.pageStats = createStats();
   world.inkRefilled = 0;
   world.shieldEarned = false;
@@ -385,6 +384,7 @@ function turnPage(world: World): void {
 
 /** True when the page just cleared was the last page of the last Apprentice chapter. */
 export function finishedNotebook(world: World): boolean {
+  if (world.mode === 'daily') return isLastPageOfChapter(world.page);
   return (
     world.mode === 'apprentice' && isLastPageOfChapter(world.page) && world.page.chapter >= APPRENTICE_CHAPTERS - 1
   );
@@ -408,6 +408,21 @@ export function startApprentice(world: World, chapter: number, difficulty: Diffi
 export function startPractice(world: World, difficulty: Difficulty = world.selectedDifficulty): void {
   resetWorld(world, difficulty);
   world.mode = 'practice';
+  markPageStart(world);
+  beginPage(world);
+}
+
+/**
+ * Start the Daily Page (core/daily.ts): always on Normal, its pages drawn
+ * from `seed`. The content (its keys and words) must already be set.
+ * `counted` is false for a replay after the day's result is in.
+ */
+export function startDaily(world: World, id: number, seed: number, counted: boolean): void {
+  resetWorld(world, 'normal');
+  world.mode = 'daily';
+  world.seed = seed;
+  world.daily = { id, counted };
+  world.page = pageFor(world, GAME_CONFIG.daily.chapter, 0);
   markPageStart(world);
   beginPage(world);
 }
@@ -449,7 +464,7 @@ export function confirm(world: World): void {
 
 /** Put the page back to how it began: same page, ink and score as at its start. */
 function restoreTo(world: World, snapshot: StartSnapshot): void {
-  world.page = createPage(world.difficulty, world.page.chapter, snapshot.pageIndex, world.content, world.mode);
+  world.page = pageFor(world, world.page.chapter, snapshot.pageIndex);
   world.targets = [];
   world.lockedId = null;
   world.ink = Math.max(1, snapshot.ink);
@@ -470,9 +485,16 @@ function restoreTo(world: World, snapshot: StartSnapshot): void {
   setPhase(world, 'playing');
 }
 
+/** Whether the page can be started over: not on the day's counted Daily Page. */
+export function canRestart(world: World): boolean {
+  return !world.daily?.counted;
+}
+
 /** Pause menu: start the current page over. */
 export function restartPage(world: World): void {
   if (world.phase !== 'paused' && world.phase !== 'playing') return;
+  // The day's counted Daily Page gets one go.
+  if (!canRestart(world)) return;
   restoreTo(world, world.pageStart);
 }
 

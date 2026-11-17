@@ -9,7 +9,8 @@ import { US_QWERTY } from '../content/layouts/us-qwerty';
 import type { Grade } from './grade';
 import { GAME_CONFIG, type BossKind, type PageParams, type TargetKind } from './config';
 
-export type GameMode = 'apprentice' | 'practice';
+/** The Daily Page is one short seeded notebook, the same for everyone that day (core/daily.ts). */
+export type GameMode = 'apprentice' | 'practice' | 'daily';
 
 export interface Lesson {
   /** Keys introduced in this chapter. */
@@ -113,11 +114,11 @@ export function easeForBeginners(params: PageParams, chapter: number): PageParam
  * The boss on a chapter's last page (0-based chapter), or null before
  * bosses start. They take turns, one per chapter (GAME_CONFIG.boss.order).
  */
-export function bossFor(mode: GameMode, chapter: number): BossKind | null {
+export function bossFor(mode: GameMode, chapter: number, turn = 0): BossKind | null {
   const b = GAME_CONFIG.boss;
   const from = mode === 'apprentice' ? b.fromApprenticeChapter : b.fromChapter;
   if (chapter < from) return null;
-  return b.order[(chapter - from) % b.order.length]!;
+  return b.order[(chapter - from + turn) % b.order.length]!;
 }
 
 /** How much more often a chapter's new keys appear than the others. */

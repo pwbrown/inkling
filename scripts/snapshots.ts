@@ -81,6 +81,31 @@ const SHOW_BOSSES = `(() => {
   return 'ok';
 })()`;
 
+/**
+ * A sample Daily Page history for the shot (M20): a three-day streak that
+ * includes today, so the streak strip, page grades and share text all show.
+ * Only in memory, for the picture; nothing is saved.
+ */
+const SAMPLE_DAILY = `(() => {
+  const store = window.inkling && window.inkling.store;
+  if (!store || !store.data.daily) return 'no daily';
+  const now = new Date();
+  const today = Math.round((Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(2026, 10, 17)) / 86400000) + 1;
+  const result = (score, grades) => ({ score, grades, wpm: 38, accuracy: 96, finished: true });
+  store.data.daily = {
+    lastId: today,
+    streak: 3,
+    bestStreak: 5,
+    best: 6120,
+    results: {
+      [today - 2]: result(4410, ['A', 'B', 'A']),
+      [today - 1]: result(5230, ['A+', 'A', 'B']),
+      [today]: result(4820, ['A+', 'B', 'C']),
+    },
+  };
+  return 'ok';
+})()`;
+
 /** The next character the auto-typer should press, or '' to wait. */
 const NEXT_KEY = (maxX: number) => `(() => {
   const w = window.inkling && window.inkling.world;
@@ -106,6 +131,8 @@ const TOUR: Step[] = [
   { click: 'Settings' }, { click: 'US QWERTY' }, { key: 'Escape' },
   { click: 'How to play' }, { eval: SCROLL_TOP }, { shot: 'how-to-play' },
   { eval: SHOW_BOSSES }, { wait: 300 }, { shot: 'how-to-play-bosses' }, { key: 'Escape' },
+  // The Daily Page (M20), with a sample streak.
+  { eval: SAMPLE_DAILY }, { click: 'Daily Page' }, { eval: SCROLL_TOP }, { shot: 'daily' }, { key: 'Escape' },
   { click: FREE_WRITE }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },
   // A fresh player gets the "New on this page" briefing before their first page.

@@ -2,7 +2,7 @@
  * Bridges the running game and the save: per-key stats, records, and
  * saving/resuming a notebook. Pure functions, so they're easy to test.
  */
-import { APPRENTICE_CHAPTERS, starKey } from '../core/campaign';
+import { APPRENTICE_CHAPTERS, starKey, type GameMode } from '../core/campaign';
 import { GAME_CONFIG, type Difficulty } from '../core/config';
 import type { Stats } from '../core/stats';
 import {
@@ -15,7 +15,7 @@ import {
   type PageState,
   type World,
 } from '../core/world';
-import type { KeyStat, SaveData, SavedNotebook } from './schema';
+import type { DailyProgress, DailyResult, KeyStat, SaveData, SavedNotebook } from './schema';
 
 /** Add a page's (or notebook's) per-key hits and misses to the saved totals. */
 export function mergeKeyStats(save: SaveData, stats: Pick<Stats, 'hitKeys' | 'missedKeys'>): void {
@@ -122,4 +122,53 @@ export function recordApprenticePage(save: SaveData, chapter: number, page: numb
     save.apprentice.unlocked = Math.min(APPRENTICE_CHAPTERS, Math.max(save.apprentice.unlocked, chapter + 2));
     if (chapter >= APPRENTICE_CHAPTERS - 1) save.apprentice.completed = true;
   }
+}
+
+/** The key a page's best score is kept under (Records.pageBest). */
+export function pageBestKey(mode: GameMode, difficulty: Difficulty, chapter: number, page: number): string {
+  return `${mode}:${difficulty}:${starKey(chapter, page)}`;
+}
+
+/** Keep a page's best score. Returns the best before this one (0 if none) and whether this beat it. */
+export function recordPageBest(save: SaveData, key: string, score: number): { previous: number; isNew: boolean } {
+  const previous = save.records.pageBest[key] ?? 0;
+  const isNew = score > previous;
+  if (isNew) save.records.pageBest[key] = score;
+  return { previous, isNew };
+}
+
+/** An Apprentice chapter's best score: its pages' best scores added up, or null before any page is cleared. */
+export function chapterBest(save: Readonly<SaveData>, difficulty: Difficulty, chapter: number, pages: number): number | null {
+  let total = 0;
+  let any = false;
+  for (let page = 0; page < pages; page++) {
+    const best = save.records.pageBest[pageBestKey('apprentice', difficulty, chapter, page)];
+    if (best !== undefined) {
+      total += best;
+      any = true;
+    }
+  }
+  return any ? total : null;
+}
+
+/** The streak as it stands on Daily Page `today`: kept if the last one played was today or yesterday. */
+export function currentStreak(daily: Readonly<DailyProgress>, today: number): number {
+  return daily.lastId !== null && today - daily.lastId <= 1 ? daily.streak : 0;
+}
+
+/**
+ * Record the day's Daily Page result. Only the first result for a day
+ * counts: returns false (and changes nothing) if `id` already has one.
+ */
+export function recordDaily(save: SaveData, id: number, result: DailyResult): boolean {
+  const daily = save.daily;
+  if (daily.results[id] !== undefined) return false;
+  daily.streak = daily.lastId === id - 1 ? daily.streak + 1 : daily.lastId === id ? daily.streak : 1;
+  daily.lastId = Math.max(daily.lastId ?? 0, id);
+  daily.bestStreak = Math.max(daily.bestStreak, daily.streak);
+  daily.best = Math.max(daily.best, result.score);
+  daily.results[id] = result;
+  const ids = Object.keys(daily.results).map(Number).sort((a, b) => b - a);
+  for (const old of ids.slice(GAME_CONFIG.daily.keepResults)) delete daily.results[old];
+  return true;
 }

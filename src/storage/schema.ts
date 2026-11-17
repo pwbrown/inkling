@@ -8,12 +8,13 @@
 import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
 import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from '../core/config';
 import { isMechanic } from '../core/mechanics';
+import type { Grade } from '../core/grade';
 import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 import { DEFAULT_CONTENT_LEVEL, isContentLevel, type ContentLevel } from '../content/contentFilter';
 import { DEFAULT_LAYOUT_ID, isLayoutId } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -83,6 +84,32 @@ export interface Records {
   bestScore: Partial<Record<Difficulty, number>>;
   /** Highest chapter reached (1-based). */
   furthestChapter: Partial<Record<Difficulty, number>>;
+  /** Best score on each page, keyed "mode:difficulty:chapter-page" (see pageBestKey; added in version 9). */
+  pageBest: Record<string, number>;
+}
+
+/** How one Daily Page went (core/daily.ts). */
+export interface DailyResult {
+  score: number;
+  /** Grade of each page cleared, in order. */
+  grades: Grade[];
+  wpm: number;
+  /** Percent, 0–100. */
+  accuracy: number;
+  /** Every page was cleared (not out of ink or left early). */
+  finished: boolean;
+}
+
+/** Daily Page history (added in version 9). */
+export interface DailyProgress {
+  /** The last Daily Page played (its number), or null. */
+  lastId: number | null;
+  /** Days in a row played, up to lastId. */
+  streak: number;
+  bestStreak: number;
+  best: number;
+  /** Recent results, keyed by Daily Page number (the oldest are dropped). */
+  results: Record<string, DailyResult>;
 }
 
 export interface SaveData {
@@ -105,6 +132,8 @@ export interface SaveData {
   tutorials: Tutorials;
   /** The keyboard layout this player types on (added in version 8). */
   layout: LayoutId;
+  /** Added in version 9. */
+  daily: DailyProgress;
 }
 
 export interface Tutorials {
@@ -140,7 +169,7 @@ export function defaultSave(): SaveData {
     difficulty: DEFAULT_DIFFICULTY,
     customPresets: [],
     keyStats: {},
-    records: { bestScore: {}, furthestChapter: {} },
+    records: { bestScore: {}, furthestChapter: {}, pageBest: {} },
     notebook: null,
     vocab: [],
     apprentice: { unlocked: 1, stars: {}, completed: false },
@@ -148,7 +177,12 @@ export function defaultSave(): SaveData {
     contentLevel: DEFAULT_CONTENT_LEVEL,
     tutorials: { enabled: true, seen: [] },
     layout: DEFAULT_LAYOUT_ID,
+    daily: defaultDaily(),
   };
+}
+
+export function defaultDaily(): DailyProgress {
+  return { lastId: null, streak: 0, bestStreak: 0, best: 0, results: {} };
 }
 
 // --- Validation -------------------------------------------------------------
@@ -265,7 +299,11 @@ function sanitize(v: Json): SaveData {
     difficulty: isDifficulty(v.difficulty) ? v.difficulty : base.difficulty,
     customPresets,
     keyStats,
-    records: { bestScore: difficultyRecord(records.bestScore), furthestChapter: difficultyRecord(records.furthestChapter) },
+    records: {
+      bestScore: difficultyRecord(records.bestScore),
+      furthestChapter: difficultyRecord(records.furthestChapter),
+      pageBest: sanitizePageBest(records.pageBest),
+    },
     notebook: sanitizeNotebook(v.notebook),
     vocab: sanitizeVocab(v.vocab),
     apprentice: sanitizeApprentice(v.apprentice),
@@ -273,7 +311,38 @@ function sanitize(v: Json): SaveData {
     contentLevel: isContentLevel(v.contentLevel) ? v.contentLevel : DEFAULT_CONTENT_LEVEL,
     tutorials: sanitizeTutorials(v.tutorials),
     layout: isLayoutId(v.layout) ? v.layout : DEFAULT_LAYOUT_ID,
+    daily: sanitizeDaily(v.daily),
   };
+}
+
+function sanitizePageBest(v: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!isObject(v)) return out;
+  for (const [key, value] of Object.entries(v)) {
+    if (/^(apprentice|practice):[a-z]+:\d+-\d+$/.test(key) && count(value) > 0) out[key] = count(value);
+  }
+  return out;
+}
+
+const GRADES: readonly Grade[] = ['A+', 'A', 'B', 'C', 'D', 'F'];
+
+function sanitizeDaily(v: unknown): DailyProgress {
+  if (!isObject(v)) return defaultDaily();
+  const results: Record<string, DailyResult> = {};
+  if (isObject(v.results)) {
+    for (const [id, r] of Object.entries(v.results)) {
+      if (!/^\d+$/.test(id) || !isObject(r)) continue;
+      results[id] = {
+        score: count(r.score),
+        grades: Array.isArray(r.grades) ? r.grades.filter((g): g is Grade => GRADES.includes(g as Grade)) : [],
+        wpm: count(r.wpm),
+        accuracy: Math.min(100, count(r.accuracy)),
+        finished: r.finished === true,
+      };
+    }
+  }
+  const lastId = typeof v.lastId === 'number' && Number.isInteger(v.lastId) && v.lastId > 0 ? v.lastId : null;
+  return { lastId, streak: count(v.streak), bestStreak: count(v.bestStreak), best: count(v.best), results };
 }
 
 function sanitizeTutorials(v: unknown): Tutorials {
@@ -342,6 +411,13 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
   }),
   // v8 added a keyboard layout per player; everyone so far typed on US QWERTY.
   7: (save) => ({ ...save, version: 8, layout: DEFAULT_LAYOUT_ID }),
+  // v9 added best scores per page and the Daily Page.
+  8: (save) => ({
+    ...save,
+    version: 9,
+    records: { ...(isObject(save.records) ? save.records : {}), pageBest: {} },
+    daily: defaultDaily(),
+  }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

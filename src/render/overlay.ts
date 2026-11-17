@@ -100,6 +100,20 @@ function mistakeLines(stats: Stats): string[] {
   return lines;
 }
 
+/**
+ * Where the points came from, when there's more to it than the keys:
+ * "Points: 1,200 for keys + 800 combo + 120 highlighter". With `lost`, what
+ * wrong keys cost too (on cards that don't say it on a line of its own).
+ */
+function pointsLine(stats: Stats, lost = false): string[] {
+  if (stats.comboPoints <= 0 && stats.bonusPoints <= 0) return [];
+  const parts = [t('overlay.points.keys', { points: formatNumber(Math.round(stats.basePoints)) })];
+  if (stats.comboPoints > 0) parts.push(t('overlay.points.combo', { points: formatNumber(Math.round(stats.comboPoints)) }));
+  if (stats.bonusPoints > 0) parts.push(t('overlay.points.bonus', { points: formatNumber(Math.round(stats.bonusPoints)) }));
+  if (lost && stats.penalty > 0) parts.push(t('overlay.points.lost', { points: formatNumber(Math.round(stats.penalty)) }));
+  return [t('overlay.points', { parts: parts.join(' ') })];
+}
+
 function statLines(stats: Stats): string[] {
   const lines = [summaryLine(stats), ...mistakeLines(stats)];
   const missed = topMissedKeys(stats);
@@ -129,25 +143,50 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
       const stats = world.pageStats;
       const grade = pageGrade(stats, world.page.params.size);
       const note = teacherNote(stats, grade);
-      const lines = [summaryLine(stats)];
+      const lines = [summaryLine(stats), ...pointsLine(stats)];
       lines.push(...mistakeLines(stats));
       if (stats.leaks > 0) lines.push(t('overlay.leaks', { leaks: stats.leaks }));
       const lastPage = isLastPageOfChapter(world.page);
       if (lastPage && world.inkRefilled > 0) lines.push(t('overlay.chapterCleared.refill', { ink: world.inkRefilled }));
       if (world.shieldEarned) lines.push(t('overlay.shieldEarned'));
       lines.push(...extra);
+      const daily = world.mode === 'daily' && world.daily;
       return {
-        title: lastPage ? t('overlay.chapterCleared.title', { chapter }) : t('overlay.pageCleared.title', { page }),
+        title: daily
+          ? t('overlay.daily.pageTitle', { id: daily.id, page, pages: world.page.pageCount })
+          : lastPage
+            ? t('overlay.chapterCleared.title', { chapter })
+            : t('overlay.pageCleared.title', { page }),
         grade,
         ...(world.mode === 'apprentice' ? { stars: starsForGrade(grade) } : {}),
         lines,
         circled: topMissedKeys(stats),
         note: t(`note.${note.kind}` as MessageKey, { key: note.key ? keyLabel(note.key) : '' }),
         links: [{ id: 'mainMenu', label: t('overlay.gameOver.mainMenu') }],
-        prompt: lastPage ? t('overlay.chapterCleared.prompt', { next: chapter + 1 }) : t('overlay.pageCleared.prompt'),
+        prompt:
+          daily && lastPage
+            ? t('overlay.daily.finishPrompt')
+            : lastPage
+              ? t('overlay.chapterCleared.prompt', { next: chapter + 1 })
+              : t('overlay.pageCleared.prompt'),
       };
     }
     case 'gameOver':
+      if (world.mode === 'daily' && world.daily) {
+        return {
+          title: t('overlay.gameOver.title'),
+          lines: [
+            t('overlay.daily.reached', { id: world.daily.id, page, pages: world.page.pageCount }),
+            ...statLines(world.stats),
+            ...extra,
+          ],
+          links: [
+            { id: 'retry', label: t('overlay.daily.retry') },
+            { id: 'mainMenu', label: t('overlay.gameOver.mainMenu') },
+          ],
+          prompt: t('overlay.daily.retryPrompt'),
+        };
+      }
       return {
         title: t('overlay.gameOver.title'),
         lines: [
@@ -187,6 +226,13 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
       };
     }
     case 'notebookComplete':
+      if (world.mode === 'daily' && world.daily) {
+        return {
+          title: t('overlay.daily.doneTitle', { id: world.daily.id }),
+          lines: [summaryLine(world.stats), ...pointsLine(world.stats, true), ...extra],
+          prompt: t('overlay.daily.donePrompt'),
+        };
+      }
       return {
         title: t('overlay.complete.title'),
         lines: [t('overlay.complete.body'), ...statLines(world.stats).slice(0, 1), ...extra],

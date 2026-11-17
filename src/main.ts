@@ -14,7 +14,9 @@ import {
   restartPage,
   retryChapter,
   selectDifficulty,
+  canRestart,
   startApprentice,
+  startDaily,
   startPractice,
   useAbility,
   useBlotter,
@@ -28,8 +30,9 @@ import { GAME_CONFIG } from './core/config';
 import { FixedStepLoop } from './core/loop';
 import { improvedKeys } from './core/mastery';
 import { accuracy, wpm } from './core/stats';
-import { APPRENTICE_CHAPTERS, NEW_KEY_WEIGHT, lessonsFor, apprenticeKeys, chapterStars, starsForGrade, totalStars } from './core/campaign';
-import { pageGrade } from './core/grade';
+import { APPRENTICE_CHAPTERS, NEW_KEY_WEIGHT, lessonsFor, apprenticeKeys, apprenticePlan, chapterStars, starsForGrade, totalStars } from './core/campaign';
+import { pageGrade, type Grade } from './core/grade';
+import { DAILY_PAGES, MARK_SQUARES, dailyId, dailyKeys, dailyPages, dailySeed, streakWeek } from './core/daily';
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, setLocale, t, type MessageKey } from './i18n';
 import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel } from './core/rewards';
@@ -46,8 +49,13 @@ import { createRenderer } from './render/renderer';
 import { keyLabel, prefersReducedMotion, setTheme } from './render/theme';
 import { TEXT_SCALE, loadSettings, reducedMotion, saveSettings, type Settings } from './settings';
 import {
+  chapterBest,
   continueNotebook,
+  currentStreak,
   keyWeights,
+  pageBestKey,
+  recordDaily,
+  recordPageBest,
   mergeKeyStats,
   nextPagePosition,
   recordApprenticePage,
@@ -64,6 +72,9 @@ import { openWordLists } from './ui/wordLists';
 import { openWhatsNewDialog } from './ui/whatsNewDialog';
 import { RELEASES, compareVersions, releasesToAnnounce, MAX_NEW_RELEASES_SHOWN, type Release } from './core/releases';
 import { APP_VERSION, loadSeenVersion, saveSeenVersion } from './version';
+
+/** Where shared results point people. */
+const SHARE_URL = 'inkykeys.com';
 
 async function main(): Promise<void> {
   const host = document.getElementById('app');
@@ -99,6 +110,12 @@ async function main(): Promise<void> {
   let newBest = false;
   /** Keys that became mastered on the page just finished, for the graded page. */
   let newlyMastered: string[] = [];
+  /** How the page just finished compares with its best score, for the graded page. */
+  let pageBest: { previous: number; isNew: boolean; score: number } | null = null;
+  /** Grades of the Daily Page's pages so far. */
+  let dailyGrades: Grade[] = [];
+  /** The Daily Page result just recorded, for its last card. */
+  let dailyOutcome: { newBest: boolean; best: number; streak: number } | null = null;
   /** Ink earned on the page just finished, and any level-up, for the graded page. */
   let reward: { ink: number; levelUp: number | null; unlocked: string[]; items: UnlockedItem[] } = { ink: 0, levelUp: null, unlocked: [], items: [] };
 
@@ -127,12 +144,30 @@ async function main(): Promise<void> {
       extraLines: (w) => {
         if (w.phase === 'pageCleared') {
           const lines = [];
+          if (pageBest && pageBest.previous > 0) {
+            lines.push(
+              pageBest.isNew
+                ? t('overlay.pageBest.new', { previous: formatNumber(pageBest.previous) })
+                : t('overlay.pageBest.short', {
+                    gap: formatNumber(pageBest.previous - pageBest.score),
+                    best: formatNumber(pageBest.previous),
+                  }),
+            );
+          }
           if (newlyMastered.length > 0) lines.push(t('overlay.newlyMastered', { keys: newlyMastered.map(keyLabel).join('  ') }));
           if (reward.ink > 0) lines.push(t('overlay.inkEarned', { ink: reward.ink }));
           if (reward.levelUp) {
             lines.push(t('overlay.levelUp', { level: reward.levelUp, rank: t(`rank.${rankForLevel(reward.levelUp)}` as MessageKey) }));
           }
           if (reward.unlocked.length > 0) lines.push(t('overlay.unlocked', { items: reward.unlocked.join(', ') }));
+          return lines;
+        }
+        if (w.mode === 'daily' && (w.phase === 'gameOver' || w.phase === 'notebookComplete')) {
+          if (!dailyOutcome) return [t('overlay.daily.practice')];
+          const lines = [
+            dailyOutcome.newBest ? t('overlay.daily.newBest') : t('overlay.daily.best', { score: formatNumber(dailyOutcome.best) }),
+          ];
+          if (dailyOutcome.streak > 1) lines.push(t('overlay.daily.streak', { streak: dailyOutcome.streak }));
           return lines;
         }
         if (w.phase === 'gameOver') {
@@ -179,6 +214,18 @@ async function main(): Promise<void> {
         .filter((word) => !blocklist.blocksWord(word)),
     });
   };
+
+  /**
+   * The Daily Page's content: the same for everyone on a layout, so the
+   * strictest word filter, no downloaded words and no weak-key weighting.
+   */
+  const dailyContent = () =>
+    createContentSource({
+      keys: dailyKeys(layout()),
+      words: pack.wordsFor('family'),
+      blocklist: pack.blocklistFor('family'),
+      trustedWords: true,
+    });
 
   const game = createWorld({
     content: contentFor(store.data.keys),
@@ -252,6 +299,60 @@ async function main(): Promise<void> {
     if (dialogOpen || game.phase !== 'ready') return;
     startApprentice(game, chapter);
     loop.reset();
+  };
+
+  /** Today's Daily Page. Only the first go of the day counts. */
+  const playDaily = () => {
+    if (dialogOpen || game.phase !== 'ready') return;
+    const id = dailyId(new Date());
+    setContent(game, dailyContent());
+    startDaily(game, id, dailySeed(id, store.data.layout), store.data.daily.results[id] === undefined);
+    dailyGrades = [];
+    dailyOutcome = null;
+    loop.reset();
+  };
+
+  /** Record the Daily Page's result, if this was the day's counted go. */
+  const finishDaily = (finished: boolean) => {
+    const daily = game.daily;
+    if (!daily?.counted) {
+      // A practice round after the day's go: nothing to record.
+      dailyOutcome = null;
+      return;
+    }
+    daily.counted = false;
+    store.update((save) => {
+      const previousBest = save.daily.best;
+      const recorded = recordDaily(save, daily.id, {
+        score: game.stats.score,
+        grades: [...dailyGrades],
+        wpm: Math.round(wpm(game.stats)),
+        accuracy: Math.round(accuracy(game.stats) * 100),
+        finished,
+      });
+      dailyOutcome = recorded
+        ? { newBest: game.stats.score > previousBest && game.stats.score > 0, best: save.daily.best, streak: save.daily.streak }
+        : null;
+    });
+  };
+
+  /** The text to copy for today's result, or null before it's played. */
+  const dailyShareText = (): string | null => {
+    const id = dailyId(new Date());
+    const result = store.data.daily.results[id];
+    if (!result) return null;
+    const streak = currentStreak(store.data.daily, id);
+    return t('daily.share', {
+      id,
+      score: formatNumber(result.score),
+      wpm: result.wpm,
+      accuracy: result.accuracy,
+      pages: dailyPages(result.grades)
+        .map((p) => t('daily.sharePage', { page: p.page, square: MARK_SQUARES[p.mark], grade: p.grade ?? t('daily.notReached') }))
+        .join(' · '),
+      streak: streak > 1 ? t('daily.shareStreak', { streak }) : '',
+      url: SHARE_URL,
+    });
   };
 
   const continueSaved = () => {
@@ -538,9 +639,13 @@ async function main(): Promise<void> {
   };
 
   const goToMenu = () => {
+    const wasDaily = game.mode === 'daily';
+    // Leaving the day's Daily Page part way still uses up its one go.
+    if (wasDaily) finishDaily(false);
     quitToMenu(game);
     loop.reset();
     void store.flush();
+    if (wasDaily) menu.show('daily');
   };
 
   // Game-over card links.
@@ -580,6 +685,10 @@ async function main(): Promise<void> {
         newKeys: lesson.newKeys.map(keyLabel).join(' '),
         stars: chapterStars(store.data.apprentice.stars, chapter),
         locked: chapter >= store.data.apprentice.unlocked,
+        best: (() => {
+          const best = chapterBest(store.data, game.selectedDifficulty, chapter, apprenticePlan(chapter).length);
+          return best === null ? null : t('contents.best', { score: formatNumber(best) });
+        })(),
       })),
     onStartApprentice: (chapter) => after(() => startChapter(chapter)),
     rankLine: () => {
@@ -641,6 +750,46 @@ async function main(): Promise<void> {
     onSavePlayer: savePlayer,
     onDeletePlayer: (id) => void deletePlayer(id),
     appVersion: () => APP_VERSION,
+    daily: () => {
+      const id = dailyId(new Date());
+      const d = store.data.daily;
+      const result = d.results[id];
+      const streak = currentStreak(d, id);
+      return {
+        id,
+        played: result !== undefined,
+        status: !result
+          ? t('daily.notPlayed')
+          : result.finished
+            ? t('daily.result', { score: formatNumber(result.score), wpm: result.wpm, accuracy: result.accuracy })
+            : t('daily.resultOut', { score: formatNumber(result.score), page: result.grades.length + 1, pages: DAILY_PAGES }),
+        streak,
+        week: streakWeek(new Date(), new Set(Object.keys(d.results).map(Number))),
+        pages: result ? dailyPages(result.grades) : null,
+        record:
+          d.lastId === null
+            ? t('daily.recordNone')
+            : t('daily.record', { bestStreak: d.bestStreak, best: formatNumber(d.best) }),
+        shareText: dailyShareText(),
+      };
+    },
+    dailyDetail: () => {
+      const id = dailyId(new Date());
+      const result = store.data.daily.results[id];
+      return result ? t('menu.dailyDone', { id, score: formatNumber(result.score) }) : t('menu.dailyNew', { id });
+    },
+    onPlayDaily: () => after(playDaily),
+    onCopyDaily: async () => {
+      const text = dailyShareText();
+      if (!text) return false;
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    canRestart: () => canRestart(game),
     onWhatsNew: () => {
       const released = RELEASES.filter((r) => compareVersions(r.version, APP_VERSION) <= 0);
       openWhatsNew(released.slice(0, 1), released.slice(1), false);
@@ -742,7 +891,7 @@ async function main(): Promise<void> {
       case 'playing':
         // A page is starting (not just resuming from pause): save the notebook
         // here, so Continue and Quit to menu always come back to this page.
-        if (lastPhase !== 'paused') {
+        if (lastPhase !== 'paused' && game.mode !== 'daily') {
           if (lastPhase === 'ready') newBest = false;
           store.update((save) => {
             save.difficulty = game.difficulty;
@@ -760,6 +909,16 @@ async function main(): Promise<void> {
           const before = structuredClone(save.keyStats);
           mergeKeyStats(save, game.pageStats);
           newlyMastered = improvedKeys(before, save.keyStats);
+          pageBest = null;
+          if (game.mode === 'daily') {
+            // The Daily Page keeps its own records (finishDaily), not the notebook's.
+            dailyGrades.push(pageGrade(game.pageStats, game.page.params.size));
+            reward = earnInk(save, inkForPage(game.pageStats.score));
+            return;
+          }
+          const score = game.pageStats.score;
+          const key = pageBestKey(game.mode, game.difficulty, game.page.chapter, game.page.index);
+          pageBest = { ...recordPageBest(save, key, score), score };
           let stars = 0;
           if (game.mode === 'apprentice') {
             const earned = starsForGrade(pageGrade(game.pageStats, game.page.params.size));
@@ -774,6 +933,10 @@ async function main(): Promise<void> {
         showUnlocks();
         break;
       case 'notebookComplete':
+        if (game.mode === 'daily') {
+          finishDaily(true);
+          break;
+        }
         store.update((save) => {
           save.notebook = null;
           reward = earnInk(save, NOTEBOOK_BONUS);
@@ -781,6 +944,11 @@ async function main(): Promise<void> {
         showUnlocks();
         break;
       case 'gameOver':
+        if (game.mode === 'daily') {
+          store.update((save) => mergeKeyStats(save, game.pageStats));
+          finishDaily(false);
+          break;
+        }
         store.update((save) => {
           mergeKeyStats(save, game.pageStats);
           newBest = recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);

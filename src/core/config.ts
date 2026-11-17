@@ -403,6 +403,20 @@ export const GAME_CONFIG = {
     notebookBonus: 500,
   },
 
+  /**
+   * The Daily Page (core/daily.ts): one short seeded notebook a day, the same
+   * for every player on the same layout, always on Normal. Its pages are
+   * tuned like Practice chapter `chapter` (0-based) and the last one brings
+   * a boss, a different one each day. Daily #1 was `epoch` (local date).
+   */
+  daily: {
+    epoch: { year: 2026, month: 11, day: 17 },
+    chapter: 3,
+    plan: ['drip', 'blotling', 'blotling'] as PageKind[],
+    /** Results kept for the record (the best score and streaks are kept regardless). */
+    keepResults: 60,
+  },
+
   /** Each target's speed varies randomly by up to ±this fraction. */
   speedJitter: 0.15,
   /** Empty space to keep behind the last target in a lane before spawning another. */
