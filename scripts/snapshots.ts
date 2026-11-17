@@ -131,6 +131,19 @@ const SAMPLE_CHALLENGE = `(() => {
   return 'ok';
 })()`;
 
+/**
+ * Open a sample transfer link (M23), made by the game's own code from a copy
+ * of this save with a little progress, as if "Pip" sent it from another device.
+ */
+const SAMPLE_TRANSFER = `(async () => {
+  const { encodeTransfer } = await import('/src/storage/transfer.ts');
+  const save = structuredClone(window.inkling.store.data);
+  save.profile.ink = 5200;
+  save.apprentice.unlocked = 9;
+  location.hash = await encodeTransfer(save, { name: 'Pip', badge: 'teal' });
+  return 'ok';
+})()`;
+
 /** The next character the auto-typer should press, or '' to wait. */
 const NEXT_KEY = (maxX: number) => `(() => {
   const w = window.inkling && window.inkling.world;
@@ -162,6 +175,9 @@ const TOUR: Step[] = [
   { eval: SAMPLE_STICKERS }, { click: 'Sticker book' }, { eval: SCROLL_TOP }, { shot: 'stickers' }, { key: 'Escape' },
   // A challenge link from a friend (M22).
   { eval: SAMPLE_CHALLENGE }, { wait: 500 }, { shot: 'challenge' }, { click: 'Not now' },
+  // Moving to another device (M23): the transfer row in Manage saves, then opening a link.
+  { click: 'Manage saves' }, { shot: 'save-data' }, { key: 'Escape' },
+  { eval: SAMPLE_TRANSFER }, { wait: 800 }, { shot: 'transfer' }, { click: 'Not now' },
   { click: FREE_WRITE }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },
   // A fresh player gets the "New on this page" briefing before their first page.

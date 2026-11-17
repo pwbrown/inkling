@@ -6,6 +6,7 @@
  *
  * Links come from anywhere, so decoding checks every field.
  */
+import { base64UrlToText, textToBase64Url } from './base64url';
 import type { Grade } from './grade';
 
 export interface Challenge {
@@ -28,18 +29,6 @@ const MAX_SCORE = 10_000_000;
 /** The longest name shown, as for player names (storage/profiles.ts). */
 const MAX_NAME_LENGTH = 20;
 
-function toBase64Url(text: string): string {
-  const bytes = new TextEncoder().encode(text);
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function fromBase64Url(code: string): string {
-  const binary = atob(code.replace(/-/g, '+').replace(/_/g, '/'));
-  return new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
-}
-
 /** A name fit to show: letters, numbers and single spaces, trimmed to the usual length. */
 export function cleanChallengeName(name: unknown): string | null {
   if (typeof name !== 'string') return null;
@@ -50,7 +39,7 @@ export function cleanChallengeName(name: unknown): string | null {
 /** The fragment for a challenge, e.g. "c=eyJ2Ijox…" (no leading #). */
 export function encodeChallenge(c: Challenge): string {
   const payload = { v: VERSION, d: c.daily, l: c.layout, s: c.score, g: c.grades.join(','), ...(c.name ? { n: c.name } : {}) };
-  return `${CHALLENGE_PARAM}=${toBase64Url(JSON.stringify(payload))}`;
+  return `${CHALLENGE_PARAM}=${textToBase64Url(JSON.stringify(payload))}`;
 }
 
 /** Read a challenge from a URL fragment (with or without the #), or null if there isn't a valid one. */
@@ -60,7 +49,7 @@ export function decodeChallenge(hash: string, isLayout: (id: string) => boolean)
   if (!code || code.length > 600 || !/^[A-Za-z0-9_-]+$/.test(code)) return null;
   let data: unknown;
   try {
-    data = JSON.parse(fromBase64Url(code));
+    data = JSON.parse(base64UrlToText(code));
   } catch {
     return null;
   }

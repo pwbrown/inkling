@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FIRST_PLAYER_ID, MAX_NAME_LENGTH, PROFILES_KEY, PlayerStore, sanitizePlayers, saveKeyFor } from './profiles';
+import { FIRST_PLAYER_ID, MAX_NAME_LENGTH, PROFILES_KEY, PlayerStore, sanitizePlayers, saveKeyFor, uniqueName } from './profiles';
 import { MemoryBackend, SAVE_KEY, SaveStore } from './store';
 
 describe('sanitizePlayers', () => {
@@ -75,5 +75,18 @@ describe('PlayerStore', () => {
   it('refuses blank names', async () => {
     const players = await PlayerStore.open(new MemoryBackend(), 'Player 1');
     expect(await players.add('   ', 'ink')).toBeNull();
+  });
+});
+
+describe('uniqueName', () => {
+  it('keeps a free name and numbers a taken one', () => {
+    expect(uniqueName('Pip', ['Sam'])).toBe('Pip');
+    expect(uniqueName('Pip', ['pip'])).toBe('Pip (2)');
+    expect(uniqueName('Pip', ['Pip', 'Pip (2)'])).toBe('Pip (3)');
+  });
+
+  it('stays within the name length', () => {
+    const long = 'x'.repeat(20);
+    expect(uniqueName(long, [long])).toBe(`${'x'.repeat(16)} (2)`);
   });
 });

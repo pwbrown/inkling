@@ -1,6 +1,6 @@
 # Game competitiveness and sharing
 
-Claude Code session started 2026-11-17. 14 prompts.
+Claude Code session started 2026-11-17. 17 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -3053,6 +3053,465 @@ Exporting the transcript and scanning with general patterns only:
 
   ```bash
   npm run transcript >/dev/null 2>&1; f=docs/transcripts/2026-11-17-game-competitiveness-and-sharing-c10c68be.md; first=$(git config user.name | awk '{print $1}'); printf 'name: %s\n' "$(grep -ci "$first" $f)"; for p in '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' '/Users/[A-Za-z]+' '(ghp|gho|github_pat|xox[bp])[-_][A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}'; do printf '%s: %s\n' "$p" "$(grep -Eoc "$p" $f)"; done; git status --short docs/transcripts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The transcript is clean. The only long encoded strings in it are the sample challenge links, which hold "Pip" or "Player 1". Committing, merging and tagging:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check, build, commit, merge, delete branch, tag
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL|×" | head -3 && npm run build 2>&1 | tail -1 && git add -A && git commit -q -F - <<'EOF'
+  Milestone 22: Challenges (2.12.0)
+
+  - Challenge links (core/challenge.ts): copied Daily results end with a link whose #c= fragment holds the day, layout, score, page grades and, only if ticked, the player's name; decoding checks every field and cleans names
+  - Opening a link shows a challenge screen; taking it plays the same seeded notebook with a "To beat" target on the HUD and the result on the last card; today's still counts if unplayed
+  - Share picture (ui/sh
+  … (618 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M22 is committed as `511dc25`, fast-forwarded into `main` and tagged `v2.12.0`, and the feature branch is deleted. Nothing has been pushed. `npm run check` (400 tests) and `npm run build` passed before the commit.
+
+What went in alongside the code:
+- **Snapshots:** the tour now opens a sample challenge link from "Pip" and captures the challenge screen. I committed `m22/challenge.png` and `m22/daily.png`, plus the updated `latest/` shots.
+- **Progression notes:** a new M22 section with both shots side by side.
+- **Transcript:** scanned with general patterns only, and clean. Your first name was removed automatically by the private-words list from M21.
+
+The snapshots showed one problem, which I fixed before committing: on the Daily screen, keyboard focus landed on the new "Sign my challenge link" checkbox instead of Copy result. The main button takes focus again: Copy result once you've played, Play today's page before.
+
+Once pushed and deployed, challenge links will point at `https://inkykeys.com/#c=…`. Pushing `v2.12.0` publishes the GitHub Release.
+
+## 🧑 Prompt
+
+> Push both
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Push main and tag; list started workflows
+
+  ```bash
+  git push origin main 2>&1 | tail -1 && git push origin v2.12.0 2>&1 | tail -1 && sleep 15 && gh run list --limit 3 --json databaseId,workflowName,status,conclusion --jq '.[] | "\(.workflowName) \(.status) \(.conclusion) \(.databaseId)"'
+  ```
+- **Shell:** Wait for Deploy and CI
+
+  ```bash
+  gh run watch 44160471461 --exit-status >/dev/null 2>&1; echo "deploy $?"; gh run watch 44160471316 --exit-status >/dev/null 2>&1; echo "ci $?"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` and the `v2.12.0` tag, and all three GitHub workflows passed:
+
+- **Release:** the GitHub Release for v2.12.0 is published.
+- **CI:** passed on `main`.
+- **Deploy:** finished, so challenge links and share pictures should now be on inkykeys.com, though I didn't open the site to check. From now on, copied Daily results end with a `https://inkykeys.com/#c=…` link.
+
+That leaves M23 from the plan: a transfer link to move your save between devices without any server.
+
+## 🧑 Prompt
+
+> let's start M23
+
+### 🤖 Claude
+
+Starting M23, the device-to-device transfer link. The plan said "merge", but merging two saves (stars, records, stickers, streaks) is error-prone. Instead, opening a transfer link will offer two choices:
+- **Add as a new player** (the default): nothing on the receiving device is overwritten.
+- **Replace the current player's save**: with a clear warning first.
+
+Reading the existing save import/export code first:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Create branch; read save data dialog and store APIs
+
+  ```bash
+  git checkout -q -b feat/m23-transfer && wc -l src/ui/saveData.ts && sed -n 1,200p src/ui/saveData.ts; grep -n "async add\|async edit\|get canAdd\|async setActive\|replace\|async remove" src/storage/profiles.ts src/storage/store.ts
+  ```
+- **Shell:** Check badge helpers, player add, compression support
+
+  ```bash
+  grep -n "export const BADGES\|export type Badge\|export function isBadge" src/storage/profiles.ts; sed -n 105,140p src/storage/profiles.ts; grep -n "deflate\|CompressionStream" -r src | head -2; node -e "console.log(typeof CompressionStream, typeof DecompressionStream)"
+  ```
+- **Shell:** Add base64url util, transfer module and tests
+
+  ```bash
+  node -e "console.log(typeof CompressionStream, typeof DecompressionStream)" && cat > src/core/base64url.ts <<'EOF'
+  /** URL-safe base64 (no padding), for data carried in a link's #fragment. */
+
+  export function bytesToBase64Url(bytes: Uint8Array): string {
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  /** Throws if `code` isn't base64url. */
+  export function base64UrlToBytes(code: string): Uint8Array {
+    if (!/^[A-Za-z0-9_-]*$/.test(code)) throw new Error('Not base64url');
+    const 
+  … (7524 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Transfer links round-trip in the tests, including the "newer version" refusal. Now the Manage saves button:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add Copy transfer link row to Manage saves
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/ui/saveData.ts',[
+  ("""  /** Called after everything was erased. */
+    onErased(): void;""","""  /** Called after everything was erased. */
+    onErased(): void;
+    /**
+     * The link that moves this player to another device, or 'tooLong' if the
+     * save is too big for a link. Left out where the browser can't make one.
+     */
+    transferLink?: () => Promise<string | 'tooLong'>;"""),
+  ("""      row(
+          t('saveData.importHelp'),
+         
+  … (2414 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the receiving side: reading `#t=` links at startup and showing a screen to add the save as a new player or replace the current one.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Read current link reader and save dialog call
+
+  ```bash
+  grep -n "const readChallenge = () => {" -A13 src/main.ts | head -16; grep -n "readChallenge" src/main.ts; grep -n "const openSaves = () => {" -A12 src/main.ts | head -14
+  ```
+- **Shell:** Receive transfer links: menu screen and actions
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/main.ts',[
+  ("""  const readChallenge = () => {
+      const challenge = decodeChallenge(location.hash, isLayoutId);
+      if (!location.hash.includes('c=')) return;
+      history.replaceState(null, '', `${location.pathname}${location.search}`);
+      if (!challenge) return;""","""  const readChallenge = () => {
+      if (!new URLSearchParams(location.hash.replace(/^#/, '')).has('c')) return;
+      const challenge = decodeChallenge(location.hash
+  … (10646 more characters)
+  ```
+- **Shell:** Fix optional row and disable full add button
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/ui/saveData.ts',[("      options.transferLink ? transferRow(options.transferLink) : null,","      ...(options.transferLink ? [transferRow(options.transferLink)] : []),")])
+  edit('src/ui/menu.ts',[
+  ("""    return [
+        h('h2', { id: 'menu-title' }, [t('transfer.title')]),
+        h('p', { className: 'tc-intro' }, [t('transfer.intro')]),""","""    const add = this.button('transfer-add', t('transfer.add'), () => this.hooks.onTransferAd
+  … (719 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck and lint pass. Now the release entry, requirements row and privacy text. PRIVACY.md currently says "nothing is shared between devices", which needs updating:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Release entry, docs, version bump, check and build
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/core/releases.ts',[("""export const RELEASES: readonly Release[] = [
+  ""","""export const RELEASES: readonly Release[] = [
+    {
+      version: '2.13.0',
+      date: '2026-11-17',
+      notes: ['release.2.13.0.transfer'],
+    },
+  """)])
+  edit('src/i18n/en.ts',[("  'release.2.12.0.challenges':","  'release.2.13.0.transfer': 'Move a player to another device with a transfer link, in Manage saves.',\n  'release.2.12.0.challenges':")])
+  edit('PRIVACY
+  … (2004 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Check (405 tests) and build pass. Checking it in the browser. I'll catch the copied link in the page instead of letting it reach your clipboard:
+
+<details><summary>3 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); 'reloading'","tabId":"seed"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 2500)); window.__copied = null; navigator.clipboard.writeText = async (s) => { window.__copied = s; }; window.inkling.openSaves(); await new Promise(r => setTimeout(r, 300)); const btn = [...document.querySelectorAll('.save-dat
+… (261 more characters)`
+- **computer** `{"action":"screenshot","tabId":"seed","scale":0.7}`
+
+</details>
+
+### 🤖 Claude
+
+The link is 1,433 characters for this dev save, well under the limit. Now opening it, as the other device would:
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"[...document.querySelectorAll('.save-data button')].find(b => b.textContent === 'Close').click(); await new Promise(r => setTimeout(r, 200)); location.hash = window.__copied.split('#')[1]; await new Promise(r => setTimeout(r, 800)); ({screen: window.inkling.menu.s
+… (100 more characters)`
+- **computer** `{"action":"screenshot","tabId":"seed","scale":0.7}`
+
+</details>
+
+### 🤖 Claude
+
+The transfer screen shows the player, their level and sticker count, and both choices. Checking the Replace confirmation (then backing out), then Add as a new player:
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"document.querySelector('[data-id=transfer-replace]').click(); await new Promise(r => setTimeout(r, 200)); const confirmText = document.querySelector('.menu-panel').innerText; document.querySelector('[data-id=replace-no]').click(); await new Promise(r => setTimeout
+… (489 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+It switched to a player with the same progress. Since both are called "Player 1", I'll check the player list to be sure it's a new player and not the old one:
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"window.inkling.menu.show('players'); await new Promise(r => setTimeout(r, 200)); [...document.querySelectorAll('.menu-player-row')].map(r => r.innerText.replace(/\\n+/g, ' | '))","tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+Both copies show up correctly, but two players with the same name is confusing. When a transferred player's name is already taken on the device, I'll add a number, for example "Player 1 (2)":
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Number duplicate names for transferred players
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/storage/profiles.ts',[
+  ("""export function defaultPlayers(""","""/** `name`, or "name (2)", "name (3)"… if a player here already has it. */
+  export function uniqueName(name: string, taken: readonly string[]): string {
+    const clean = cleanName(name);
+    const used = new Set(taken.map((n) => n.toLowerCase()));
+    if (!used.has(clean.toLowerCase())) return clean;
+    for (let n = 2; ; n++) {
+      const suffix = ` (${n})`;
+      const candida
+  … (1485 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+My import edit landed in the wrong import line. Fixing it:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Fix test import and rerun
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/storage/profiles.test.ts'
+  s=open(p).read()
+  s=s.replace("import {\n  uniqueName, describe, expect, it } from 'vitest';","import { describe, expect, it } from 'vitest';",1)
+  s=s.replace("import { FIRST_PLAYER_ID, MAX_NAME_LENGTH, PROFILES_KEY, PlayerStore, sanitizePlayers, saveKeyFor } from './profiles';",
+              "import { FIRST_PLAYER_ID, MAX_NAME_LENGTH, PROFILES_KEY, PlayerStore, sanitizePlayers, saveKeyFor, uniqueName } from './profiles';",1)
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit -p . && npx vitest run src/storage/profiles.test.ts 2>&1 | tail -3
+  ```
+- **Shell:** Show profile test results
+
+  ```bash
+  npx vitest run src/storage/profiles.test.ts 2>&1 | grep -E "Tests|FAIL|×"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Tests pass. Now in the browser I'll open the link again to see the numbered name, then remove the extra test players so your dev data is back to one player:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Find player edit and delete button ids
+
+  ```bash
+  grep -n "'data-id': \`edit-\|'data-id': 'delete\|data-id': 'confirm-delete\|delete-yes\|'data-id': 'delete-confirm" src/ui/menu.ts | head
+  ```
+- **javascript_tool** `{"action":"javascript_exec","text":"location.reload(); 'reloading'","tabId":"seed"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 2500)); const wait = (ms) => new Promise(r => setTimeout(r, ms));\nlocation.hash = window.__copied ? window.__copied.split('#')[1] : ''; await wait(100);\n// Reload cleared __copied; make a fresh link from this save.\nnavigator
+… (664 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The new player was named "Player 1 (2)". Now removing the two test players and keeping the original:
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const wait = (ms) => new Promise(r => setTimeout(r, ms));\nfor (let i = 0; i < 3; i++) {\n  window.inkling.menu.show('players'); await wait(200);\n  const edit = [...document.querySelectorAll('[data-id^=\"edit-\"]')].find(b => b.dataset.id !== 'edit-main');\n  if 
+… (455 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Back to one player. Last check, a damaged link:
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"window.inkling.menu.show('title'); location.hash = 't=AAAAbroken'; await new Promise(r => setTimeout(r, 600)); ({screen: window.inkling.menu.screen, text: document.querySelector('.menu-panel').innerText, hash: location.hash})","tabId":"seed"}`
+- **Shell:** Run check and build
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL|×" | head -3 && npm run build 2>&1 | tail -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M23 is working on `feat/m23-transfer` as version 2.13.0. `npm run check` (407 tests) and `npm run build` pass, and I tried each part in the browser. Nothing is committed yet, and there are no snapshots.
+
+**Sending (Manage saves → Copy transfer link)**
+- It copies a link holding the current player's name, badge and save. The save is compressed with the browser's built-in `CompressionStream` and goes after `#t=`, which browsers never send to the server. Your dev save made a 1,433-character link.
+- Downloaded word lists are left out to keep links short; they can be downloaded again.
+- A warning under the button says anyone with the link can load a copy, so send it only to yourself.
+- If the clipboard isn't available, the link shows in a selected box to copy by hand. If a save makes a link over 12,000 characters, you're told to use Export instead.
+
+**Receiving (opening the link)**
+- The game reads the link, removes it from the address bar, and shows the player's badge, name, level, course chapter and sticker count.
+- **Add as a new player** is the default and changes nothing that's already there. If the name is taken it becomes "Player 1 (2)", for example. The button is disabled if the device already has the 8-player maximum.
+- **Replace {current}'s progress** takes a second confirmation that spells out what will be lost and suggests exporting a backup first.
+- The save goes through the same checks as importing a backup file. A damaged link or one from a newer version of the game gets a clear message.
+
+**What I checked in the browser:** copy, open, the Replace confirmation (backed out of), Add as a new player, the duplicate-name numbering, and a damaged link. Afterwards I deleted the two test players, so your dev data is back to one player.
+
+**Docs:** `PRIVACY.md` no longer says nothing moves between devices; it has a new "Moving to another device" section. There's also a requirements row and a release note.
+
+There's no merging: saves move whole, either as an extra player or as a replacement. This was the last milestone in the plan we made.
+
+## 🧑 Prompt
+
+> Yes, finish M23
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check how the snapshot script evaluates code
+
+  ```bash
+  grep -n "async function evaluate\|const evaluate" -A8 scripts/snapshots.ts | head -12
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The script awaits promises, so the tour can build a real transfer link with the game's own code:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Add transfer shots; run m23 and latest snapshots
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/snapshots.ts'
+  s=open(p).read()
+  a="""/** The next character the auto-typer should press, or '' to wait. */"""
+  s=s.replace(a,"""/**
+   * Open a sample transfer link (M23), made by the game's own code from a copy
+   * of this save with a little progress, as if "Pip" sent it from another device.
+   */
+  const SAMPLE_TRANSFER = `(async () => {
+    const { encodeTransfer } = await import('/src/storage/transfer.ts');
+    const save = structuredClone(window.inkling.store.data);
+    save.profile.ink = 5200;
+    save.apprentice.unlocked = 9;
+    location.hash = await encodeTransfer(save, { na
+  … (724 more characters)
+  ```
+- **Read** `docs/progression/m23/transfer.png`
+- **Read** `docs/progression/m23/save-data.png`
+
+</details>
+
+### 🤖 Claude
+
+Both shots look right. Keeping just these two and writing the M23 notes:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Trim snapshots and write M23 notes
+
+  ```bash
+  git status --short docs/progression/latest | grep '^??' | awk '{print $2}' | xargs rm -f; find docs/progression/m23 -type f ! -name transfer.png ! -name save-data.png -delete; ls docs/progression/m23; python3 - <<'EOF'
+  p='docs/progression/README.md'
+  s=open(p).read()
+  def rep(a,b):
+      global s
+      assert a in s, a; s=s.replace(a,b,1)
+  rep("""## Keeping this up to date""","""### M23: Transfer links
+
+  | Manage saves | Opening a transfer link |
+  |---|---|
+  | <img src="m23/save-data.png" width="420" alt="Manage saves with a new Copy transfer link row and a warning to only send the link to yourself"> | 
+  … (1111 more characters)
+  ```
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; f=docs/transcripts/2026-11-17-game-competitiveness-and-sharing-c10c68be.md; first=$(git config user.name | awk '{print $1}'); printf 'name: %s\n' "$(grep -ci "$first" $f)"; for p in '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' '/Users/[A-Za-z]+' '(ghp|gho|github_pat|xox[bp])[-_][A-Za-z0-9]{10,}|sk-[A-Za-z0-9]{20,}' '#t=[A-Za-z0-9_-]{200,}'; do printf '%s: %s\n' "$p" "$(grep -Eoc "$p" $f)"; done; git status --short docs/transcripts
   ```
 
 </details>

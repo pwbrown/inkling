@@ -285,15 +285,24 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 
 **Changed:** links are checked field by field; names are cut to letters, numbers and spaces and dropped if the word filter objects. PRIVACY.md says what links and pictures contain.
 
+### M23: Transfer links
+
+| Manage saves | Opening a transfer link |
+|---|---|
+| <img src="m23/save-data.png" width="420" alt="Manage saves with a new Copy transfer link row and a warning to only send the link to yourself"> | <img src="m23/transfer.png" width="420" alt="A player from another device: Pip's badge, level and stickers, with Add as a new player and Replace buttons"> |
+| A **Copy transfer link** row, with a warning to send it only to yourself. | Opening one. (Sample data from the snapshot script.) |
+
+**New:** **transfer links** move a player to another device with no server. **Copy transfer link** in Manage saves compresses the player's name, badge and save (without downloaded word lists) into the part of a link after `#t=`, which browsers never send to the host. Opening it on the other device offers **Add as a new player** (numbered if the name is taken) or **Replace** the current player's progress, after a second confirmation. The save is checked just like an imported backup file; damaged links, saves from a newer version, and saves too big for a link each get a clear message.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m22
+npm run snapshots -- m23
 ```
 
-That writes a standard set of shots to `docs/progression/m22/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m23/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

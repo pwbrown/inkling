@@ -14,6 +14,11 @@ export interface SaveDataOptions {
   onImported(save: SaveData): void;
   /** Called after everything was erased. */
   onErased(): void;
+  /**
+   * The link that moves this player to another device, or 'tooLong' if the
+   * save is too big for a link. Left out where the browser can't make one.
+   */
+  transferLink?: () => Promise<string | 'tooLong'>;
   onClose(): void;
 }
 
@@ -86,6 +91,44 @@ export function openSaveData(host: HTMLElement, options: SaveDataOptions): { clo
 
   const row = (help: string, button: HTMLButtonElement) => h('div', { className: 'sd-row' }, [h('p', {}, [help]), button]);
 
+  /** Move to another device: copy a link holding this player's save (storage/transfer.ts). */
+  const transferRow = (makeLink: () => Promise<string | 'tooLong'>) => {
+    const linkBox = h('textarea', { className: 'sd-link', readonly: true, rows: 3, 'aria-label': t('saveData.transferLinkLabel') });
+    linkBox.hidden = true;
+    const button = h(
+      'button',
+      {
+        type: 'button',
+        className: 'tc-secondary',
+        onClick: async () => {
+          await store.flush();
+          const link = await makeLink();
+          if (link === 'tooLong') {
+            status.textContent = t('saveData.transferTooLong');
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(link);
+            status.textContent = t('saveData.transferCopied');
+          } catch {
+            // No clipboard: show the link, selected, to copy by hand.
+            linkBox.value = link;
+            linkBox.hidden = false;
+            linkBox.select();
+            status.textContent = t('saveData.transferCopyManually');
+          }
+        },
+      },
+      [t('saveData.transfer')],
+    );
+    return h('div', { className: 'sd-row' }, [
+      h('p', {}, [t('saveData.transferHelp')]),
+      h('p', { className: 'tc-warning' }, [t('saveData.transferWarning')]),
+      button,
+      linkBox,
+    ]);
+  };
+
   function showMain() {
     refreshSummary();
     body.replaceChildren(
@@ -109,6 +152,7 @@ export function openSaveData(host: HTMLElement, options: SaveDataOptions): { clo
         t('saveData.importHelp'),
         h('button', { type: 'button', className: 'tc-secondary', onClick: () => fileInput.click() }, [t('saveData.import')]),
       ),
+      ...(options.transferLink ? [transferRow(options.transferLink)] : []),
       h('div', { className: 'sd-row' }, [
         h(
           'button',

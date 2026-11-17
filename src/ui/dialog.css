@@ -630,3 +630,12 @@
 :root[data-motion='reduced'] .tc-chip {
   transition: none;
 }
+
+/* A transfer link to copy by hand, when the clipboard isn't available. */
+.sd-link {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  font: 12px/1.4 ui-monospace, Menlo, monospace;
+  word-break: break-all;
+}

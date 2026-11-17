@@ -30,7 +30,8 @@ export type MenuScreen =
   | 'about'
   | 'daily'
   | 'stickers'
-  | 'challenge';
+  | 'challenge'
+  | 'transfer';
 
 /** Inky Keys' source code and issue forms. */
 export const REPO_URL = 'https://github.com/pwbrown/inky-keys';
@@ -101,6 +102,21 @@ export interface ChallengeView {
   otherLayout: string | null;
   myLayout: string;
 }
+
+/** A save from a transfer link, before the player decides what to do with it. */
+export type TransferView =
+  | { error: string }
+  | {
+      name: string;
+      badge: Badge;
+      /** e.g. "Scribe · Level 5 · Apprentice chapter 4". */
+      detail: string;
+      stickers: number;
+      /** There's room for another player on this device. */
+      canAdd: boolean;
+      /** The player whose save "Replace" would overwrite. */
+      currentName: string;
+    };
 
 /** The Daily Page screen. */
 export interface DailyView {
@@ -188,6 +204,11 @@ export interface MenuHooks {
   challenge(): ChallengeView | null;
   onTakeChallenge(): void;
   onDismissChallenge(): void;
+  /** A save from a transfer link waiting for a choice, or null. */
+  transfer(): TransferView | null;
+  onTransferAdd(): void;
+  onTransferReplace(): void;
+  onDismissTransfer(): void;
   /** Share today's result as a picture: share sheet, clipboard or a saved file. */
   onShareImage(): Promise<'shared' | 'copied' | 'saved' | 'cancelled'>;
   /** Copy the share text. Resolves false if the clipboard isn't available. */
@@ -313,6 +334,9 @@ export class Menu {
         break;
       case 'challenge':
         this.panel.replaceChildren(...this.challengeScreen());
+        break;
+      case 'transfer':
+        this.panel.replaceChildren(...this.transferScreen());
         break;
       default:
         return;
@@ -697,6 +721,80 @@ export class Menu {
         h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'back', onClick: dismiss }, [t('challenge.notNow')]),
       ]),
     ].filter((el): el is HTMLElement => el !== null);
+  }
+
+  /** Replace is a second step, so a save isn't overwritten by one slip. */
+  private confirmingReplace = false;
+
+  /** A save from a transfer link: whose it is, and add it as a player or put it in place of this one. */
+  private transferScreen(): HTMLElement[] {
+    const v = this.hooks.transfer();
+    if (!v) {
+      queueMicrotask(() => this.show('title'));
+      return [];
+    }
+    const dismiss = () => {
+      this.confirmingReplace = false;
+      this.hooks.onDismissTransfer();
+      this.show('title');
+    };
+    const back = (label: string) =>
+      h('div', { className: 'tc-actions' }, [h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'back', onClick: dismiss }, [label])]);
+    if ('error' in v) {
+      return [h('h2', { id: 'menu-title' }, [t('transfer.title')]), h('p', { className: 'tc-intro' }, [v.error]), back(t('menu.back'))];
+    }
+    if (this.confirmingReplace) {
+      return [
+        h('h2', { id: 'menu-title' }, [t('transfer.replaceTitle')]),
+        h('p', { className: 'tc-warning' }, [t('transfer.replaceWarning', { current: v.currentName, name: v.name })]),
+        h('nav', { className: 'menu-list' }, [
+          this.button('replace-yes', t('transfer.replaceConfirm', { current: v.currentName }), () => {
+            this.confirmingReplace = false;
+            this.hooks.onTransferReplace();
+          }),
+          this.button(
+            'replace-no',
+            t('transfer.replaceCancel'),
+            () => {
+              this.confirmingReplace = false;
+              this.render();
+            },
+            { primary: true, autofocus: true },
+          ),
+        ]),
+      ];
+    }
+    const add = this.button('transfer-add', t('transfer.add'), () => this.hooks.onTransferAdd(), {
+      detail: v.canAdd ? t('transfer.addDetail') : t('transfer.addFull'),
+      primary: v.canAdd,
+      autofocus: v.canAdd,
+    });
+    add.disabled = !v.canAdd;
+    return [
+      h('h2', { id: 'menu-title' }, [t('transfer.title')]),
+      h('p', { className: 'tc-intro' }, [t('transfer.intro')]),
+      h('div', { className: 'menu-player transfer-player' }, [
+        artElement(badgeSvg(v.badge), 'menu-player-badge'),
+        h('span', { className: 'transfer-player-text' }, [
+          h('strong', {}, [v.name]),
+          h('span', { className: 'menu-detail' }, [v.detail]),
+          h('span', { className: 'menu-detail' }, [t('menu.stickersDetail', { earned: v.stickers, total: this.hooks.stickerBook().total })]),
+        ]),
+      ]),
+      h('nav', { className: 'menu-list' }, [
+        add,
+        this.button(
+          'transfer-replace',
+          t('transfer.replace', { current: v.currentName }),
+          () => {
+            this.confirmingReplace = true;
+            this.render();
+          },
+          { detail: t('transfer.replaceDetail') },
+        ),
+      ]),
+      back(t('transfer.notNow')),
+    ];
   }
 
   /** One tile per page, coloured by its grade, with the page number and grade on it. */

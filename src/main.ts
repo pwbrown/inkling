@@ -37,8 +37,9 @@ import { cleanChallengeName, decodeChallenge, encodeChallenge, type Challenge } 
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, getLocale, setLocale, t, type MessageKey } from './i18n';
 import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel } from './core/rewards';
-import { defaultSave, migrate, type SaveData } from './storage/schema';
-import { PlayerStore, cleanName, saveKeyFor, type Player } from './storage/profiles';
+import { SaveFormatError, defaultSave, migrate, type SaveData } from './storage/schema';
+import { MAX_TRANSFER_LENGTH, canTransfer, decodeTransfer, encodeTransfer, hasTransfer, type Transfer } from './storage/transfer';
+import { PlayerStore, cleanName, saveKeyFor, uniqueName, type Player } from './storage/profiles';
 import { DEFAULT_CONTENT_LEVEL, type ContentLevel } from './content/contentFilter';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { loadFonts } from './fonts';
@@ -426,13 +427,70 @@ async function main(): Promise<void> {
    * wouldn't allow is dropped.
    */
   const readChallenge = () => {
+    if (!new URLSearchParams(location.hash.replace(/^#/, '')).has('c')) return;
     const challenge = decodeChallenge(location.hash, isLayoutId);
-    if (!location.hash.includes('c=')) return;
     history.replaceState(null, '', `${location.pathname}${location.search}`);
     if (!challenge) return;
     if (challenge.name && pack.blocklistFor('family').blocksString(challenge.name)) challenge.name = null;
     pendingChallenge = challenge;
     if (game.phase === 'ready' && !dialogOpen) menu.show('challenge');
+  };
+
+  /** A save from a transfer link (or why it couldn't be read), waiting for the player to choose. */
+  let pendingTransfer: Transfer | { error: string } | null = null;
+
+  /** Read a transfer link (#t=…), clear it from the address bar, and ask what to do with it. */
+  const readTransfer = async () => {
+    const hash = location.hash;
+    if (!hasTransfer(hash)) return;
+    history.replaceState(null, '', `${location.pathname}${location.search}`);
+    try {
+      pendingTransfer = await decodeTransfer(hash);
+    } catch (error) {
+      pendingTransfer = {
+        error: error instanceof SaveFormatError && error.reason === 'newer' ? t('transfer.newer') : t('transfer.damaged'),
+      };
+    }
+    if (game.phase === 'ready' && !dialogOpen) menu.show('transfer');
+  };
+
+  /** Links someone opened: a challenge or a transfer. */
+  const readLinks = () => {
+    readChallenge();
+    void readTransfer();
+  };
+
+  /** The link that moves the active player to another device. */
+  const transferLink = async (): Promise<string | 'tooLong'> => {
+    const fragment = await encodeTransfer(store.data, { name: players.active.name, badge: players.active.badge });
+    const link = `${location.origin}${location.pathname}#${fragment}`;
+    return link.length > MAX_TRANSFER_LENGTH ? 'tooLong' : link;
+  };
+
+  /** Keep a transferred save as a new player on this device, and switch to them. */
+  const addTransferredPlayer = async () => {
+    const pending = pendingTransfer;
+    if (!pending || 'error' in pending || dialogOpen || game.phase !== 'ready') return;
+    const name = uniqueName(
+      pending.player.name || t('players.defaultName'),
+      players.list.players.map((p) => p.name),
+    );
+    const player = await players.add(name, pending.player.badge);
+    if (!player) return;
+    await backend.save(pending.save, saveKeyFor(player.id));
+    pendingTransfer = null;
+    await switchPlayer(player.id);
+  };
+
+  /** Put a transferred save in place of the active player's. */
+  const replaceWithTransfer = async () => {
+    const pending = pendingTransfer;
+    if (!pending || 'error' in pending || dialogOpen || game.phase !== 'ready') return;
+    await store.replace(pending.save);
+    pendingTransfer = null;
+    applySave();
+    renderer.rebuild();
+    menu.show('title');
   };
 
   const continueSaved = () => {
@@ -487,6 +545,7 @@ async function main(): Promise<void> {
       store,
       onImported: applySave,
       onErased: applySave,
+      ...(canTransfer() ? { transferLink } : {}),
       onClose: () => {
         dialogOpen = false;
         menu.refresh();
@@ -889,6 +948,25 @@ async function main(): Promise<void> {
     onDismissChallenge: () => {
       pendingChallenge = null;
     },
+    transfer: () => {
+      const pending = pendingTransfer;
+      if (!pending) return null;
+      if ('error' in pending) return { error: pending.error };
+      const { save, player } = pending;
+      return {
+        name: player.name || t('players.defaultName'),
+        badge: player.badge,
+        detail: describePlayer(save),
+        stickers: Object.keys(save.stickers.earned).length,
+        canAdd: players.canAdd,
+        currentName: players.active.name,
+      };
+    },
+    onTransferAdd: () => void addTransferredPlayer(),
+    onTransferReplace: () => void replaceWithTransfer(),
+    onDismissTransfer: () => {
+      pendingTransfer = null;
+    },
     onCopyDaily: async () => {
       const text = dailyShareText();
       if (!text) return false;
@@ -1271,8 +1349,8 @@ async function main(): Promise<void> {
   giveStickers({}, false);
 
   // Opened from a challenge link (or one pasted into the address bar while here).
-  readChallenge();
-  window.addEventListener('hashchange', readChallenge);
+  readLinks();
+  window.addEventListener('hashchange', readLinks);
 
   renderer.app.ticker.add((ticker) => {
     const alpha = loop.advance(ticker.deltaMS);

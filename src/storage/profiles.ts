@@ -47,6 +47,18 @@ export function cleanName(name: string): string {
   return [...name.replace(/\s+/g, ' ').trim()].slice(0, MAX_NAME_LENGTH).join('');
 }
 
+/** `name`, or "name (2)", "name (3)"… if a player here already has it. */
+export function uniqueName(name: string, taken: readonly string[]): string {
+  const clean = cleanName(name);
+  const used = new Set(taken.map((n) => n.toLowerCase()));
+  if (!used.has(clean.toLowerCase())) return clean;
+  for (let n = 2; ; n++) {
+    const suffix = ` (${n})`;
+    const candidate = [...clean].slice(0, MAX_NAME_LENGTH - suffix.length).join('').trimEnd() + suffix;
+    if (!used.has(candidate.toLowerCase())) return candidate;
+  }
+}
+
 export function defaultPlayers(firstName: string, now = new Date()): PlayerList {
   return {
     version: PROFILES_VERSION,

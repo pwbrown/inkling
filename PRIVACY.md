@@ -4,7 +4,7 @@ Inky Keys collects **nothing** about you.
 
 - **No analytics, tracking, ads, crash reporting or third-party scripts.** The game's code only talks to the site it was loaded from, plus the optional word download described below.
 - **Your data stays in your browser.** Your chosen keys, presets, progress, best scores and per-key typing stats are stored on your device (IndexedDB) and never sent anywhere. Display and sound settings are kept in the browser's local storage.
-- **Players.** Several people can play on one browser, each with their own save. A player is just a name and an ink-drop color you choose, stored with the saves on your device. There are no accounts and nothing is shared between devices.
+- **Players.** Several people can play on one browser, each with their own save. A player is just a name and an ink-drop color you choose, stored with the saves on your device. There are no accounts, and nothing moves between devices unless you send it yourself (see **Moving to another device** below).
 - **You control it.** In the game, open **Manage saves** (press **B** on the main menu) to export a backup of the current player's save, import one, or erase it. **Switch player** (U) lets you rename or delete players. Clearing your browser's site data for Inky Keys erases everything.
 - **Offline.** After the first visit, the game runs from your browser's cache and doesn't need a connection.
 
@@ -17,6 +17,12 @@ When the game is served from a website (for example GitHub Pages), that host rec
 Pressing **W** opens **Word lists**, where you can download words related to a topic. Only when you click **Download words**, Inky Keys sends the topic you typed, and nothing else, to the free [Datamuse API](https://www.datamuse.com/api/) at `api.datamuse.com`. The request carries no cookies, no referrer and no identifiers. Datamuse receives the request like any web server would (including your IP address) under its own terms. The downloaded words are saved on your device and work offline.
 
 This is the only network request the game makes beyond loading itself, and it never happens unless you ask.
+
+## Moving to another device
+
+In **Manage saves**, **Copy transfer link** puts the current player's name, badge and progress (everything in their save except downloaded word lists) into a link, after a `#`. Browsers never send that part to the website. You send the link to yourself however you like, and open it on the other device, where the game reads it, removes it from the address bar, and asks whether to add the player or replace the current one.
+
+Anyone who has the link can load a copy of that progress, so send it only to yourself. The game checks a transfer link exactly as it checks an imported backup file.
 
 ## Sharing your Daily Page result
 

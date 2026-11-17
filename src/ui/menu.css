@@ -798,3 +798,18 @@
   height: 18px;
   margin: 0;
 }
+
+/* The player in a transfer link. */
+.transfer-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-start;
+  cursor: default;
+}
+
+.transfer-player-text {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
