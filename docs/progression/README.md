@@ -39,7 +39,7 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 | M9 | M12 | M13 | M14 | Latest |
 |---|---|---|---|---|
 | <img src="m09/menu.png" width="170" alt="M9 main menu"> | <img src="m12/menu.png" width="170" alt="M12 menu with Apprentice and Practice"> | <img src="m13/menu.png" width="170" alt="M13 menu with Desk and rank"> | <img src="m14/menu.png" width="170" alt="M14 menu with player badge and About"> | <img src="latest/menu.png" width="170" alt="Latest menu"> |
-| A real **main menu** with a logo replaces the card. | **Apprentice** and **Practice** replace New notebook and Choose keys. | **Desk** button, and your rank and ink along the bottom. | **Player** badge and **About**. The course is now 27 chapters long. | **Free Write** (formerly Practice) comes first; new players start on letters, capitals and space. A **Daily Page** button (M20). |
+| A real **main menu** with a logo replaces the card. | **Apprentice** and **Practice** replace New notebook and Choose keys. | **Desk** button, and your rank and ink along the bottom. | **Player** badge and **About**. The course is now 27 chapters long. | **Free Write** (formerly Practice) comes first; new players start on letters, capitals and space. A **Daily Page** button (M20) and a **Sticker book** (M21). |
 
 ### Type Case (choosing keys)
 
@@ -256,15 +256,31 @@ No new screens this time: everything changed is in motion and in which pages com
 
 **Changed:** graded pages break the score down into points for keys, the combo and the Highlighter. Seeded pages draw each creature from its own stream, so how you play never changes what comes next (save version 9).
 
+### M21: Stickers
+
+<img src="m21/stickers.png" width="420" alt="The sticker book: round stickers in shelves, earned ones in color with the date, the rest as faded dashed outlines with how to earn them">
+
+(The stickers in this shot are sample data, filled in by the snapshot script.)
+
+**New:** a **sticker book** (K on the menu) with 26 stickers on six shelves:
+- **Pages:** first page, an A+, runs of 50, 100 and 200 keys, 10,000 points in a notebook, a clean margin on Hard or Expert.
+- **Speed:** 30, 50 and 70 words a minute on a page (with at least 60 keys typed).
+- **Bosses:** the first boss, a spotless boss page, and all five kinds.
+- **Apprentice and ranks:** every star in a chapter, halfway, graduating, and levels 5, 12 and 23.
+- **Daily Page:** the first one, a perfect day, and 3, 7 and 30 days in a row.
+- **Secrets:** two hidden ones, shown as "?" until earned.
+
+Stickers arrive the moment they're earned, with a toast in the corner that doesn't stop play and a line on the page card. New ones are marked until the book is opened. Progress from before stickers existed (level, the Apprentice course) earns its stickers on the next visit (save version 10).
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m20
+npm run snapshots -- m21
 ```
 
-That writes a standard set of shots to `docs/progression/m20/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m21/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

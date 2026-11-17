@@ -854,7 +854,7 @@ The game is now **Inky Keys** on the `chore/rename` branch, nothing is committed
 - **Shell:** Check the transcript for names and local paths
 
   ```bash
-  F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; grep -n -i -o -E ".{30}(philip|[removed]|claude-501|scratchpad|tool-results).{30}" $F | head; grep -c "pwbrown" $F
+  F=docs/transcripts/2026-11-16-game-name-change-feasibility-26b363a8.md; grep -n -i -o -E ".{30}([removed]|[removed]|claude-501|scratchpad|tool-results).{30}" $F | head; grep -c "pwbrown" $F
   ```
 
 </details>
@@ -1054,7 +1054,7 @@ The repo is now **github.com/pwbrown/inky-keys**, and the game is live at **http
 - **Shell:** Export the transcript and scan it for private details
 
   ```bash
-  npm run transcript 2>&1 | grep -c Wrote; git status --short; F=$(git status --short docs/transcripts | awk '{print $2}' | grep -v README); echo "$F"; grep -n -i -o -E ".{20}([a-z0-9._%+-]+@[a-z0-9.-]+\.(com|org|net)|/Users/[a-z]+|philip|[removed]|claude-501|ghp_|sk-[a-z0-9]{10}).{20}" $F | head
+  npm run transcript 2>&1 | grep -c Wrote; git status --short; F=$(git status --short docs/transcripts | awk '{print $2}' | grep -v README); echo "$F"; grep -n -i -o -E ".{20}([a-z0-9._%+-]+@[a-z0-9.-]+\.(com|org|net)|/Users/[a-z]+|[removed]|[removed]|claude-501|ghp_|sk-[a-z0-9]{10}).{20}" $F | head
   ```
 
 </details>

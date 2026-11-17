@@ -106,6 +106,19 @@ const SAMPLE_DAILY = `(() => {
   return 'ok';
 })()`;
 
+/**
+ * Some sample stickers for the sticker book shot (M21), a couple marked new.
+ * Only in memory, for the picture; nothing is saved.
+ */
+const SAMPLE_STICKERS = `(() => {
+  const store = window.inkling && window.inkling.store;
+  if (!store || !store.data.stickers) return 'no stickers';
+  const at = new Date().toISOString();
+  const ids = ['firstPage', 'goldStar', 'onARoll', 'quickPen', 'firstBoss', 'scribe', 'dailyFirst', 'onFire', 'midnightOil'];
+  store.data.stickers = { earned: Object.fromEntries(ids.map((id) => [id, at])), unseen: ['onFire', 'midnightOil'], bossesBeaten: ['spill'] };
+  return 'ok';
+})()`;
+
 /** The next character the auto-typer should press, or '' to wait. */
 const NEXT_KEY = (maxX: number) => `(() => {
   const w = window.inkling && window.inkling.world;
@@ -133,6 +146,8 @@ const TOUR: Step[] = [
   { eval: SHOW_BOSSES }, { wait: 300 }, { shot: 'how-to-play-bosses' }, { key: 'Escape' },
   // The Daily Page (M20), with a sample streak.
   { eval: SAMPLE_DAILY }, { click: 'Daily Page' }, { eval: SCROLL_TOP }, { shot: 'daily' }, { key: 'Escape' },
+  // The sticker book (M21), with some sample stickers.
+  { eval: SAMPLE_STICKERS }, { click: 'Sticker book' }, { eval: SCROLL_TOP }, { shot: 'stickers' }, { key: 'Escape' },
   { click: FREE_WRITE }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },
   // A fresh player gets the "New on this page" briefing before their first page.

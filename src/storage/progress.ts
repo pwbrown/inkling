@@ -3,7 +3,7 @@
  * saving/resuming a notebook. Pure functions, so they're easy to test.
  */
 import { APPRENTICE_CHAPTERS, starKey, type GameMode } from '../core/campaign';
-import { GAME_CONFIG, type Difficulty } from '../core/config';
+import { GAME_CONFIG, type BossKind, type Difficulty } from '../core/config';
 import type { Stats } from '../core/stats';
 import {
   beginPage,
@@ -15,6 +15,8 @@ import {
   type PageState,
   type World,
 } from '../core/world';
+import { newStickers, type StickerFacts } from '../core/stickers';
+import { levelForInk } from '../core/rewards';
 import type { DailyProgress, DailyResult, KeyStat, SaveData, SavedNotebook } from './schema';
 
 /** Add a page's (or notebook's) per-key hits and misses to the saved totals. */
@@ -171,4 +173,27 @@ export function recordDaily(save: SaveData, id: number, result: DailyResult): bo
   const ids = Object.keys(daily.results).map(Number).sort((a, b) => b - a);
   for (const old of ids.slice(GAME_CONFIG.daily.keepResults)) delete daily.results[old];
   return true;
+}
+
+/** What the sticker rules need from the save, plus what just happened. */
+export function stickerFacts(save: Readonly<SaveData>, extra: Pick<StickerFacts, 'page' | 'daily'> = {}): StickerFacts {
+  return {
+    level: levelForInk(save.profile.ink),
+    apprentice: save.apprentice,
+    bossesBeaten: save.stickers.bossesBeaten,
+    ...extra,
+  };
+}
+
+/** Give any stickers the facts earn. Returns their ids, newest marked unseen. */
+export function awardStickers(save: SaveData, facts: StickerFacts, now = new Date()): string[] {
+  const fresh = newStickers(facts, save.stickers.earned).map((s) => s.id);
+  for (const id of fresh) save.stickers.earned[id] = now.toISOString();
+  save.stickers.unseen = [...new Set([...save.stickers.unseen, ...fresh])];
+  return fresh;
+}
+
+/** Remember a boss kind as beaten. */
+export function recordBossBeaten(save: SaveData, boss: BossKind): void {
+  if (!save.stickers.bossesBeaten.includes(boss)) save.stickers.bossesBeaten.push(boss);
 }

@@ -724,7 +724,7 @@ Checks and the production build pass. Next I'm adding the license and CI, then I
   cat > LICENSE <<'EOF'
   MIT License
 
-  Copyright (c) 2026 Philip Brown
+  Copyright (c) 2026 [removed] Brown
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal

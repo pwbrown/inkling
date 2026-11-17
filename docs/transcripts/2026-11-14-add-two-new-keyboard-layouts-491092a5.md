@@ -956,12 +956,12 @@ I left a hand-over note in the shared notes folder (`m16-layouts.md`).
 - **Shell:** Scan transcripts for private details
 
   ```bash
-  f="docs/transcripts/2026-11-14-add-two-new-keyboard-layouts-491092a5.md docs/transcripts/2026-11-14-game-look-feel-and-mechanics-1bcd11e0.md docs/transcripts/README.md"; grep -nEio "[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|/Users/[a-z]+|sk-[a-z0-9]{10,}|ghp_[a-z0-9]+|token[=:][^ ]+|philip|pwbrown" $f | sort | uniq -c | head -20; git diff --stat docs/transcripts
+  f="docs/transcripts/2026-11-14-add-two-new-keyboard-layouts-491092a5.md docs/transcripts/2026-11-14-game-look-feel-and-mechanics-1bcd11e0.md docs/transcripts/README.md"; grep -nEio "[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|/Users/[a-z]+|sk-[a-z0-9]{10,}|ghp_[a-z0-9]+|token[=:][^ ]+|[removed]|pwbrown" $f | sort | uniq -c | head -20; git diff --stat docs/transcripts
   ```
 - **Shell:** Scan transcripts for private details
 
   ```bash
-  grep -nEio "[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|/Users/[a-z]+|sk-[a-z0-9]{10,}|ghp_[a-z0-9]+|philip|pwbrown|Application Support" docs/transcripts/2026-11-14-add-two-new-keyboard-layouts-491092a5.md docs/transcripts/2026-11-14-game-look-feel-and-mechanics-1bcd11e0.md docs/transcripts/README.md | sort | uniq -c | head -20
+  grep -nEio "[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|/Users/[a-z]+|sk-[a-z0-9]{10,}|ghp_[a-z0-9]+|[removed]|pwbrown|Application Support" docs/transcripts/2026-11-14-add-two-new-keyboard-layouts-491092a5.md docs/transcripts/2026-11-14-game-look-feel-and-mechanics-1bcd11e0.md docs/transcripts/README.md | sort | uniq -c | head -20
   ```
 - **Shell:** Inspect flagged transcript lines
 

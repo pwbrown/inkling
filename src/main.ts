@@ -34,7 +34,7 @@ import { APPRENTICE_CHAPTERS, NEW_KEY_WEIGHT, lessonsFor, apprenticeKeys, appren
 import { pageGrade, type Grade } from './core/grade';
 import { DAILY_PAGES, MARK_SQUARES, dailyId, dailyKeys, dailyPages, dailySeed, streakWeek } from './core/daily';
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
-import { formatNumber, setLocale, t, type MessageKey } from './i18n';
+import { formatNumber, getLocale, setLocale, t, type MessageKey } from './i18n';
 import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel } from './core/rewards';
 import { defaultSave, migrate, type SaveData } from './storage/schema';
 import { PlayerStore, cleanName, saveKeyFor, type Player } from './storage/profiles';
@@ -54,8 +54,11 @@ import {
   currentStreak,
   keyWeights,
   pageBestKey,
+  awardStickers,
+  recordBossBeaten,
   recordDaily,
   recordPageBest,
+  stickerFacts,
   mergeKeyStats,
   nextPagePosition,
   recordApprenticePage,
@@ -70,6 +73,8 @@ import { openBriefingDialog } from './ui/briefingDialog';
 import { openUnlockDialog, type UnlockedItem } from './ui/unlockDialog';
 import { openWordLists } from './ui/wordLists';
 import { openWhatsNewDialog } from './ui/whatsNewDialog';
+import { showStickerToast } from './ui/stickerToast';
+import { STICKERS, type StickerFacts, type StickerGroup } from './core/stickers';
 import { RELEASES, compareVersions, releasesToAnnounce, MAX_NEW_RELEASES_SHOWN, type Release } from './core/releases';
 import { APP_VERSION, loadSeenVersion, saveSeenVersion } from './version';
 
@@ -116,6 +121,8 @@ async function main(): Promise<void> {
   let dailyGrades: Grade[] = [];
   /** The Daily Page result just recorded, for its last card. */
   let dailyOutcome: { newBest: boolean; best: number; streak: number } | null = null;
+  /** Stickers earned at the end of the page or notebook just finished, for its card. */
+  let recentStickers: string[] = [];
   /** Ink earned on the page just finished, and any level-up, for the graded page. */
   let reward: { ink: number; levelUp: number | null; unlocked: string[]; items: UnlockedItem[] } = { ink: 0, levelUp: null, unlocked: [], items: [] };
 
@@ -141,7 +148,17 @@ async function main(): Promise<void> {
     createRenderer(host, {
       onConfirm: () => actions.start(),
       onLink: (id) => actions.onLink(id),
-      extraLines: (w) => {
+      extraLines: (w) => [...cardLines(w), ...stickerLines(w)],
+    }, () => ({
+      textScale: TEXT_SCALE[settings.textSize],
+      reducedMotion: reducedMotion(settings, prefersReducedMotion()),
+      screenEffects: settings.screenEffects,
+      cosmetics: store.data.profile.cosmetics,
+    })),
+  ]);
+
+  /** A card's lines from the save and this session (records, ink, level-ups) for the phase. */
+  function cardLines(w: { phase: GamePhase; mode: string; difficulty: typeof game.difficulty }): string[] {
         if (w.phase === 'pageCleared') {
           const lines = [];
           if (pageBest && pageBest.previous > 0) {
@@ -183,14 +200,18 @@ async function main(): Promise<void> {
           return lines;
         }
         return [];
-      },
-    }, () => ({
-      textScale: TEXT_SCALE[settings.textSize],
-      reducedMotion: reducedMotion(settings, prefersReducedMotion()),
-      screenEffects: settings.screenEffects,
-      cosmetics: store.data.profile.cosmetics,
-    })),
-  ]);
+  }
+
+  /** "New sticker: Gold Star!" on the card that ends a page or notebook. */
+  function stickerLines(w: { phase: GamePhase }): string[] {
+    if (recentStickers.length === 0) return [];
+    if (w.phase !== 'pageCleared' && w.phase !== 'notebookComplete' && w.phase !== 'gameOver') return [];
+    return [t('overlay.newSticker', { names: recentStickers.map(stickerName).join(', ') })];
+  }
+
+  function stickerName(id: string): string {
+    return t(`sticker.${id}.name` as MessageKey);
+  }
 
   /**
    * Content for a key set, weighted toward the player's weak keys and, in the
@@ -270,6 +291,8 @@ async function main(): Promise<void> {
     game.selectedDifficulty = store.data.difficulty;
     refreshAbilities();
     refreshTips();
+    // An imported save may already have earned stickers.
+    giveStickers({}, false);
     menu.refresh();
   };
 
@@ -334,6 +357,9 @@ async function main(): Promise<void> {
         ? { newBest: game.stats.score > previousBest && game.stats.score > 0, best: save.daily.best, streak: save.daily.streak }
         : null;
     });
+    if (dailyOutcome) {
+      giveStickers({ daily: { grades: dailyGrades, pages: DAILY_PAGES, finished, streak: store.data.daily.streak } });
+    }
   };
 
   /** The text to copy for today's result, or null before it's played. */
@@ -790,6 +816,42 @@ async function main(): Promise<void> {
       }
     },
     canRestart: () => canRestart(game),
+    stickerDetail: () => {
+      const { earned, unseen } = store.data.stickers;
+      const args = { earned: Object.keys(earned).length, total: STICKERS.length, count: unseen.length };
+      return unseen.length > 0 ? t('menu.stickersNew', args) : t('menu.stickersDetail', args);
+    },
+    stickerBook: () => {
+      const { earned, unseen } = store.data.stickers;
+      const date = new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium' });
+      const groups: StickerGroup[] = ['pages', 'speed', 'bosses', 'course', 'daily', 'secret'];
+      return {
+        earned: Object.keys(earned).length,
+        total: STICKERS.length,
+        shelves: groups.map((group) => ({
+          title: t(`stickers.group.${group}` as MessageKey),
+          stickers: STICKERS.filter((s) => s.group === group).map((s) => {
+            const at = earned[s.id];
+            const hidden = s.secret && !at;
+            return {
+              id: s.id,
+              emoji: hidden ? '?' : s.emoji,
+              group: s.group,
+              name: hidden ? t('stickers.secretName') : stickerName(s.id),
+              how: hidden ? t('stickers.secretHow') : t(`sticker.${s.id}.how` as MessageKey),
+              earnedOn: at ? t('stickers.earnedOn', { date: date.format(new Date(at)) }) : null,
+              isNew: unseen.includes(s.id),
+            };
+          }),
+        })),
+      };
+    },
+    onStickersSeen: () => {
+      if (store.data.stickers.unseen.length === 0) return;
+      store.update((save) => {
+        save.stickers.unseen = [];
+      });
+    },
     onWhatsNew: () => {
       const released = RELEASES.filter((r) => compareVersions(r.version, APP_VERSION) <= 0);
       openWhatsNew(released.slice(0, 1), released.slice(1), false);
@@ -828,6 +890,29 @@ async function main(): Promise<void> {
       unlocked: items.map(({ slot, item }) => t(`${slot}.${item}` as MessageKey)),
       items,
     };
+  };
+
+  /**
+   * Give whatever stickers the save (plus what just happened) has earned.
+   * New ones go on the card and, with `toast`, pop up in the corner.
+   */
+  const giveStickers = (extra: Pick<StickerFacts, 'page' | 'daily'> = {}, toast = true) => {
+    let fresh: string[] = [];
+    store.update((save) => {
+      fresh = awardStickers(save, stickerFacts(save, extra));
+    });
+    if (fresh.length === 0) return;
+    recentStickers = [...recentStickers, ...fresh];
+    if (toast) {
+      showStickerToast(
+        document.body,
+        fresh.map((id) => {
+          const sticker = STICKERS.find((s) => s.id === id)!;
+          return { emoji: sticker.emoji, group: sticker.group, name: stickerName(id) };
+        }),
+      );
+    }
+    menu.refresh();
   };
 
   /** Show what was just unlocked, with pictures and a button to use each one now. */
@@ -878,6 +963,24 @@ async function main(): Promise<void> {
     });
   };
 
+  /** Stickers for the page just cleared (and any boss on it). */
+  const awardPageStickers = () => {
+    const boss = game.page.hasBoss ? game.page.bossKind : null;
+    if (boss) store.update((save) => recordBossBeaten(save, boss));
+    giveStickers({
+      page: {
+        mode: game.mode,
+        difficulty: game.difficulty,
+        grade: pageGrade(game.pageStats, game.page.params.size),
+        stats: game.pageStats,
+        notebookScore: game.stats.score,
+        boss,
+        layoutId: store.data.layout,
+        at: new Date(),
+      },
+    });
+  };
+
   /** Phase before the latest change, to tell starting a page from resuming one. */
   let lastPhase: GamePhase = game.phase;
 
@@ -891,6 +994,7 @@ async function main(): Promise<void> {
       case 'playing':
         // A page is starting (not just resuming from pause): save the notebook
         // here, so Continue and Quit to menu always come back to this page.
+        if (lastPhase !== 'paused') recentStickers = [];
         if (lastPhase !== 'paused' && game.mode !== 'daily') {
           if (lastPhase === 'ready') newBest = false;
           store.update((save) => {
@@ -930,6 +1034,7 @@ async function main(): Promise<void> {
           recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);
           save.notebook = snapshotNotebook(game, nextPagePosition(game.page));
         });
+        awardPageStickers();
         showUnlocks();
         break;
       case 'notebookComplete':
@@ -941,6 +1046,7 @@ async function main(): Promise<void> {
           save.notebook = null;
           reward = earnInk(save, NOTEBOOK_BONUS);
         });
+        giveStickers();
         showUnlocks();
         break;
       case 'gameOver':
@@ -1062,6 +1168,9 @@ async function main(): Promise<void> {
     split: 'split',
   };
   const phaseSound: Partial<Record<GamePhase, Sound>> = { pageCleared: 'page', gameOver: 'gameOver', notebookComplete: 'complete' };
+
+  // Progress made before stickers existed (or in another version) earns its stickers now, quietly.
+  giveStickers({}, false);
 
   renderer.app.ticker.add((ticker) => {
     const alpha = loop.advance(ticker.deltaMS);

@@ -1,6 +1,6 @@
 # Game competitiveness and sharing
 
-Claude Code session started 2026-11-17. 8 prompts.
+Claude Code session started 2026-11-17. 11 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1670,12 +1670,749 @@ Points line is in the page-done shot. Now trimming to just the shots the page us
 
 Progression notes written. Now exporting the transcript and scanning it for private details:
 
-<details><summary>1 tool call</summary>
+<details><summary>4 tool calls</summary>
 
 - **Shell:** Export session transcript
 
   ```bash
   npm run transcript 2>&1 | tail -5; git status --short docs/transcripts | head
+  ```
+- **Shell:** Scan new transcript for private details
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys/docs/transcripts && f=2026-11-17-game-competitiveness-and-sharing-c10c68be.md; for p in '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' '/Users/[A-Za-z]+' '/private/tmp' '(sk|ghp|gho|github_pat|xox[bp])[-_][A-Za-z0-9]{10,}' '[A-Za-z0-9+/]{40,}' 'password|passwd|secret|token'; do printf '%s: ' "$p"; grep -Eoi "$p" "$f" | sort | uniq -c | head -5 | tr '\n' ';'; echo; done; git diff --stat 2026-11-16-inky-keys-milestones-95f6365a.md
+  ```
+- **Shell:** Inspect token mentions and scan changed transcript
+
+  ```bash
+  grep -noi "token[^|]\{0,60\}" 2026-11-17-game-competitiveness-and-sharing-c10c68be.md; for p in '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' '/Users/[A-Za-z]+' '[A-Za-z0-9+/]{40,}'; do git diff -U0 2026-11-16-inky-keys-milestones-95f6365a.md | grep '^+' | grep -Eoc "$p"; done
+  ```
+- **Shell:** Check remaining token hit and personal names
+
+  ```bash
+  sed -n 1298,1302p 2026-11-17-game-competitiveness-and-sharing-c10c68be.md; grep -ci "[removed]\|[removed]" 2026-11-17-game-competitiveness-and-sharing-c10c68be.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The transcript is clean: no emails, home paths, keys or names. The only "token" hits are about colour tokens in the CSS. Now the final check, build and commit:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Final check, build and status
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && npm run check 2>&1 | grep -E "error|Tests|FAIL" | head -3 && npm run build 2>&1 | tail -1 && git status --short
+  ```
+- **Shell:** Commit milestone 20
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Milestone 20: Score that matters (2.10.0)
+
+  - Daily Page: a seeded three-page notebook, the same for everyone on a layout each day, on Normal with a daily boss; only the first go counts, Restart is off on it, later goes are practice
+  - Seeded randomness (core/rng.ts): each spawn, extra life and boss word draws from its own stream, so play never shifts what comes next
+  - Streaks: a flaming ink-drop mascot (asleep when broken) and this week's days, filled in where played
+  - Copy result: plain text with the score, each page's grade and colour, and the streak; 
+  … (433 more characters)
+  ```
+- **Shell:** Fast-forward main, delete branch, tag release
+
+  ```bash
+  git checkout -q main && git merge --ff-only feat/m20-daily-page 2>&1 | tail -2 && git branch -d feat/m20-daily-page && npm run release:tag 2>&1 | tail -5 && git tag --points-at HEAD && git log --oneline -2
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Milestone 20 is committed as `9d3156b`, fast-forwarded into `main` and tagged `v2.10.0`, and the feature branch is deleted. Nothing has been pushed. `npm run check` (381 tests) and `npm run build` passed just before the commit.
+
+What went in alongside the code:
+- **Release:** version 2.10.0 in `package.json` and `package-lock.json`, with two "What's new" notes: the Daily Page, and the points breakdown with page bests.
+- **Snapshots:** I added a Daily screen step to the snapshot tour, filled with a sample 3-day streak so the screenshot shows the streak strip, page tiles and share text. I committed `m20/daily.png` and `m20/page-done.png`, plus the updated `latest/` shots the progression page uses, and deleted the rest.
+- **Progression notes:** a new M20 section, an M20 column in "End of a page", and the menu's new Daily Page button noted under the Latest menu screenshot.
+- **Transcript:** exported this session and scanned it with general patterns for emails, home-folder paths, keys and names. It was clean; the only "token" hits were about colour tokens in the CSS.
+
+The screenshots turned up one bug, which I fixed before committing: the share-text box was one line too short and cut off `inkykeys.com`. It now sizes itself to the text.
+
+Pushing `v2.10.0` will make the Release workflow publish a GitHub Release.
+
+## 🧑 Prompt
+
+> Push both
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Push main and the release tag
+
+  ```bash
+  git push origin main 2>&1 | tail -2 && git push origin v2.10.0 2>&1 | tail -2
+  ```
+- **Shell:** Check workflows started by the push
+
+  ```bash
+  sleep 20; gh run list --limit 4 2>&1 | head -6
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Release is published. CI and Deploy are still running; waiting for them to finish:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Wait for CI and Deploy runs
+
+  ```bash
+  gh run watch 44146412451 --exit-status >/dev/null 2>&1; echo "deploy exit $?"; gh run watch 44146412651 --exit-status >/dev/null 2>&1; echo "ci exit $?"; gh run list --limit 3 2>&1 | head -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` and the `v2.10.0` tag, and all three GitHub workflows passed:
+
+- **Release:** the GitHub Release for v2.10.0 is published with the notes.
+- **CI:** passed on `main`.
+- **Deploy:** finished, so 2.10.0 should now be on inkykeys.com, though I didn't open the site to check. Returning players will see the "What's new" card about the Daily Page the first time they load it.
+
+Next in the plan is M21, achievements as notebook stickers.
+
+## 🧑 Prompt
+
+> let's start M21 stickers
+
+### 🤖 Claude
+
+Starting M21. My plan: a notebook sticker book with about 22 stickers for pages, speed, combos, bosses, the Apprentice course, the Daily Page and a few secret ones. You'll get each one at the moment you earn it, with a toast and a line on the page card. Players' existing progress counts too, so a returning player gets stickers for what they've already done.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Create branch; read boss kinds, ranks, star helpers
+
+  ```bash
+  git checkout -q -b feat/m21-stickers && grep -n "BossKind\b.*=\|order:" src/core/config.ts | head; grep -n "RANKS" -A10 src/core/rewards.ts | head -12; grep -n "chapterStars" -A8 src/core/campaign.ts | head -10; grep -n "LayoutId\|DEFAULT_LAYOUT_ID" src/content/layouts/index.ts | head -4
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Writing the sticker definitions and rules (`src/core/stickers.ts`), with thresholds in `config.ts`:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add sticker rules and thresholds
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/config.ts'
+  s=open(p).read()
+  a="""  /**
+     * The Daily Page (core/daily.ts)"""
+  assert a in s
+  s=s.replace(a,"""  /**
+     * Sticker thresholds (core/stickers.ts). Speed stickers need at least
+     * `minKeys` correct keys on the page, so a tiny page can't win them.
+     */
+    stickers: {
+      combo: [50, 100, 200],
+      wpm: [30, 50, 70],
+      minKeys: 60,
+      bigScore: 10_000,
+      streak: [3, 7, 30],
+      /** Levels for the rank stickers: Scribe, Calligrapher, Master. */
+      levels: [5, 12, 23],
+      halfwayChapter: 14,
+      /** A page finished from midnight up to this hour (lo
+  … (6205 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Sticker rules typecheck. Now save version 10:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Save v10 sticker book and award helpers
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/storage/schema.ts'
+  s=open(p).read()
+  def rep(a,b):
+      global s
+      assert a in s, a; s=s.replace(a,b,1)
+  rep("export const SAVE_VERSION = 9;","export const SAVE_VERSION = 10;")
+  rep("""/** Daily Page history (added in version 9). */""","""/** The sticker book (core/stickers.ts; added in version 10). */
+  export interface StickerBook {
+    /** When each sticker was earned (ISO timestamp), by id. */
+    earned: Record<string, string>;
+    /** Earned but not yet looked at in the book, shown as new. */
+    unseen: string[];
+    /** Boss kinds beaten at least once. */
+    bossesBeaten: Bos
+  … (3330 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Save format done. Now the strings for all 26 stickers, then wiring them into the game:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add sticker strings
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/i18n/en.ts'
+  s=open(p).read()
+  a="  'daily.title': 'Daily Page #{id}',\n"
+  assert a in s
+  add = """  'menu.stickers': 'Sticker book',
+    'menu.stickersDetail': '{earned} of {total} stickers',
+    'menu.stickersNew': '{earned} of {total} stickers · {count} new!',
+    'stickers.title': 'Sticker book',
+    'stickers.intro': 'Earn stickers for great pages, fast fingers, beaten bosses and coming back each day.',
+    'stickers.count': '{earned} of {total} collected',
+    'stickers.earnedOn': 'Earned {date}',
+    'stickers.new': 'New!',
+    'stickers.locked': 'Not earned yet',
+    'stickers.secre
+  … (3384 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the toast, the sticker book screen and the game-flow wiring:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add toast, sticker book screen; start main wiring
+
+  ```bash
+  cat > src/ui/stickers.css <<'EOF'
+  /* Stickers: round die-cut stickers with a white edge, colored by shelf. */
+  .sticker-art {
+    --sticker: #8a8f9c;
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--sticker);
+    border: 3px solid #fff;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.25);
+    font-size: 28px;
+    line-height: 1;
+    transform: rotate(-6deg);
+  }
+
+  .sticker-pages { --sticker: #f2c94c; }
+  .sticker-speed { --sticker: #f08a5d; }
+  .sticker-bosses { --sticker: #b07cc6; }
+  .sticker-course { --sticker: #6fb3d9; }
+  .sticker-daily { --st
+  … (9418 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+That edit landed in an awkward spot. Rewriting the card-lines block cleanly:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Rewrite card lines block in main
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'
+  s=open(p).read()
+  start=s.index("      extraLines: (w) => {\n")
+  endmarker="""        return [];
+        },
+      }, () => ({
+        textScale: TEXT_SCALE[settings.textSize],
+        reducedMotion: reducedMotion(settings, prefersReducedMotion()),
+        screenEffects: settings.screenEffects,
+        cosmetics: store.data.profile.cosmetics,
+      })),
+    ]);
+  """
+  end=s.index(endmarker)+len(endmarker)
+  block=s[start:end]
+  # extract original pageCleared branch body and the rest
+  pc_start=block.index("        if (w.phase === 'pageCleared') {")
+  pc_end=block.index("        const stick
+  … (1330 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the award logic: after each page, after the Daily, at the end of the Apprentice course, and quietly at startup so existing progress counts.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Award stickers in game flow and menu hooks
+
+  ```bash
+  grep -n "update(fn\|update(" src/storage/store.ts | head -3; python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/main.ts',[
+  ("function cardLines(w: { phase: GamePhase; mode: string; difficulty: Difficulty }): string[] {",
+   "function cardLines(w: { phase: GamePhase; mode: string; difficulty: typeof game.difficulty }): string[] {"),
+  ("import { STICKERS, type PageFacts, type StickerFacts } from './core/stickers';",
+   "import { STICKERS, type StickerFacts, type StickerGroup } from './cor
+  … (5670 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck passes. Adding the quiet startup check so existing progress earns its stickers:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Award earned stickers quietly at startup
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'
+  s=open(p).read()
+  a="""  renderer.app.ticker.add((ticker) => {"""
+  assert a in s
+  s=s.replace(a,"""  // Progress made before stickers existed (or in another version) earns its stickers now, quietly.
+    giveStickers({}, false);
+
+  """+a,1)
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit -p . && npm run lint 2>&1 | tail -5
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck and lint pass. Writing tests:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Write sticker rule tests
+
+  ```bash
+  cat > src/core/stickers.test.ts <<'EOF'
+  import { describe, expect, it } from 'vitest';
+  import { en } from '../i18n/en';
+  import { apprenticePlan, starKey } from './campaign';
+  import { BOSS_KINDS, GAME_CONFIG } from './config';
+  import { createStats, type Stats } from './stats';
+  import { STICKERS, newStickers, type PageFacts, type StickerFacts } from './stickers';
+
+  const S = GAME_CONFIG.stickers;
+
+  function facts(extra: Partial<StickerFacts> = {}): StickerFacts {
+    return { level: 1, apprentice: { unlocked: 1, stars: {}, completed: false }, bossesBeaten: [], ...extra };
+  }
+
+  function page(stats: Par
+  … (4471 more characters)
+  ```
+- **Shell:** Add progress and schema tests, run check
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/stickers.test.ts'
+  s=open(p).read()
+  s=s.replace("""    const daily = (grades: StickerFacts['daily'] extends infer D ? (D extends { grades: infer G } ? G : never) : never, streak = 1, finished = true) =>
+        facts({ daily: { grades, pages: 3, finished, streak } });""","""    const daily = (grades: Grade[], streak = 1) => facts({ daily: { grades, pages: 3, finished: true, streak } });""")
+  s=s.replace("import { createStats, type Stats } from './stats';","import type { Grade } from './grade';\nimport { createStats, type Stats } from './stats';")
+  open(p,'w').write(s)
+
+  … (1926 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+All 394 tests pass. Checking it in the browser:
+
+<details><summary>2 tool calls</summary>
+
+- **navigate** `{"url":"http://localhost:5173/","tabId":"seed"}`
+- **computer** `{"action":"screenshot","tabId":"seed","scale":0.6}`
+
+</details>
+
+### 🤖 Claude
+
+The dev server had stopped. Restarting it:
+
+<details><summary>2 tool calls</summary>
+
+- **preview_start** `{"name":"inky-keys-dev"}`
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 2500)); ({stickers: window.inkling?.store.data.stickers, detail: document.querySelector('[data-id=stickers] .menu-detail')?.textContent, level: window.inkling?.store.data.profile.ink})","tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+Your existing level earned "Scribe" quietly at startup, and the menu shows "1 of 26 stickers · 1 new!". Opening the book:
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"k","action_summary":"Opens the sticker book","tabId":"seed"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"seed"}},{"name":"computer","input":{"action":"screenshot","tabId":"seed"}}]}`
+- **Shell:** Open sticker book at the top
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  a="""      h('h2', { id: 'menu-title' }, [t('stickers.title')]),"""
+  assert a in s
+  s=s.replace(a,"""      // Focus starts on the heading, so the book opens at the top rather than scrolled to Back.
+        h('h2', { id: 'menu-title', tabindex: -1, 'data-autofocus': true }, [t('stickers.title')]),""",1)
+  a="""        h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', 'data-autofocus': true, onClick: () => this.show('title') }, [
+            t('menu.back'),
+          ]),
+        ]),
+      ];
+    }
+
+    /** Today's Daily Page"""
+  assert a
+  … (271 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":2,"tabId":"seed"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"window.inkling.menu.show('stickers'); 'ok'","tabId":"seed"}},{"name":"computer","input":{"action":"screenshot","tabId":"seed"}}]}`
+
+</details>
+
+### 🤖 Claude
+
+Opens at the top now. Next, earning stickers in play: a Free Write page with the typing script, which should give First Page, Gold Star and a toast.
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"window.inkling.menu.show('newNotebook'); document.querySelector('[data-id=start]').click();\nwindow.__bot = setInterval(() => {\n  const w = window.inkling.world;\n  const send = (key) => window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));\
+… (771 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":10,"tabId":"seed"}},{"name":"computer","input":{"action":"wait","duration":10,"tabId":"seed"}},{"name":"computer","input":{"action":"wait","duration":10,"tabId":"seed"}},{"name":"javascript_tool","input":{"action":"javascript_exec","
+… (198 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The pane lost focus and paused the game again. Teaching the script to click Resume:
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"clearInterval(window.__bot); window.__bot = setInterval(() => {\n  const w = window.inkling.world;\n  const send = (key) => window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));\n  const dlg = [...document.querySelectorAll('.dialog')].find(d 
+… (746 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":10,"tabId":"seed"}},{"name":"computer","input":{"action":"wait","duration":10,"tabId":"seed"}},{"name":"computer","input":{"action":"wait","duration":10,"tabId":"seed"}},{"name":"javascript_tool","input":{"action":"javascript_exec","
+… (198 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The page is cleared, but there's no toast showing. Checking whether stickers were awarded or the toast already faded:
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"({stickers: window.inkling.store.data.stickers, grade: window.inkling.world.pageStats.errors, combo: window.inkling.world.pageStats.bestCombo})","tabId":"seed"}`
+- **computer** `{"action":"screenshot","tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+Both stickers were awarded and the card says "New sticker: First Page, Gold Star!". The toast had already faded by the time I looked. Showing one directly to check how it looks:
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const m = await import('/src/ui/stickerToast.ts'); m.showStickerToast(document.body, [{emoji: '📄', group: 'pages', name: 'First Page'}, {emoji: '⭐', group: 'pages', name: 'Gold Star'}], 8000); 'shown'","tabId":"seed"}`
+- **computer** `{"action":"zoom","region":[460,711,800,911],"tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+The toast looks washed out and uses a serif font. Taking another look once its entrance animation is done:
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","text":"const el = document.querySelector('.sticker-toast'); const cs = getComputedStyle(el); ({opacity: cs.opacity, bg: cs.backgroundColor, color: cs.color, font: cs.fontFamily, filter: cs.filter, parentOverlay: [...document.body.children].map(c => c.className + ':' + ge
+… (56 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Colours are right (the dim look came from the screenshot), but the font falls back to Times. Checking which font and colour tokens the dialogs use:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Find dialog font and colour tokens
+
+  ```bash
+  grep -n "font-family\|--tc-paper:\|--tc-ink:" src/ui/dialog.css src/style.css | head
+  ```
+- **Shell:** Read dialog token scopes
+
+  ```bash
+  sed -n 1,20p src/ui/dialog.css; sed -n 560,580p src/ui/dialog.css
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The colour tokens only exist inside `.dialog`, so the toast doesn't follow the night or high-contrast themes either. I'll share the tokens with the toast and give it the game font:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Share theme tokens and font with the toast
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/dialog.css'
+  s=open(p).read()
+  old=""".dialog {
+    --tc-paper: #f7f1e3;
+    --tc-ink: #1f2a44;
+    --tc-ink-light: #3a4a6b;
+    --tc-rule: #b9cfe0;
+    --tc-margin: #d9534f;
+    --tc-highlight: #ffe066;
+    --tc-sort: #e9e2d0;
+
+    position: fixed;"""
+  new="""/* Colors, shared with the sticker toast (which sits outside any dialog). */
+  .dialog,
+  .sticker-toast {
+    --tc-paper: #f7f1e3;
+    --tc-ink: #1f2a44;
+    --tc-ink-light: #3a4a6b;
+    --tc-rule: #b9cfe0;
+    --tc-margin: #d9534f;
+    --tc-highlight: #ffe066;
+    --tc-sort: #e9e2d0;
+  }
+
+  .dialog {
+    position: fixed;"""
+  assert old in s; s=s.repla
+  … (928 more characters)
+  ```
+- **javascript_tool** `{"action":"javascript_exec","text":"await new Promise(r => setTimeout(r, 1500)); const m = await import('/src/ui/stickerToast.ts'); m.showStickerToast(document.body, [{emoji: '📄', group: 'pages', name: 'First Page'}, {emoji: '⭐', group: 'pages', name: 'Gold Star'}], 15000); await new Promise(r => s
+… (106 more characters)`
+- **computer** `{"action":"screenshot","tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+The toast now uses the game's font and theme colours. The menu shows "Sticker book · 3 of 26 stickers · 2 new!". Adding the release entry, version bump and requirements row:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Release entry, version bump, check and build
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert a in s, (p,a); s=s.replace(a,b,1)
+      open(p,'w').write(s)
+  edit('src/core/releases.ts',[("""export const RELEASES: readonly Release[] = [
+  ""","""export const RELEASES: readonly Release[] = [
+    {
+      version: '2.11.0',
+      date: '2026-11-17',
+      notes: ['release.2.11.0.stickers'],
+    },
+  """)])
+  edit('src/i18n/en.ts',[("  'release.2.10.0.daily':","  'release.2.11.0.stickers': 'A sticker book: 26 stickers to earn for great pages, speed, bosses and streaks.',\n  'release.2.10.0.daily':")])
+  edit('docs/REQ
+  … (734 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M21 stickers are working on `feat/m21-stickers`, as version 2.11.0 with save version 10. `npm run check` (394 tests) and `npm run build` pass, and I played a page in the browser and saw stickers awarded. Nothing is committed yet, and the snapshots and progression notes aren't done.
+
+**What players get**
+- **Sticker book** (press **K** on the menu). The menu button shows something like "3 of 26 stickers · 2 new!", and new stickers are highlighted until you open the book.
+- **26 stickers on six shelves:**
+
+| Shelf | Stickers |
+|---|---|
+| Pages | First Page, Gold Star (an A+), runs of 50 / 100 / 200 keys without a slip, 10,000 points in one notebook, a clean margin on Hard or Expert |
+| Speed | 30 / 50 / 70 words a minute on a page with at least 60 correct keys, so a tiny page can't win them |
+| Bosses | your first boss, a boss page with no wrong keys or leaks, all five kinds of boss |
+| Apprentice and ranks | every star in a chapter, halfway through the course, finishing it, and levels 5, 12 and 23 |
+| Daily Page | first Daily, A or A+ on every page, and 3-, 7- and 30-day streaks |
+| Secrets | finish a page after midnight, or on another keyboard layout. Both show as "?" until earned. |
+
+- **Earning one:** you get a toast in the corner, which doesn't take the keyboard or pause play, plus "New sticker: First Page, Gold Star!" on the page card.
+- **Existing players** quietly get stickers for their level and course progress on first load. Page-based stickers like First Page can only be earned by playing, since old saves don't record past pages.
+
+**What I checked in the browser**
+- Your level earned "Scribe" at startup, and a Free Write page earned First Page and Gold Star.
+- I fixed three problems along the way:
+  - The book opened scrolled to the bottom, because the Back button took focus.
+  - The toast fell back to a Times font.
+  - The toast didn't follow the night and high-contrast themes.
+- I didn't look at the night or high-contrast themes themselves after the fix.
+
+All thresholds are in `GAME_CONFIG.stickers`, so they're easy to retune. The sticker pictures are emoji on coloured circles, one colour per shelf. If you'd rather have hand-drawn SVG stickers like the Desk items, that would be a good follow-up.
+
+## 🧑 Prompt
+
+> Yes, finish M21
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Add sticker book shot; run m21 and latest snapshots
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/snapshots.ts'
+  s=open(p).read()
+  a="""/** The next character the auto-typer should press, or '' to wait. */"""
+  assert a in s
+  s=s.replace(a,"""/**
+   * Some sample stickers for the sticker book shot (M21), a couple marked new.
+   * Only in memory, for the picture; nothing is saved.
+   */
+  const SAMPLE_STICKERS = `(() => {
+    const store = window.inkling && window.inkling.store;
+    if (!store || !store.data.stickers) return 'no stickers';
+    const at = new Date().toISOString();
+    const ids = ['firstPage', 'goldStar', 'onARoll', 'quickPen', 'firstBoss', 'scribe', 'dailyFirst', 'o
+  … (770 more characters)
+  ```
+- **Read** `docs/progression/m21/stickers.png`
+- **Read** `docs/progression/m21/page-done.png`
+- **Shell:** Hide heading focus outline; reshoot snapshots
+
+  ```bash
+  cat >> src/ui/stickers.css <<'EOF'
+
+  /* The book's heading takes focus only so it opens at the top; it isn't a control. */
+  .menu h2[tabindex='-1']:focus {
+    outline: none;
+  }
+  EOF
+  grep -n "import './stickers.css'" src/ui/menu.ts || sed -i '' "s#^import './menu.css';#import './menu.css';\nimport './stickers.css';#" src/ui/menu.ts; grep -n "stickers.css" src/ui/menu.ts; npx tsc --noEmit -p . && npm run snapshots -- m21 2>&1 | tail -1 && npm run snapshots -- latest 2>&1 | tail -1
+  ```
+- **Read** `docs/progression/m21/stickers.png`
+
+</details>
+
+### 🤖 Claude
+
+Clean now. Keeping only the shots the progression page uses, then writing the notes:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Trim snapshots and write M21 progression notes
+
+  ```bash
+  git status --short docs/progression/latest | grep '^??' | awk '{print $2}' | xargs rm -f; find docs/progression/m21 -type f ! -name stickers.png -delete; ls docs/progression/m21; git status --short docs/progression; python3 - <<'EOF'
+  p='docs/progression/README.md'
+  s=open(p).read()
+  def rep(a,b):
+      global s
+      assert a in s, a; s=s.replace(a,b,1)
+  rep("A **Daily Page** button (M20). |","A **Daily Page** button (M20) and a **Sticker book** (M21). |")
+  rep("""## Keeping this up to date""","""### M21: Stickers
+
+  <img src="m21/stickers.png" width="420" alt="The sticker book: round stickers in shelve
+  … (1361 more characters)
+  ```
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  npm run transcript 2>&1 | grep -i "c10c68be\|error"; cd docs/transcripts && f=2026-11-17-game-competitiveness-and-sharing-c10c68be.md; for p in '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' '/Users/[A-Za-z]+' '/private/tmp' '(sk|ghp|gho|github_pat|xox[bp])[-_][A-Za-z0-9]{10,}' '[A-Za-z0-9+/]{40,}' '[removed]|[removed]'; do printf '%s: %s\n' "$p" "$(grep -Eoic "$p" "$f")"; done; grep -noiE "password|secret[^ ]*|token" $f | grep -viE "secret (sticker|ones|stickers)|secrets|secret: true|stickers.secret|secretName|secretHow|colour tokens|token\b.*ink|late-night|secret late" | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Two hits need a look: `/private/tmp` and a name match. Checking them, plus a second transcript the export just added:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Inspect hits and scan the other new transcript
+
+  ```bash
+  f=2026-11-17-game-competitiveness-and-sharing-c10c68be.md; grep -noE ".{0,60}(/private/tmp|[Pp]hilip|[removed]).{0,40}" $f; g=2026-11-16-inkykeys-com-connection-security-error-1a386715.md; git status --short $g; for p in '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' '/Users/[A-Za-z]+' '/private/tmp' '[A-Za-z0-9+/]{40,}' '[removed]|[removed]' 'password|token|secret'; do printf '%s: %s\n' "$p" "$(grep -Eoic "$p" "$g")"; done
+  ```
+- **Shell:** Show lines with the remaining hits
+
+  ```bash
+  f=2026-11-17-game-competitiveness-and-sharing-c10c68be.md; grep -nE "/private/tmp" $f | cut -c1-200; grep -niE "[removed]|[removed]" $f | cut -c1-200; git status --short . 
+  ```
+- **Shell:** Scrub the first name from the transcript
+
+  ```bash
+  f=2026-11-17-game-competitiveness-and-sharing-c10c68be.md; perl -pi -e 's/[Pp]hi[l]ip\\?\|//g; s/[Pp]hi[l]ip//g' $f; grep -ciE "ph[i]lip" $f; grep -c "\[removed\]" $f
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Updating my saved note about transcript scans so this doesn't happen again:
+
+<details><summary>2 tool calls</summary>
+
+- **Read** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/memory/transcript-scan-no-secrets.md`
+- **Shell:** Check the private-words file exists and is ignored
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && test -f .private-words && wc -l < .private-words; git check-ignore -q .private-words && echo ignored; grep -n "private-words" scripts/*.ts | head -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I'll add your first name to `.private-words`, taking it from your git config so I never type it, then re-export:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add first name to private words; re-export transcript
+
+  ```bash
+  first=$(git config user.name | awk '{print $1}'); grep -qx "$first" .private-words || printf '%s\n' "$first" >> .private-words; low=$(printf '%s' "$first" | tr 'A-Z' 'a-z'); grep -qx "$low" .private-words || printf '%s\n' "$low" >> .private-words; sed -n 44,70p scripts/export-transcript.ts | grep -n "gi\|toLowerCase\|RegExp" | head -3; npm run transcript >/dev/null 2>&1; f=docs/transcripts/2026-11-17-game-competitiveness-and-sharing-c10c68be.md; grep -ci "$first" $f
   ```
 
 </details>

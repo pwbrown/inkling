@@ -1259,7 +1259,7 @@ I've added the credit even though it isn't required:
 - **Shell:** Final scan, check and build
 
   ```bash
-  grep -nci "philip" docs/transcripts/2026-11-13-visual-improvements-hands-keyboard-ui-fixes-65163df2.md; git diff docs/transcripts/2026-11-13-apprentice-mode-improvements-836f321d.md | grep "^+" ; npm run check 2>&1 | grep -E "Tests |error" ; npm run build 2>&1 | grep -iE "error|built in"
+  grep -nci "[removed]" docs/transcripts/2026-11-13-visual-improvements-hands-keyboard-ui-fixes-65163df2.md; git diff docs/transcripts/2026-11-13-apprentice-mode-improvements-836f321d.md | grep "^+" ; npm run check 2>&1 | grep -E "Tests |error" ; npm run build 2>&1 | grep -iE "error|built in"
   ```
 
 </details>

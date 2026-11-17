@@ -130,6 +130,19 @@ describe('save schema', () => {
     });
   });
 
+  it('gives version 9 saves an empty sticker book, and checks a saved one', () => {
+    expect(migrate({ version: 9 }).stickers).toEqual({ earned: {}, unseen: [], bossesBeaten: [] });
+    const save = migrate({
+      ...defaultSave(),
+      stickers: {
+        earned: { goldStar: '2026-11-18T10:00:00.000Z', madeUp: 'x', firstPage: 5 },
+        unseen: ['goldStar', 'firstPage', 'madeUp'],
+        bossesBeaten: ['squid', 'dragon', 'squid'],
+      },
+    });
+    expect(save.stickers).toEqual({ earned: { goldStar: '2026-11-18T10:00:00.000Z' }, unseen: ['goldStar'], bossesBeaten: ['squid'] });
+  });
+
   it('drops unknown tutorial ids and keeps the tips choice', () => {
     const save = migrate({ version: 7, tutorials: { enabled: false, seen: ['basics', 'nonsense', 'basics', 4] } });
     expect(save.tutorials).toEqual({ enabled: false, seen: ['basics'] });

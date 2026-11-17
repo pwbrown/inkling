@@ -1,6 +1,8 @@
 /* Shared dialog styles (Type Case, Save data) and the Type Case drawer (DESIGN §4). */
 
-.dialog {
+/* Colors, shared with the sticker toast (which sits outside any dialog). */
+.dialog,
+.sticker-toast {
   --tc-paper: #f7f1e3;
   --tc-ink: #1f2a44;
   --tc-ink-light: #3a4a6b;
@@ -8,7 +10,9 @@
   --tc-margin: #d9534f;
   --tc-highlight: #ffe066;
   --tc-sort: #e9e2d0;
+}
 
+.dialog {
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -562,7 +566,7 @@
 }
 
 /* Dialogs follow the game's color theme (REQUIREMENTS §10). */
-:root[data-theme='contrast'] .dialog {
+:root[data-theme='contrast'] :is(.dialog, .sticker-toast) {
   --tc-paper: #ffffff;
   --tc-ink: #000000;
   --tc-ink-light: #1a1a1a;
@@ -572,7 +576,7 @@
   --tc-sort: #f2f2f2;
 }
 
-:root[data-theme='night'] .dialog {
+:root[data-theme='night'] :is(.dialog, .sticker-toast) {
   --tc-paper: #1d2130;
   --tc-ink: #e9e4d4;
   --tc-ink-light: #c4bfae;

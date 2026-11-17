@@ -1,0 +1,159 @@
+/* Stickers: round die-cut stickers with a white edge, colored by shelf. */
+.sticker-art {
+  --sticker: #8a8f9c;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--sticker);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.25);
+  font-size: 28px;
+  line-height: 1;
+  transform: rotate(-6deg);
+}
+
+.sticker-pages { --sticker: #f2c94c; }
+.sticker-speed { --sticker: #f08a5d; }
+.sticker-bosses { --sticker: #b07cc6; }
+.sticker-course { --sticker: #6fb3d9; }
+.sticker-daily { --sticker: #ef7d22; }
+.sticker-secret { --sticker: #3d4a6b; }
+
+/* Not earned yet: a faded outline, the picture in grey. */
+.sticker-locked .sticker-art {
+  background: transparent;
+  border: 2px dashed var(--tc-ink-light);
+  box-shadow: none;
+  filter: grayscale(1);
+  opacity: 0.45;
+  transform: none;
+}
+
+.stickers-shelf {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.stickers-shelf h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.stickers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sticker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.sticker-new {
+  border-color: var(--tc-ink);
+  background: color-mix(in srgb, #f8c537 22%, transparent);
+}
+
+.sticker-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sticker-name {
+  font-weight: 700;
+}
+
+.sticker-how,
+.sticker-when {
+  font-size: 13px;
+  color: var(--tc-ink-light);
+}
+
+.sticker-badge {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b3261e;
+  text-transform: uppercase;
+}
+
+.stickers-count {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* The toast when a sticker is earned: slides up in the corner, then away. */
+.sticker-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: grid;
+  gap: 8px;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--tc-paper);
+  color: var(--tc-ink);
+  border: 2px solid var(--tc-ink);
+  font-family: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+  animation: sticker-in 280ms ease-out;
+}
+
+.sticker-toast-title {
+  font-weight: 700;
+}
+
+.sticker-toast-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sticker-toast .sticker-art {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+}
+
+.sticker-toast-leaving {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 300ms, transform 300ms;
+}
+
+@keyframes sticker-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
+}
+
+[data-motion='reduced'] .sticker-toast {
+  animation: none;
+}
+
+[data-motion='reduced'] .sticker-toast-leaving {
+  transition: none;
+}
+
+/* The book's heading takes focus only so it opens at the top; it isn't a control. */
+.menu h2[tabindex='-1']:focus {
+  outline: none;
+}

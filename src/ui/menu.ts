@@ -5,6 +5,7 @@
  */
 import './dialog.css';
 import './menu.css';
+import './stickers.css';
 import { DIFFICULTIES, type Difficulty } from '../core/config';
 import { DAILY_PAGES, type PageMark, type StreakDay } from '../core/daily';
 import type { Grade } from '../core/grade';
@@ -14,9 +15,10 @@ import { getLocale, t, type MessageKey } from '../i18n';
 import { CONTENT_LEVELS, type ContentLevel } from '../content/contentFilter';
 import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage/profiles';
 import { artElement, badgeSvg, cosmeticSvg, dayDropSvg, streakDropSvg } from './art';
+import { stickerArt } from './stickerToast';
 import { h } from './dom';
 
-export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk' | 'players' | 'playerEdit' | 'about' | 'daily';
+export type MenuScreen = 'title' | 'contents' | 'newNotebook' | 'howToPlay' | 'pause' | 'desk' | 'players' | 'playerEdit' | 'about' | 'daily' | 'stickers';
 
 /** Inky Keys' source code and issue forms. */
 export const REPO_URL = 'https://github.com/pwbrown/inky-keys';
@@ -51,6 +53,25 @@ export interface ChapterEntry {
   locked: boolean;
   /** e.g. "best 1,240" at the selected difficulty, or null before any page is cleared. */
   best: string | null;
+}
+
+/** One sticker in the book. */
+export interface StickerEntry {
+  id: string;
+  emoji: string;
+  group: string;
+  name: string;
+  how: string;
+  /** e.g. "Earned 17 Nov 2026", or null if not earned yet. */
+  earnedOn: string | null;
+  /** Earned since the book was last opened. */
+  isNew: boolean;
+}
+
+export interface StickerShelf {
+  /** e.g. "Bosses". */
+  title: string;
+  stickers: StickerEntry[];
 }
 
 /** The Daily Page screen. */
@@ -132,6 +153,11 @@ export interface MenuHooks {
   onPlayDaily(): void;
   /** Copy the share text. Resolves false if the clipboard isn't available. */
   onCopyDaily(): Promise<boolean>;
+  /** e.g. "7 of 26 stickers · 2 new!". */
+  stickerDetail(): string;
+  stickerBook(): { shelves: StickerShelf[]; earned: number; total: number };
+  /** The book was opened: its new stickers have been seen. */
+  onStickersSeen(): void;
   /** Off on the day's counted Daily Page, which gets one go. */
   canRestart(): boolean;
 }
@@ -243,6 +269,9 @@ export class Menu {
       case 'daily':
         this.panel.replaceChildren(...this.daily());
         break;
+      case 'stickers':
+        this.panel.replaceChildren(...this.stickers());
+        break;
       default:
         return;
     }
@@ -304,6 +333,7 @@ export class Menu {
           key: 'a',
         }),
         this.button('daily', t('menu.daily'), () => this.show('daily'), { detail: this.hooks.dailyDetail(), key: 't' }),
+        this.button('stickers', t('menu.stickers'), () => this.show('stickers'), { detail: this.hooks.stickerDetail(), key: 'k' }),
         this.button('words', t('menu.wordLists'), () => this.hooks.onWordLists(), { key: 'w' }),
         this.button('desk', t('menu.desk'), () => this.show('desk'), { detail: t('menu.deskDetail'), key: 'd' }),
         h('div', { className: 'menu-row' }, [
@@ -565,6 +595,43 @@ export class Menu {
         this.button('quit', t('pause.quit'), () => this.hooks.onQuit(), { key: 'q' }),
       ]),
       h('p', { className: 'menu-best' }, [t('pause.note')]),
+    ];
+  }
+
+  /** The sticker book: every sticker by shelf, earned or not. Opening it marks new ones seen. */
+  private stickers(): HTMLElement[] {
+    const book = this.hooks.stickerBook();
+    this.hooks.onStickersSeen();
+    return [
+      // Focus starts on the heading, so the book opens at the top rather than scrolled to Back.
+      h('h2', { id: 'menu-title', tabindex: -1, 'data-autofocus': true }, [t('stickers.title')]),
+      h('p', { className: 'tc-intro' }, [t('stickers.intro')]),
+      h('p', { className: 'stickers-count' }, [t('stickers.count', { earned: book.earned, total: book.total })]),
+      ...book.shelves.map((shelf) =>
+        h('section', { className: 'stickers-shelf' }, [
+          h('h3', {}, [shelf.title]),
+          h(
+            'ul',
+            { className: 'stickers-grid' },
+            shelf.stickers.map((s) =>
+              h('li', { className: `sticker${s.earnedOn ? '' : ' sticker-locked'}${s.isNew ? ' sticker-new' : ''}` }, [
+                stickerArt(s.emoji, s.group),
+                h('span', { className: 'sticker-text' }, [
+                  h('span', { className: 'sticker-name' }, [
+                    s.name,
+                    s.isNew ? h('span', { className: 'sticker-badge' }, [t('stickers.new')]) : null,
+                  ]),
+                  h('span', { className: 'sticker-how' }, [s.how]),
+                  h('span', { className: 'sticker-when' }, [s.earnedOn ?? t('stickers.locked')]),
+                ]),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+      h('div', { className: 'tc-actions' }, [
+        h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', onClick: () => this.show('title') }, [t('menu.back')]),
+      ]),
     ];
   }
 

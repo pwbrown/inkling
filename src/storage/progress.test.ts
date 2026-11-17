@@ -10,8 +10,11 @@ import {
   continueNotebook,
   currentStreak,
   pageBestKey,
+  awardStickers,
+  recordBossBeaten,
   recordDaily,
   recordPageBest,
+  stickerFacts,
   recordApprenticePage,
   keyWeights,
   mergeKeyStats,
@@ -182,5 +185,26 @@ describe('recordDaily', () => {
     expect(save.daily.results[1]).toBeUndefined();
     expect(save.daily.best).toBe(keep + 5);
     expect(save.daily.streak).toBe(keep + 5);
+  });
+});
+
+describe('awardStickers', () => {
+  it('dates new stickers, marks them unseen and never repeats them', () => {
+    const save = defaultSave();
+    save.profile.ink = 1_000_000;
+    const now = new Date('2026-11-18T10:00:00Z');
+    const first = awardStickers(save, stickerFacts(save), now);
+    expect(first).toEqual(['scribe', 'calligrapher', 'master']);
+    expect(save.stickers.earned.scribe).toBe(now.toISOString());
+    expect(save.stickers.unseen).toEqual(first);
+    expect(awardStickers(save, stickerFacts(save), now)).toEqual([]);
+  });
+
+  it('remembers each boss kind once', () => {
+    const save = defaultSave();
+    recordBossBeaten(save, 'squid');
+    recordBossBeaten(save, 'squid');
+    expect(save.stickers.bossesBeaten).toEqual(['squid']);
+    expect(awardStickers(save, stickerFacts(save))).toEqual(['firstBoss']);
   });
 });

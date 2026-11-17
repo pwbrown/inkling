@@ -6,7 +6,8 @@
  * changes, so older saves (and exported backups) keep loading.
  */
 import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
-import { DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type Difficulty } from '../core/config';
+import { BOSS_KINDS, DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type BossKind, type Difficulty } from '../core/config';
+import { isStickerId } from '../core/stickers';
 import { isMechanic } from '../core/mechanics';
 import type { Grade } from '../core/grade';
 import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
@@ -14,7 +15,7 @@ import { DEFAULT_CONTENT_LEVEL, isContentLevel, type ContentLevel } from '../con
 import { DEFAULT_LAYOUT_ID, isLayoutId } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -100,6 +101,16 @@ export interface DailyResult {
   finished: boolean;
 }
 
+/** The sticker book (core/stickers.ts; added in version 10). */
+export interface StickerBook {
+  /** When each sticker was earned (ISO timestamp), by id. */
+  earned: Record<string, string>;
+  /** Earned but not yet looked at in the book, shown as new. */
+  unseen: string[];
+  /** Boss kinds beaten at least once. */
+  bossesBeaten: BossKind[];
+}
+
 /** Daily Page history (added in version 9). */
 export interface DailyProgress {
   /** The last Daily Page played (its number), or null. */
@@ -134,6 +145,8 @@ export interface SaveData {
   layout: LayoutId;
   /** Added in version 9. */
   daily: DailyProgress;
+  /** Added in version 10. */
+  stickers: StickerBook;
 }
 
 export interface Tutorials {
@@ -178,6 +191,7 @@ export function defaultSave(): SaveData {
     tutorials: { enabled: true, seen: [] },
     layout: DEFAULT_LAYOUT_ID,
     daily: defaultDaily(),
+    stickers: { earned: {}, unseen: [], bossesBeaten: [] },
   };
 }
 
@@ -312,7 +326,21 @@ function sanitize(v: Json): SaveData {
     tutorials: sanitizeTutorials(v.tutorials),
     layout: isLayoutId(v.layout) ? v.layout : DEFAULT_LAYOUT_ID,
     daily: sanitizeDaily(v.daily),
+    stickers: sanitizeStickers(v.stickers),
   };
+}
+
+function sanitizeStickers(v: unknown): StickerBook {
+  const book: StickerBook = { earned: {}, unseen: [], bossesBeaten: [] };
+  if (!isObject(v)) return book;
+  if (isObject(v.earned)) {
+    for (const [id, at] of Object.entries(v.earned)) if (isStickerId(id) && typeof at === 'string') book.earned[id] = at;
+  }
+  if (Array.isArray(v.unseen)) book.unseen = [...new Set(v.unseen.filter((id): id is string => isStickerId(id) && id in book.earned))];
+  if (Array.isArray(v.bossesBeaten)) {
+    book.bossesBeaten = [...new Set(v.bossesBeaten.filter((k): k is BossKind => BOSS_KINDS.includes(k as BossKind)))];
+  }
+  return book;
 }
 
 function sanitizePageBest(v: unknown): Record<string, number> {
@@ -418,6 +446,8 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
     records: { ...(isObject(save.records) ? save.records : {}), pageBest: {} },
     daily: defaultDaily(),
   }),
+  // v10 added the sticker book; stickers for progress already made are given on the next check.
+  9: (save) => ({ ...save, version: 10, stickers: { earned: {}, unseen: [], bossesBeaten: [] } }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

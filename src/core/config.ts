@@ -404,6 +404,23 @@ export const GAME_CONFIG = {
   },
 
   /**
+   * Sticker thresholds (core/stickers.ts). Speed stickers need at least
+   * `minKeys` correct keys on the page, so a tiny page can't win them.
+   */
+  stickers: {
+    combo: [50, 100, 200],
+    wpm: [30, 50, 70],
+    minKeys: 60,
+    bigScore: 10_000,
+    streak: [3, 7, 30],
+    /** Levels for the rank stickers: Scribe, Calligrapher, Master. */
+    levels: [5, 12, 23],
+    halfwayChapter: 14,
+    /** A page finished from midnight up to this hour (local time) earns the secret Midnight Oil. */
+    lateHour: 4,
+  },
+
+  /**
    * The Daily Page (core/daily.ts): one short seeded notebook a day, the same
    * for every player on the same layout, always on Normal. Its pages are
    * tuned like Practice chapter `chapter` (0-based) and the last one brings

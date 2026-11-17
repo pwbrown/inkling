@@ -80,7 +80,7 @@ The gameplay findings are in, and the UI exploration is still running. I'll wait
 # Inky Keys, Round 3: milestones 17–19
 
 ## Context
-Most people Philip shares the game with will play free play (today's "Practice"), not the Apprentice course. They also find a few things rough: waiting for long words to slide fully into view, too few word creatures compared with single letters, numbers and symbols mixed in with letters, an unexplained ␣ glyph, and no way to leave from the page-cleared card. Yellow rings also stay stuck on the ink bar, How to Play is all text, Blotters are too easy, and the only boss (the Spill) appears late and only in Apprentice. This round fixes those problems in three milestones. Each milestone gets its own branch, release and snapshot.
+Most people [removed] shares the game with will play free play (today's "Practice"), not the Apprentice course. They also find a few things rough: waiting for long words to slide fully into view, too few word creatures compared with single letters, numbers and symbols mixed in with letters, an unexplained ␣ glyph, and no way to leave from the page-cleared card. Yellow rings also stay stuck on the ink bar, How to Play is all text, Blotters are too easy, and the only boss (the Spill) appears late and only in Apprentice. This round fixes those problems in three milestones. Each milestone gets its own branch, release and snapshot.
 
 Decisions taken:
 - Practice is renamed **Free Write** in the player-facing text only. Internal identifiers stay `practice`, the same way `blotling`/`inkling` stayed.
