@@ -1,6 +1,6 @@
 # Game competitiveness and sharing
 
-Claude Code session started 2026-11-17. 17 prompts.
+Claude Code session started 2026-11-17. 18 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -3515,3 +3515,73 @@ Both shots look right. Keeping just these two and writing the M23 notes:
   ```
 
 </details>
+
+### 🤖 Claude
+
+The transcript is clean, and no full transfer link from your dev save made it in. Committing, merging and tagging:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check, build, commit, merge, delete branch, tag
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL|×" | head -3 && npm run build 2>&1 | tail -1 && git add -A && git commit -q -F - <<'EOF'
+  Milestone 23: Transfer links (2.13.0)
+
+  - Transfer links (storage/transfer.ts): Manage saves copies a link holding the player's name, badge and save, compressed with CompressionStream after #t= (downloaded word lists left out); oversized saves are pointed to the backup file
+  - Opening a link shows the player and offers Add as a new player (numbered if the name is taken) or Replace, after a second confirmation; saves are checked like imported files, with clear me
+  … (482 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+M23 is committed as `d3fc1e5`, fast-forwarded into `main` and tagged `v2.13.0`, and the feature branch is deleted. Nothing has been pushed. `npm run check` (407 tests) and `npm run build` passed before the commit.
+
+What went in alongside the code:
+- **Snapshots:** the tour now captures Manage saves with the new transfer row. It also builds a real transfer link for a sample player "Pip" using the game's own code, opens it, and captures the screen. Both shots are committed, with a new M23 section in the progression notes.
+- **Transcript:** clean. I also checked that no full transfer link from your dev save made it in.
+
+That completes the plan from the start of this conversation:
+- **M20, Daily Page:** score breakdown and best score per page, the Daily Page, streaks and share text.
+- **M21, stickers:** a 26-sticker book.
+- **M22, challenges:** challenge links and a share picture.
+- **M23, transfer links:** moving a player to another device.
+
+All of it works with no server and without collecting anything.
+
+Pushing `v2.13.0` publishes the release, and pushing `main` deploys the site.
+
+## 🧑 Prompt
+
+> Push both
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Push main and tag; list started workflows
+
+  ```bash
+  git push origin main 2>&1 | tail -1 && git push origin v2.13.0 2>&1 | tail -1 && sleep 15 && gh run list --limit 3 --json databaseId,workflowName,status,conclusion --jq '.[] | "\(.workflowName) \(.status) \(.conclusion) \(.databaseId)"'
+  ```
+- **Shell:** Wait for Deploy and CI
+
+  ```bash
+  gh run watch 44163771298 --exit-status >/dev/null 2>&1; echo "deploy $?"; gh run watch 44163771349 --exit-status >/dev/null 2>&1; echo "ci $?"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` and the `v2.13.0` tag, and all three GitHub workflows passed:
+
+- **Release:** the GitHub Release for v2.13.0 is published.
+- **CI:** passed on `main`.
+- **Deploy:** finished, so transfer links should now be on inkykeys.com, though I didn't open the site to check.
+
+That finishes M20 to M23, all live: the Daily Page with streaks and share text, the sticker book, challenge links with a share picture, and transfer links.
+
+I've only tried a transfer link within one browser here. Two things are worth trying on real devices:
+- Send yourself a transfer link from your computer and open it on another device, to make sure your messaging app doesn't cut the link short.
+- Send a Daily challenge link to a friend's phone. The game is built for physical keyboards, but the link should still open and show the challenge screen.

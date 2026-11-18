@@ -11,11 +11,10 @@ import { isStickerId } from '../core/stickers';
 import { isMechanic } from '../core/mechanics';
 import type { Grade } from '../core/grade';
 import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
-import { DEFAULT_CONTENT_LEVEL, isContentLevel, type ContentLevel } from '../content/contentFilter';
 import { DEFAULT_LAYOUT_ID, isLayoutId } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -137,8 +136,6 @@ export interface SaveData {
   apprentice: ApprenticeProgress;
   /** Added in version 4. */
   profile: Progression;
-  /** How much the word list leaves out for this player (added in version 6). */
-  contentLevel: ContentLevel;
   /** Which mechanics this player has been shown, and whether to show more (added in version 7). */
   tutorials: Tutorials;
   /** The keyboard layout this player types on (added in version 8). */
@@ -187,7 +184,6 @@ export function defaultSave(): SaveData {
     vocab: [],
     apprentice: { unlocked: 1, stars: {}, completed: false },
     profile: { ink: 0, cosmetics: { ...DEFAULT_COSMETICS } },
-    contentLevel: DEFAULT_CONTENT_LEVEL,
     tutorials: { enabled: true, seen: [] },
     layout: DEFAULT_LAYOUT_ID,
     daily: defaultDaily(),
@@ -322,7 +318,6 @@ function sanitize(v: Json): SaveData {
     vocab: sanitizeVocab(v.vocab),
     apprentice: sanitizeApprentice(v.apprentice),
     profile: sanitizeProfile(v.profile),
-    contentLevel: isContentLevel(v.contentLevel) ? v.contentLevel : DEFAULT_CONTENT_LEVEL,
     tutorials: sanitizeTutorials(v.tutorials),
     layout: isLayoutId(v.layout) ? v.layout : DEFAULT_LAYOUT_ID,
     daily: sanitizeDaily(v.daily),
@@ -427,8 +422,8 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
     apprentice: { unlocked: 1, stars: {}, completed: false },
     notebook: isObject(save.notebook) && save.notebook.mode === 'apprentice' ? null : save.notebook,
   }),
-  // v6 added the word filter, starting at the strictest level.
-  5: (save) => ({ ...save, version: 6, contentLevel: DEFAULT_CONTENT_LEVEL }),
+  // v6 added a per-player word filter level (dropped again in v11).
+  5: (save) => ({ ...save, version: 6 }),
   // v7 added tutorials (players keep credit for what they'd already met) and
   // ability charges on a saved notebook.
   6: (save) => ({
@@ -448,6 +443,12 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
   }),
   // v10 added the sticker book; stickers for progress already made are given on the next check.
   9: (save) => ({ ...save, version: 10, stickers: { earned: {}, unseen: [], bossesBeaten: [] } }),
+  // v11 dropped the per-player word filter level: everyone gets the family-friendly filter.
+  10: (save) => {
+    const next: Json = { ...save, version: 11 };
+    delete next.contentLevel;
+    return next;
+  },
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

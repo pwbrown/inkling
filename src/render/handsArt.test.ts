@@ -20,6 +20,19 @@ describe('handsArt', () => {
     expect(lit([' '])).toBe(2);
   });
 
+  it('leaves out the red-pen rings and arrows when asked', () => {
+    const { svg } = handsArt(US_QWERTY, ['e', 'b', ' '], colors, { redPen: false });
+    expect(svg).not.toContain(colors.margin);
+    expect(svg).toContain(colors.highlight);
+  });
+
+  it('can leave the hands out, for a plain keyboard', () => {
+    const withHands = handsArt(US_QWERTY, ['e'], colors);
+    const keysOnly = handsArt(US_QWERTY, ['e'], colors, { hands: false });
+    expect(keysOnly.svg).not.toContain('data-hand=');
+    expect(keysOnly.height).toBeLessThan(withHands.height);
+  });
+
   it('keeps the hands on the home row and points an arrow at keys off it', () => {
     const arrows = (keys: string[]) => count(handsArt(US_QWERTY, keys, colors).svg, 'stroke-dasharray');
     expect(arrows(['f', 'j'])).toBe(0);

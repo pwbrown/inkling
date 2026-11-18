@@ -481,52 +481,6 @@
   opacity: 0.6;
 }
 
-/* Word filter (player editor). */
-.menu-filters {
-  display: grid;
-  gap: 6px;
-}
-
-.menu .menu-filter {
-  padding: 8px 14px;
-}
-
-.menu .menu-filter[aria-checked='true'] {
-  background: var(--tc-highlight);
-}
-
-.menu .menu-filter[aria-checked='true']::after {
-  content: '✓';
-  position: absolute;
-  top: 50%;
-  right: 14px;
-  transform: translateY(-50%);
-  font-weight: 700;
-}
-
-.menu-grown-up {
-  display: grid;
-  gap: 6px;
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 2px dashed var(--tc-margin);
-  border-radius: 10px;
-}
-
-.menu-grown-up label {
-  font-weight: 700;
-}
-
-.menu-grown-up-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.menu-grown-up-row .menu-input {
-  width: 6em;
-}
-
 /* How to play: pictures beside the words. */
 .how-creatures {
   list-style: none;
@@ -812,4 +766,228 @@
   display: grid;
   gap: 2px;
   text-align: left;
+}
+
+/* Main menu tile grid: six columns, so tiles can take a whole row, half or a third. */
+.menu-tiles {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.menu .menu-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 2px solid var(--tc-ink);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--tc-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  --ico-accent: var(--tc-margin);
+}
+
+.menu .menu-tile:hover,
+.menu .menu-tile:focus-visible {
+  background: rgb(255 224 102 / 0.35);
+}
+
+.menu .menu-tile.menu-primary {
+  background: var(--tc-ink);
+  color: var(--tc-paper);
+  --ico-accent: var(--tc-highlight);
+}
+
+.menu .menu-tile.menu-primary:hover,
+.menu .menu-tile.menu-primary:focus-visible {
+  background: var(--tc-ink-light);
+}
+
+.menu-tile-full {
+  grid-column: span 6;
+}
+
+.menu-tile-half {
+  grid-column: span 3;
+}
+
+.menu-tile-third {
+  grid-column: span 2;
+}
+
+.menu-tile-small {
+  grid-column: span 3;
+}
+
+/* Big tiles: icon on the left; the Continue and Apprentice rows get a larger one. */
+.menu-tile-icon {
+  flex: none;
+  display: grid;
+  width: 36px;
+  height: 36px;
+}
+
+.menu-tile-full .menu-tile-icon {
+  width: 44px;
+  height: 44px;
+}
+
+.menu-tile-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.menu-tile .menu-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-tile .menu-key {
+  top: 8px;
+  right: 8px;
+  transform: none;
+  padding: 1px 5px;
+  font-size: 11px;
+}
+
+/* Smaller tiles: icon above a centred label. */
+.menu .menu-tile-third,
+.menu .menu-tile-small {
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  text-align: center;
+}
+
+.menu .menu-tile-small {
+  flex-direction: row;
+  padding: 8px 10px;
+}
+
+.menu-tile-third .menu-tile-icon,
+.menu-tile-small .menu-tile-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.menu-tile-third .menu-label,
+.menu-tile-small .menu-label {
+  font-size: 16px;
+}
+
+.ico {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ico .ico-a {
+  stroke: var(--ico-accent);
+}
+
+.ico .ico-dot {
+  stroke-width: 3.6;
+}
+
+@media (max-width: 420px) {
+  .menu .menu-tile {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  /* Half tiles: icon above the words, so labels get the full width. */
+  .menu .menu-tile-half {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .menu-tile .menu-label {
+    font-size: 17px;
+  }
+
+  .menu-tile-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .menu-tile-third .menu-label,
+  .menu-tile-small .menu-label {
+    font-size: 14px;
+  }
+}
+
+.menu a.menu-tile {
+  text-decoration: none;
+}
+
+.menu-tile-icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* How to play: small icon tiles in place of paragraphs. */
+.how-tiles {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  --ico-accent: var(--tc-margin);
+}
+
+.how-tiles-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.how-tile {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 2px solid var(--tc-ink);
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.how-tile-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+}
+
+.how-tile-detail {
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--tc-ink-light);
+}
+
+/* Creatures and bosses two to a row on wider screens. */
+@media (min-width: 560px) {
+  .how-creatures {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .how-creature {
+    grid-template-columns: 80px 1fr;
+  }
+
+  .how-creature .how-art {
+    width: 80px;
+  }
 }

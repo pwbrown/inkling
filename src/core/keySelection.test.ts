@@ -33,25 +33,14 @@ describe('regions', () => {
     expect(region('lowercase')).toHaveLength(26);
     expect(region('uppercase')).toHaveLength(26);
     expect(region('digits').join('')).toBe('1234567890');
-    expect(region('symbols').join('')).toBe("`-=[]\\;',./");
-    expect(region('shiftedSymbols').join('')).toBe('~!@#$%^&*()_+{}|:"<>?');
+    expect(region('symbols').join('')).toBe("`-=[]\\;',./~!@#$%^&*()_+{}|:\"<>?");
     expect(region('space')).toEqual([' ']);
   });
 
-  it('splits rows by their unshifted characters', () => {
-    expect(region('homeRow').join('')).toBe("asdfghjkl;'");
-    expect(region('topRow').join('')).toBe('qwertyuiop[]\\');
-    expect(region('bottomRow').join('')).toBe('zxcvbnm,./');
-    expect(region('numberRow').join('')).toBe('`1234567890-=');
-  });
-
-  it('splits hands without overlap, covering every unshifted key but space', () => {
-    const left = region('leftHand');
-    const right = region('rightHand');
-    expect(left.filter((ch) => right.includes(ch))).toEqual([]);
-    expect(left).toContain('g');
-    expect(right).toContain('h');
-    expect(left.length + right.length).toBe(47);
+  it('cover every character the layout can type, once', () => {
+    const all = REGIONS.flatMap((id) => region(id));
+    expect(new Set(all).size).toBe(all.length);
+    expect(all).toHaveLength(layoutChars(layout).size);
   });
 
   it('never returns an empty region', () => {
@@ -89,23 +78,25 @@ describe('presets', () => {
     }
   });
 
-  it('start new players on the Letters + capitals + space preset', () => {
-    expect(matchingPreset(presets, DEFAULT_KEYS)?.id).toBe('lettersCapitalsSpace');
+  it('start new players on the Everything preset', () => {
+    expect(matchingPreset(presets, DEFAULT_KEYS)?.id).toBe('everything');
+  });
+
+  it('all include space', () => {
+    for (const each of LAYOUTS) for (const p of builtInPresets(each)) expect(p.chars, `${each.id} ${p.id}`).toContain(' ');
   });
 
   it('match only exact selections', () => {
-    expect(matchingPreset(presets, [...DEFAULT_KEYS, '1', '2'])).toBeUndefined();
-    expect(matchingPreset(presets, [...region('digits')].reverse())?.id).toBe('numbers');
+    expect(matchingPreset(presets, [...region('lowercase'), ' ', '1'])).toBeUndefined();
+    expect(matchingPreset(presets, [' ', ...region('digits')].reverse())?.id).toBe('numbers');
   });
 
-  it('follow the layout: its home row and the first keys taught after it', () => {
+  it('follow the layout: its home row', () => {
     expect(homeRowLesson(US_QWERTY).join('')).toBe('asdfghjkl;');
     expect(homeRowLesson(DVORAK).join('')).toBe('aoeuidhtns');
     expect(homeRowLesson(COLEMAK).join('')).toBe('arstdhneio');
-    const plus = (l: typeof layout) => builtInPresets(l).find((p) => p.id === 'homeRowPlus')!;
-    expect(plus(US_QWERTY).nameParams).toEqual({ keys: 'E I' });
-    expect(plus(DVORAK).chars).toEqual([...'aoeuidhtnsrl']);
-    expect(plus(COLEMAK).nameParams).toEqual({ keys: 'U L' });
+    const home = (l: typeof layout) => builtInPresets(l).find((p) => p.id === 'homeRow')!;
+    expect(home(DVORAK).chars).toEqual([...'aoeuidhtns ']);
   });
 
   it('have no two built-ins with the same keys on any layout', () => {
@@ -118,12 +109,12 @@ describe('presets', () => {
 
 describe('remapSelection', () => {
   it('carries a preset over to the same preset on the new layout', () => {
-    expect(remapSelection(US_QWERTY, DVORAK, homeRowLesson(US_QWERTY), 1)).toEqual([...'aoeuidhtns']);
+    expect(remapSelection(US_QWERTY, DVORAK, [...homeRowLesson(US_QWERTY), ' '], 1).sort()).toEqual([...'aoeuidhtns '].sort());
     expect(remapSelection(US_QWERTY, DVORAK, DEFAULT_KEYS, 1).sort()).toEqual([...DEFAULT_KEYS].sort());
     const qwertyApprentice = apprenticePreset(US_QWERTY, 3, '').chars;
     expect(qwertyApprentice).toEqual([...'fjdk']);
     expect(remapSelection(US_QWERTY, COLEMAK, qwertyApprentice, 3).sort()).toEqual([...'tnse'].sort());
-    const allLetters = region('lowercase');
+    const allLetters = [...region('lowercase'), ' '];
     expect(remapSelection(US_QWERTY, DVORAK, allLetters, 1).sort()).toEqual([...allLetters].sort());
   });
 

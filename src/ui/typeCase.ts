@@ -51,7 +51,7 @@ export function capLabel(ch: string): string {
 }
 
 export function presetName(preset: Preset): string {
-  return preset.builtIn && !preset.name ? t(`preset.${preset.id}` as MessageKey, preset.nameParams) : (preset.name ?? '');
+  return preset.builtIn && !preset.name ? t(`preset.${preset.id}` as MessageKey) : (preset.name ?? '');
 }
 
 export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeCaseHandle {

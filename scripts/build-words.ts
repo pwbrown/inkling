@@ -9,15 +9,15 @@
  *
  * Writes src/content/en/words.json and src/content/en/blocklist.json, and
  * prints every word the blocklist removed so false positives can be reviewed
- * and added to ALLOW below. Each word is filed under the strictest word
- * filter level that allows it (src/content/contentFilter.ts).
+ * and added to ALLOW below. The blocklist also includes the family-friendly
+ * filter terms from src/content/contentFilter.ts.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Blocklist } from '../src/content/blocklist.ts';
-import { ALWAYS_BLOCKED, CONTENT_LEVELS, levelTerms } from '../src/content/contentFilter.ts';
+import { FILTER_TERMS } from '../src/content/contentFilter.ts';
 
 const require = createRequire(import.meta.url);
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -64,52 +64,37 @@ function readJson<T>(modulePath: string): T {
 }
 
 const rawTerms = readJson<string[]>('naughty-words/en.json');
-/** Blocked at every filter level. */
-const terms = [...rawTerms.filter((t) => !t.includes(' ')), ...ALWAYS_BLOCKED];
-/** One blocklist per filter level, strictest first (src/content/contentFilter.ts). */
-const levelBlocklists = CONTENT_LEVELS.map((level) => new Blocklist([...terms, ...levelTerms(level)], ALLOW));
-const always = new Blocklist(terms, ALLOW);
+const terms = [...rawTerms.filter((t) => !t.includes(' ')), ...FILTER_TERMS];
+const blocklist = new Blocklist(terms, ALLOW);
 
 const seen = new Set<string>();
-/** byLevel[l][tier]: words first allowed at filter level l. */
-const byLevel: string[][][] = CONTENT_LEVELS.map(() => []);
+const tiers: string[][] = [];
 const removed: string[] = [];
 
 LEVELS.forEach((level, tier) => {
   const words = readJson<string[]>(`wordlist-english/english-words-${level}.json`);
-  for (const lists of byLevel) lists[tier] = [];
+  tiers[tier] = [];
   for (const word of words) {
     if (!/^[a-z]+$/.test(word) || word.length < MIN_LENGTH || word.length > MAX_LENGTH) continue;
     if (seen.has(word)) continue;
     seen.add(word);
-    const first = always.blocksWord(word) ? -1 : levelBlocklists.findIndex((b) => !b.blocksWord(word));
-    if (first < 0) {
-      removed.push(word);
-      continue;
-    }
-    byLevel[first]![tier]!.push(word);
+    if (blocklist.blocksWord(word)) removed.push(word);
+    else tiers[tier]!.push(word);
   }
 });
-
-const joinTiers = (tiers: string[][]) => tiers.map((words) => words.sort().join(' '));
-const [family, ...looser] = byLevel;
 
 const wordsPack = {
   locale: 'en',
   source: 'SCOWL size levels 10, 20, 35, 40, 50 (english-words-*) via wordlist-english 1.2.1',
   license: 'SCOWL license, see licenses/SCOWL.txt',
-  // Space-separated per tier to keep the bundle small. `tiers` is every word
-  // the family-friendly filter allows; `levels` adds the words each looser
-  // filter level lets through.
-  tiers: joinTiers(family!),
-  levels: Object.fromEntries(CONTENT_LEVELS.slice(1).map((level, i) => [level, joinTiers(looser[i]!)])),
+  // Space-separated per tier to keep the bundle small.
+  tiers: tiers.map((words) => words.sort().join(' ')),
 };
 
 const blocklistPack = {
   locale: 'en',
   source: 'List of Dirty, Naughty, Obscene, and Otherwise Bad Words (LDNOOBW) via naughty-words 1.2.0, plus terms in src/content/contentFilter.ts',
   license: 'CC-BY-4.0',
-  // Blocked at every level. The filter groups are read from contentFilter.ts at runtime.
   terms: [...new Set(terms.map((t) => t.toLowerCase()))].sort(),
   allow: ALLOW,
 };
@@ -117,7 +102,6 @@ const blocklistPack = {
 writeFileSync(join(outDir, 'words.json'), JSON.stringify(wordsPack) + '\n');
 writeFileSync(join(outDir, 'blocklist.json'), JSON.stringify(blocklistPack, null, 1) + '\n');
 
-const count = (tiers: string[][]) => tiers.reduce((sum, t) => sum + t.length, 0);
-console.log(`words: ${CONTENT_LEVELS.map((level, i) => `${level} +${count(byLevel[i]!)}`).join(', ')}`);
-console.log(`blocklist: ${always.size} terms always; removed ${removed.length} words at every level:`);
+console.log(`words: ${tiers.reduce((sum, t) => sum + t.length, 0)}`);
+console.log(`blocklist: ${blocklist.size} terms; removed ${removed.length} words:`);
 console.log(removed.join(' '));

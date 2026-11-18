@@ -6,34 +6,9 @@
 import type { KeyboardLayout, LayoutKey } from '../content/layouts/types';
 import { APPRENTICE_CHAPTERS, apprenticeKeys } from './campaign';
 
-export type RegionId =
-  | 'lowercase'
-  | 'uppercase'
-  | 'digits'
-  | 'symbols'
-  | 'shiftedSymbols'
-  | 'space'
-  | 'numberRow'
-  | 'topRow'
-  | 'homeRow'
-  | 'bottomRow'
-  | 'leftHand'
-  | 'rightHand';
+export type RegionId = 'lowercase' | 'uppercase' | 'digits' | 'symbols' | 'space';
 
-export const REGIONS: readonly RegionId[] = [
-  'lowercase',
-  'uppercase',
-  'digits',
-  'symbols',
-  'shiftedSymbols',
-  'space',
-  'numberRow',
-  'topRow',
-  'homeRow',
-  'bottomRow',
-  'leftHand',
-  'rightHand',
-];
+export const REGIONS: readonly RegionId[] = ['lowercase', 'uppercase', 'digits', 'symbols', 'space'];
 
 const isLetter = (ch: string) => /^\p{L}$/u.test(ch);
 const isDigit = (ch: string) => /^\p{Nd}$/u.test(ch);
@@ -49,7 +24,6 @@ function baseChars(keys: LayoutKey[]): string[] {
 /** Characters in a region, in keyboard order. */
 export function regionChars(layout: KeyboardLayout, region: RegionId): string[] {
   const keys = allKeys(layout);
-  const row = (i: number) => layout.rows[i] ?? [];
   switch (region) {
     case 'lowercase':
       return keys.filter((k) => isLetter(k.base)).map((k) => k.base);
@@ -58,23 +32,13 @@ export function regionChars(layout: KeyboardLayout, region: RegionId): string[] 
     case 'digits':
       return keys.filter((k) => isDigit(k.base)).map((k) => k.base);
     case 'symbols':
-      return keys.filter((k) => !isLetter(k.base) && !isDigit(k.base) && k.base !== ' ').map((k) => k.base);
-    case 'shiftedSymbols':
-      return keys.filter((k) => !isLetter(k.base) && k.shift).map((k) => k.shift!);
+      // Plain symbols, then the shifted ones (the digits' shifts included).
+      return [
+        ...keys.filter((k) => !isLetter(k.base) && !isDigit(k.base) && k.base !== ' ').map((k) => k.base),
+        ...keys.filter((k) => !isLetter(k.base) && k.shift).map((k) => k.shift!),
+      ];
     case 'space':
       return keys.some((k) => k.base === ' ') ? [' '] : [];
-    case 'numberRow':
-      return baseChars(row(0));
-    case 'topRow':
-      return baseChars(row(1));
-    case 'homeRow':
-      return baseChars(row(2));
-    case 'bottomRow':
-      return baseChars(row(3));
-    case 'leftHand':
-      return baseChars(keys.filter((k) => k.hand === 'left'));
-    case 'rightHand':
-      return baseChars(keys.filter((k) => k.hand === 'right'));
   }
 }
 
@@ -84,8 +48,6 @@ export interface Preset {
   chars: string[];
   /** Built-in presets have translated names; custom ones carry their own. */
   name?: string;
-  /** Values for a built-in name's placeholders, e.g. the keys in "Home row + {keys}". */
-  nameParams?: Record<string, string>;
   builtIn: boolean;
 }
 
@@ -98,41 +60,27 @@ export function homeRowLesson(layout: KeyboardLayout): string[] {
 }
 
 /**
- * The two keys a typing course adds after the home row (E and I on QWERTY),
- * the first ones the Apprentice teaches after space.
+ * Common lessons, roughly in the order a typing course teaches them. Every
+ * one includes space, so real words and phrases show up; only the Apprentice
+ * course (apprenticePreset) holds space back until its own chapter.
  */
-export function firstReachKeys(layout: KeyboardLayout): string[] {
-  const space = layout.lessons.findIndex((keys) => keys.includes(' '));
-  return layout.lessons.slice(space + 1, space + 3).flatMap((keys) => [...keys]);
-}
-
-/** Common lessons, roughly in the order a typing course teaches them. */
 export function builtInPresets(layout: KeyboardLayout): Preset[] {
   const r = (id: RegionId) => regionChars(layout, id);
-  const preset = (id: string, chars: string[], nameParams?: Record<string, string>): Preset => ({
-    id,
-    chars: [...new Set(chars)],
-    builtIn: true,
-    ...(nameParams ? { nameParams } : {}),
-  });
+  const preset = (id: string, chars: string[]): Preset => ({ id, chars: [...new Set([...chars, ' '])], builtIn: true });
   const home = homeRowLesson(layout);
-  const reach = firstReachKeys(layout);
+  const topRow = baseChars(layout.rows[1] ?? []).filter(isLetter);
   return [
     // The classic first lesson: the home row without the far-right key.
     preset('homeRow', home),
-    preset('homeRowPlus', [...home, ...reach], { keys: reach.map((k) => k.toUpperCase()).join(' ') }),
-    preset('homeTopRows', [...home, ...r('topRow').filter(isLetter)]),
+    preset('homeTopRows', [...home, ...topRow]),
     preset('allLetters', r('lowercase')),
     preset('lettersCapitals', [...r('lowercase'), ...r('uppercase')]),
-    // What a brand-new player starts with (DEFAULT_KEYS in config.ts).
-    preset('lettersCapitalsSpace', [...r('lowercase'), ...r('uppercase'), ' ']),
-    preset('lettersPunctuation', [...r('lowercase'), ...r('uppercase'), ',', '.', "'", '?', '!', ' ']),
-    preset('leftHand', r('leftHand')),
-    preset('rightHand', r('rightHand')),
+    preset('lettersPunctuation', [...r('lowercase'), ...r('uppercase'), ',', '.', "'", '?', '!']),
     preset('numbers', r('digits')),
-    preset('numberSymbols', regionChars(layout, 'shiftedSymbols').filter((ch) => '!@#$%^&*()'.includes(ch))),
-    preset('code', [...'{}[]()<>;:=+-*/\\|&!?"\'`~_#$%^@']),
-    preset('everything', [...r('lowercase'), ...r('uppercase'), ...r('digits'), ...r('symbols'), ...r('shiftedSymbols'), ' ']),
+    preset('numberSymbols', r('symbols').filter((ch) => '!@#$%^&*()'.includes(ch))),
+    preset('symbols', r('symbols')),
+    // What a brand-new player starts with (DEFAULT_KEYS in config.ts).
+    preset('everything', [...r('lowercase'), ...r('uppercase'), ...r('digits'), ...r('symbols')]),
   ];
 }
 

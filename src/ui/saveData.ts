@@ -176,7 +176,6 @@ export function openSaveData(host: HTMLElement, options: SaveDataOptions): { clo
     h('header', {}, [
       h('h2', { id: 'sd-title' }, [t('saveData.title')]),
       h('p', { className: 'tc-intro' }, [t('saveData.privacy')]),
-      h('p', { className: 'tc-intro' }, [t('saveData.host')]),
       store.persistent ? null : h('p', { className: 'tc-warning' }, [t('saveData.notPersistent')]),
     ]),
     body,

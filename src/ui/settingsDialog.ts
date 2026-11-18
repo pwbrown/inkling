@@ -96,7 +96,7 @@ export function openSettings(host: HTMLElement, options: SettingsDialogOptions):
   mute.checked = settings.muted;
 
   const panel = h('div', { className: 'tc-panel st-panel' }, [
-    h('header', {}, [h('h2', { id: 'st-title' }, [t('settings.title')]), h('p', { className: 'tc-intro' }, [t('settings.intro')])]),
+    h('header', {}, [h('h2', { id: 'st-title' }, [t('settings.title')])]),
     radioGroup(
       t('settings.textSize'),
       t('settings.textSize.help'),

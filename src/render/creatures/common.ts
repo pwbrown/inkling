@@ -23,6 +23,10 @@ export interface FrameContext {
   defeated?: boolean;
   /** The player just mistyped at this creature: it grins for a moment. */
   taunting?: boolean;
+  /** It can't be typed yet (a Squid's body behind its bubble): its word is drawn faded. */
+  guarded?: boolean;
+  /** About to do its boss move (a Squid tentacle about to squirt): it swells and flashes red pen. */
+  warning?: boolean;
 }
 
 export interface CreatureView {

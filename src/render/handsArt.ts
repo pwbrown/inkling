@@ -110,7 +110,19 @@ function fingerFor(key: LayoutKey): { side: Side; finger: Finger } {
  * The picture for `keys` (characters; Shift characters use their key). Rows
  * shown: top, home, bottom and space, plus the number row when a key needs it.
  */
-export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors: HandsColors): HandsArt {
+export interface HandsOptions {
+  /**
+   * Red-pen rings round each chosen key and dashed arrows from the fingers
+   * (default true). Off for an overview of many keys, where they crowd the picture.
+   */
+  redPen?: boolean;
+  /** Draw the hands over the keyboard (default true); without them it's just the keys. */
+  hands?: boolean;
+}
+
+export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors: HandsColors, options: HandsOptions = {}): HandsArt {
+  const redPen = options.redPen ?? true;
+  const showHands = options.hands ?? true;
   const all = layout.rows.flat();
   const targets = keys
     .map((ch) => all.find((k) => k.base === ch || k.shift === ch))
@@ -140,7 +152,8 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
 
   const widest = Math.max(...layout.rows.slice(firstRow, 4).map((row, r) => row.length + (ROW_OFFSET[r + firstRow] ?? 0)));
   const width = widest + 1;
-  const height = spaceY + 2.3;
+  // Room below the space bar for the hands, or just a margin without them.
+  const height = spaceY + (showHands ? 2.3 : 0.6);
 
   // Which fingers are used, and the keys they reach for.
   const lit = new Set<string>();
@@ -162,7 +175,7 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
   // Each hand is the drawing in handDrawing.ts, scaled and turned so its
   // fingertips sit on the home keys as closely as they can; the right hand is
   // the same drawing mirrored.
-  const hands = (['left', 'right'] as const).map((side) => {
+  const hands = (showHands ? (['left', 'right'] as const) : []).map((side) => {
     const mirror = side === 'right' ? -1 : 1;
     const pairs = DIGITS.map((digit) => {
       const home = homeOf(side, digit);
@@ -204,7 +217,7 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
       const bar = (inset: number, color: string) =>
         `<rect x="${r1(x + inset)}" y="${r1((p.y - 0.28) * U + inset)}" width="${r1(spaceW * U - inset * 2)}" height="${r1(0.56 * U - inset * 2)}" rx="${r1(0.28 * U - inset)}" fill="${color}"/>`;
       keyCaps.push(bar(0, colors.rim), bar(3, isTarget ? colors.highlight : colors.ink));
-      if (isTarget)
+      if (isTarget && redPen)
         marks.push(
           `<rect x="${r1(x - 6)}" y="${r1((p.y - 0.28) * U - 6)}" width="${r1(spaceW * U + 12)}" height="${r1(0.56 * U + 12)}" rx="${r1(0.28 * U + 6)}" fill="none" stroke="${colors.margin}" stroke-width="3"/>`,
         );
@@ -227,13 +240,13 @@ export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors
       marks.push(
         `<circle cx="${cx}" cy="${cy}" r="${r1(0.36 * U)}" fill="${colors.highlight}" stroke="${colors.ink}" stroke-width="2"/>`,
         label(key.base, p, colors.ink, 0.46),
-        `<circle cx="${cx}" cy="${cy}" r="${r1(0.53 * U)}" fill="none" stroke="${colors.margin}" stroke-width="3"/>`,
       );
+      if (redPen) marks.push(`<circle cx="${cx}" cy="${cy}" r="${r1(0.53 * U)}" fill="none" stroke="${colors.margin}" stroke-width="3"/>`);
     }
   }
 
   // Dashed red-pen arrows from a resting fingertip to the key it reaches for.
-  const arrows = reaches.map(({ from, to }) => {
+  const arrows = (redPen ? reaches : []).map(({ from, to }) => {
     const d = unit(sub(to, from));
     const start = add(from, d, 0.3);
     const end = add(to, d, -0.62);

@@ -26,11 +26,10 @@ Anyone who has the link can load a copy of that progress, so send it only to you
 
 ## Sharing your Daily Page result
 
-On the **Daily Page** screen you can copy your result or share it as a picture. Both are made on your device; the game sends nothing.
+On the **Daily Page** screen you can copy your result. It's made on your device; the game sends nothing.
 
 - **Copy result** puts a short text on your clipboard: your score, words per minute, accuracy, each page's grade, your streak and a **challenge link**.
 - The challenge link holds the day's page number, your keyboard layout, your score and page grades after a `#` in the address. Browsers never send that part to the website, so the host doesn't see it when a friend opens the link. Your player name is only added if you tick **Sign my challenge link**.
-- **Share picture** draws the result as an image and hands it to your device's share menu (or copies or saves it). Where it goes from there is up to you.
 - When you open someone else's challenge link, the game reads it in your browser and removes it from the address bar. A name in a link is shortened to letters, numbers and spaces, and left out if the word filter wouldn't allow it.
 
 ## Links to GitHub

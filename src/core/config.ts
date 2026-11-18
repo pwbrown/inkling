@@ -13,14 +13,17 @@
  */
 
 /**
- * Keys a brand-new player starts with in Free Write: every letter, both
- * cases, and space, so real words and phrases show up from the first page.
- * Matches the "Letters + capitals + space" preset in keySelection.ts.
+ * Keys a brand-new player starts with in Free Write: every key on the
+ * keyboard (the "Everything" preset in keySelection.ts). Numbers and symbols
+ * get their own waves, so a mixed set still reads as real words and phrases.
  * Beginners who want the home row start the Apprentice course instead.
  */
 export const DEFAULT_KEYS: readonly string[] = [
   ...'abcdefghijklmnopqrstuvwxyz',
   ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  ...'1234567890',
+  ...'`-=[]\\;\',./',
+  ...'~!@#$%^&*()_+{}|:"<>?',
   ' ',
 ];
 
@@ -358,9 +361,23 @@ export const GAME_CONFIG = {
     bookworm: { segmentsMin: 4, segmentsMax: 6, speedFactor: 0.75, speedStep: 0.12 },
     /**
      * Tentacles guard the body. One left alone for `squirtMs` squirts ink
-     * that hides a lane's words for `smudgeMs`.
+     * that hides a lane's words for `smudgeMs`, after `warnMs` of warning. They sit in lanes
+     * `laneOffsets` from the body (first that fit), and hold
+     * `tentacleDx` × the body's width + `tentacleDxStep` × n px right of its
+     * left edge, so their arms reach back and out from the body.
      */
-    squid: { tentacles: 3, lives: 2, speedFactor: 0.5, squirtMs: 6500, smudgeMs: 2800 },
+    squid: {
+      tentacles: 3,
+      lives: 2,
+      speedFactor: 0.5,
+      squirtMs: 6500,
+      smudgeMs: 2800,
+      /** A tentacle swells and flashes red pen this long before it squirts. */
+      warnMs: 1200,
+      laneOffsets: [-3, 3, -4, 4, -2, 2, -5, 5],
+      tentacleDx: 0.6,
+      tentacleDxStep: 40,
+    },
     /**
      * The rival writes `cps` letters a second (scaled with the page's speed)
      * after `startDelayMs`; if it finishes first it splashes you for `inkLoss`.
@@ -451,6 +468,14 @@ export const GAME_CONFIG = {
     marginPx: 24,
     /** Never closer than this behind the target ahead in the same lane. */
     gapPx: 40,
+  },
+  menu: {
+    /**
+     * Shortcut letters are ignored this long after a menu screen opens, so
+     * typing carried over from play (e.g. after an accidental pause) can't
+     * restart or quit by mistake.
+     */
+    shortcutDelayMs: 400,
   },
 };
 

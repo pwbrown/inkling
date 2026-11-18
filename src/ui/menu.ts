@@ -6,14 +6,14 @@
 import './dialog.css';
 import './menu.css';
 import './stickers.css';
-import { DIFFICULTIES, type Difficulty } from '../core/config';
+import { DIFFICULTIES, GAME_CONFIG, type Difficulty } from '../core/config';
 import { DAILY_PAGES, type PageMark, type StreakDay } from '../core/daily';
 import type { Grade } from '../core/grade';
 import type { MechanicId } from '../core/mechanics';
 import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
 import { getLocale, t, type MessageKey } from '../i18n';
-import { CONTENT_LEVELS, type ContentLevel } from '../content/contentFilter';
 import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage/profiles';
+import { iconSvg, type IconId } from './icons';
 import { artElement, badgeSvg, cosmeticSvg, dayDropSvg, streakDropSvg } from './art';
 import { stickerArt } from './stickerToast';
 import { h } from './dom';
@@ -44,17 +44,6 @@ export interface PlayerEntry {
   /** e.g. "Scribe · Level 5 · Apprentice chapter 4". */
   detail: string;
   active: boolean;
-  /** The player's word filter. */
-  contentLevel: ContentLevel;
-}
-
-/** A times-table question a grown-up answers before the word filter is loosened. */
-interface GrownUpCheck {
-  level: ContentLevel;
-  a: number;
-  b: number;
-  answer: string;
-  wrong: boolean;
 }
 
 export interface ChapterEntry {
@@ -185,7 +174,7 @@ export interface MenuHooks {
   canAddPlayer(): boolean;
   onChoosePlayer(id: string): void;
   /** Add (`id` null) or edit a player. Resolves false if the name is unusable. */
-  onSavePlayer(id: string | null, name: string, badge: Badge, contentLevel: ContentLevel): Promise<boolean>;
+  onSavePlayer(id: string | null, name: string, badge: Badge): Promise<boolean>;
   onDeletePlayer(id: string): void;
   /** e.g. "2.6.0". */
   appVersion(): string;
@@ -209,8 +198,6 @@ export interface MenuHooks {
   onTransferAdd(): void;
   onTransferReplace(): void;
   onDismissTransfer(): void;
-  /** Share today's result as a picture: share sheet, clipboard or a saved file. */
-  onShareImage(): Promise<'shared' | 'copied' | 'saved' | 'cancelled'>;
   /** Copy the share text. Resolves false if the clipboard isn't available. */
   onCopyDaily(): Promise<boolean>;
   /** e.g. "7 of 26 stickers · 2 new!". */
@@ -236,19 +223,20 @@ const LOGO_SVG = `
   <path class="logo-underline" d="M84 82 C160 74 270 90 366 78"/>
 </svg>`;
 
+/** Shortcut for the player button on the title screen. */
+const PLAYER_KEY = 'u';
+
 export class Menu {
   private readonly root: HTMLDivElement;
   private readonly panel: HTMLDivElement;
   private current: MenuScreen | null = null;
+  /** When the current screen opened (performance.now()), for the shortcut delay. */
+  private shownAt = 0;
   /** The player being added (id null) or edited on the playerEdit screen. */
   private editing: {
     id: string | null;
     name: string;
     badge: Badge;
-    contentLevel: ContentLevel;
-    /** The filter when the form opened: loosening past it needs a grown-up. */
-    savedLevel: ContentLevel;
-    check: GrownUpCheck | null;
     confirmDelete: boolean;
     error: string | null;
   } | null = null;
@@ -262,7 +250,15 @@ export class Menu {
       this.panel,
     ]);
     this.root.hidden = true;
-    this.root.addEventListener('keydown', (event) => this.onKeyDown(event));
+    // On the document, so shortcuts still work when focus has dropped to the
+    // page body; keys meant for a dialog opened over the menu are left alone.
+    document.addEventListener('keydown', (event) => {
+      const target = event.target;
+      const inMenu = target instanceof Node && this.root.contains(target);
+      const onPage = target === document.body || target === document.documentElement;
+      const otherDialog = document.querySelector('.dialog:not(.menu):not([hidden])') !== null;
+      if (inMenu || (onPage && !otherDialog)) this.onKeyDown(event);
+    });
     host.append(this.root);
   }
 
@@ -276,6 +272,7 @@ export class Menu {
 
   show(screen: MenuScreen): void {
     this.current = screen;
+    this.shownAt = performance.now();
     this.root.hidden = false;
     this.root.dataset.screen = screen;
     this.render();
@@ -372,6 +369,40 @@ export class Menu {
     );
   }
 
+  /**
+   * A main-menu tile: an icon, a label, an optional short status line and
+   * the shortcut key in the corner. `size` sets how much of the row it takes.
+   */
+  private tile(
+    id: string,
+    size: 'full' | 'half' | 'third' | 'small',
+    label: string,
+    onClick: () => void,
+    opts: { icon?: IconId; detail?: string | null; key: string; primary?: boolean },
+  ) {
+    const icon = h('span', { className: 'menu-tile-icon' });
+    icon.innerHTML = iconSvg(opts.icon ?? (id as IconId));
+    return h(
+      'button',
+      {
+        type: 'button',
+        className: `menu-tile menu-tile-${size}${opts.primary ? ' menu-primary' : ''}`,
+        'data-id': id,
+        'data-key': opts.key,
+        'data-autofocus': opts.primary ? true : undefined,
+        onClick,
+      },
+      [
+        icon,
+        h('span', { className: 'menu-tile-text' }, [
+          h('span', { className: 'menu-label' }, [label]),
+          opts.detail ? h('span', { className: 'menu-detail' }, [opts.detail]) : null,
+        ]),
+        h('kbd', { className: 'menu-key', 'aria-hidden': 'true' }, [opts.key.toUpperCase()]),
+      ],
+    );
+  }
+
   private title(): HTMLElement[] {
     const logo = h('div', { className: 'menu-logo-wrap' });
     logo.innerHTML = LOGO_SVG;
@@ -386,34 +417,33 @@ export class Menu {
       ]),
       h(
         'button',
-        { type: 'button', className: 'menu-player', 'data-id': 'player', 'data-key': 'u', onClick: () => this.show('players') },
+        { type: 'button', className: 'menu-player', 'data-id': 'player', 'data-key': PLAYER_KEY, onClick: () => this.show('players') },
         [
           artElement(badgeSvg(player.badge), 'menu-player-badge'),
           h('span', { className: 'menu-player-name' }, [t('menu.player', { name: player.name })]),
-          h('span', { className: 'menu-player-switch' }, [t('menu.switchPlayer'), ' ', h('kbd', { 'aria-hidden': 'true' }, ['U'])]),
+          h('span', { className: 'menu-player-switch' }, [t('menu.switchPlayer'), ' ', h('kbd', { 'aria-hidden': 'true' }, [PLAYER_KEY.toUpperCase()])]),
         ],
       ),
-      h('nav', { className: 'menu-list' }, [
-        cont ? this.button('continue', t('menu.continue'), () => this.hooks.onContinue(), { detail: cont, key: 'c', primary: true }) : null,
-        this.button('practice', t('menu.practice'), () => this.show('newNotebook'), {
-          detail: t('menu.practiceDetail', { keys: this.hooks.keysSummary() }),
+      h('nav', { className: 'menu-tiles', 'aria-label': t('menu.nav') }, [
+        cont ? this.tile('continue', 'full', t('menu.continue'), () => this.hooks.onContinue(), { detail: cont, key: 'c', primary: true }) : null,
+        this.tile('practice', 'half', t('menu.practice'), () => this.show('newNotebook'), {
+          icon: 'freeWrite',
+          detail: this.hooks.keysSummary(),
           key: 'f',
           primary: !cont,
         }),
-        this.button('apprentice', t('menu.apprentice'), () => this.show('contents'), {
+        this.tile('daily', 'half', t('menu.daily'), () => this.show('daily'), { detail: this.hooks.dailyDetail(), key: 't' }),
+        this.tile('apprentice', 'full', t('menu.apprentice'), () => this.show('contents'), {
           detail: this.hooks.apprenticeDetail(),
           key: 'a',
         }),
-        this.button('daily', t('menu.daily'), () => this.show('daily'), { detail: this.hooks.dailyDetail(), key: 't' }),
-        this.button('stickers', t('menu.stickers'), () => this.show('stickers'), { detail: this.hooks.stickerDetail(), key: 'k' }),
-        this.button('words', t('menu.wordLists'), () => this.hooks.onWordLists(), { key: 'w' }),
-        this.button('desk', t('menu.desk'), () => this.show('desk'), { detail: t('menu.deskDetail'), key: 'd' }),
-        h('div', { className: 'menu-row' }, [
-          this.button('settings', t('menu.settings'), () => this.hooks.onSettings(), { key: 's' }),
-          this.button('saves', t('menu.saveData'), () => this.hooks.onSaveData(), { key: 'b' }),
-          this.button('how', t('menu.howToPlay'), () => this.show('howToPlay'), { key: 'h' }),
-          this.button('about', t('menu.about'), () => this.show('about'), { key: 'i' }),
-        ]),
+        this.tile('desk', 'half', t('menu.desk'), () => this.show('desk'), { key: 'd' }),
+        this.tile('stickers', 'half', t('menu.stickers'), () => this.show('stickers'), { detail: this.hooks.stickerDetail(), key: 'k' }),
+        this.tile('words', 'third', t('menu.wordLists'), () => this.hooks.onWordLists(), { key: 'w' }),
+        this.tile('how', 'third', t('menu.howToPlay'), () => this.show('howToPlay'), { key: 'h' }),
+        this.tile('settings', 'third', t('menu.settings'), () => this.hooks.onSettings(), { key: 's' }),
+        this.tile('saves', 'small', t('menu.saveData'), () => this.hooks.onSaveData(), { key: 'b' }),
+        this.tile('about', 'small', t('menu.about'), () => this.show('about'), { key: 'i' }),
       ]),
       h('p', { className: 'menu-best' }, [this.hooks.rankLine(), best ? h('br') : null, best]),
     ];
@@ -610,10 +640,29 @@ export class Menu {
         h('dd', {}, [t(action)]),
       ]);
     const hands = this.hooks.handsPicture();
+    const iconTile = (icon: IconId, text: string, detail?: string) => {
+      const art = h('span', { className: 'how-tile-icon' });
+      art.innerHTML = iconSvg(icon);
+      return h('li', { className: 'how-tile' }, [art, h('span', {}, [text]), detail ? h('span', { className: 'how-tile-detail' }, [detail]) : null]);
+    };
     return [
       h('h2', { id: 'menu-title' }, [t('how.title')]),
-      section('how.goalTitle', p('how.goal')),
-      section('how.modesTitle', p('how.modes')),
+      section(
+        'how.goalTitle',
+        p('how.goal'),
+        h('ol', { className: 'how-tiles' }, [
+          iconTile('freeWrite', t('how.step.type'), t('how.step.typeDetail')),
+          iconTile('margin', t('how.step.margin'), t('how.step.marginDetail')),
+          iconTile('pageDone', t('how.step.page'), t('how.step.pageDetail')),
+        ]),
+      ),
+      section(
+        'how.modesTitle',
+        h('ul', { className: 'how-tiles how-tiles-2' }, [
+          iconTile('freeWrite', t('menu.practice'), t('how.mode.freeWrite')),
+          iconTile('apprentice', t('menu.apprentice'), t('how.mode.apprentice')),
+        ]),
+      ),
       section(
         'how.creaturesTitle',
         h('ul', { className: 'how-creatures' }, [
@@ -623,7 +672,7 @@ export class Menu {
           creature('recovery', 'how.bottle'),
         ]),
       ),
-      section('how.variantsTitle', h('div', { className: 'how-variants' }, [variant('crimson'), variant('violet'), variant('ghost')]), p('how.variants'), p('how.mix')),
+      section('how.variantsTitle', h('div', { className: 'how-variants' }, [variant('crimson'), variant('violet'), variant('ghost')]), p('how.variants')),
       section(
         'how.bossTitle',
         p('how.boss'),
@@ -633,18 +682,26 @@ export class Menu {
           (['spill', 'bookworm', 'shuffler', 'squid', 'quill'] as const).map((id) => creature(id, `how.boss.${id}`)),
         ),
       ),
-      section('how.powersTitle', p('how.powers')),
+      section(
+        'how.powersTitle',
+        p('how.powers'),
+        h('dl', { className: 'how-controls' }, [
+          control(['↑'], 'how.power.paperweight'),
+          control(['↓'], 'how.power.highlighter'),
+          control(['Enter'], 'how.power.blotter'),
+          control([], 'how.power.eraser'),
+          control([], 'how.power.paper'),
+        ]),
+      ),
       section('how.keysTitle', hands ? h('img', { className: 'how-hands', src: hands, alt: t('how.handsAlt') }) : null, p('how.keys')),
       section(
         'how.controlsTitle',
         h('dl', { className: 'how-controls' }, [
           control([t('how.control.typeKey')], 'how.control.type'),
           control(['Tab'], 'how.control.tab'),
-          control(['↑'], 'how.control.up'),
-          control(['↓'], 'how.control.down'),
-          control(['Enter'], 'how.control.enter'),
           control(['Backspace'], 'how.control.backspace'),
           control(['Esc'], 'how.control.esc'),
+          control(['R', 'M'], 'how.control.card'),
         ]),
       ),
       h('div', { className: 'tc-actions' }, [
@@ -834,15 +891,15 @@ export class Menu {
             'ul',
             { className: 'stickers-grid' },
             shelf.stickers.map((s) =>
-              h('li', { className: `sticker${s.earnedOn ? '' : ' sticker-locked'}${s.isNew ? ' sticker-new' : ''}` }, [
+              // Earned: the name and when (how is on hover). Not yet: the name and how to earn it.
+              h('li', { className: `sticker${s.earnedOn ? '' : ' sticker-locked'}${s.isNew ? ' sticker-new' : ''}`, title: s.earnedOn ? s.how : undefined }, [
                 stickerArt(s.emoji, s.group),
                 h('span', { className: 'sticker-text' }, [
                   h('span', { className: 'sticker-name' }, [
                     s.name,
                     s.isNew ? h('span', { className: 'sticker-badge' }, [t('stickers.new')]) : null,
                   ]),
-                  h('span', { className: 'sticker-how' }, [s.how]),
-                  h('span', { className: 'sticker-when' }, [s.earnedOn ?? t('stickers.locked')]),
+                  s.earnedOn ? h('span', { className: 'sticker-when' }, [s.earnedOn]) : h('span', { className: 'sticker-how' }, [s.how]),
                 ]),
               ]),
             ),
@@ -887,19 +944,6 @@ export class Menu {
       h('nav', { className: 'menu-list' }, [
         d.played
           ? this.button('copy', t('daily.copy'), () => void copy(), { key: 'c', primary: true, autofocus: true })
-          : null,
-        d.played
-          ? this.button(
-              'share-image',
-              t('daily.shareImage'),
-              () =>
-                void this.hooks.onShareImage().then((how) => {
-                  if (how !== 'cancelled') {
-                    copied.textContent = t(how === 'shared' ? 'daily.imageShared' : how === 'copied' ? 'daily.imageCopied' : 'daily.imageSaved');
-                  }
-                }),
-              { detail: t('daily.shareImageDetail'), key: 'i' },
-            )
           : null,
         this.button('play-daily', d.played ? t('daily.playAgain') : t('daily.play'), () => this.hooks.onPlayDaily(), {
           detail: d.played ? t('daily.playAgainDetail') : t('daily.playDetail', { pages: DAILY_PAGES }),
@@ -1004,10 +1048,10 @@ export class Menu {
 
   private editPlayer(player: PlayerEntry | null): void {
     const used = new Set(this.hooks.players().map((p) => p.badge));
-    const base = { check: null, confirmDelete: false, error: null };
+    const base = { confirmDelete: false, error: null };
     this.editing = player
-      ? { ...base, id: player.id, name: player.name, badge: player.badge, contentLevel: player.contentLevel, savedLevel: player.contentLevel }
-      : { ...base, id: null, name: '', badge: BADGES.find((b) => !used.has(b)) ?? 'ink', contentLevel: 'family', savedLevel: 'family' };
+      ? { ...base, id: player.id, name: player.name, badge: player.badge }
+      : { ...base, id: null, name: '', badge: BADGES.find((b) => !used.has(b)) ?? 'ink' };
     this.show('playerEdit');
   }
 
@@ -1029,7 +1073,7 @@ export class Menu {
       },
     });
     const save = async () => {
-      const ok = await this.hooks.onSavePlayer(e.id, e.name, e.badge, e.contentLevel);
+      const ok = await this.hooks.onSavePlayer(e.id, e.name, e.badge);
       if (ok) {
         this.editing = null;
         this.show('players');
@@ -1081,7 +1125,6 @@ export class Menu {
               ),
             ),
           ]),
-          this.wordFilter(e),
           canDelete && e.confirmDelete
             ? h('div', { className: 'menu-confirm', role: 'alert' }, [
                 h('p', {}, [t('players.deleteConfirm', { name: player?.name ?? e.name })]),
@@ -1117,120 +1160,29 @@ export class Menu {
     ];
   }
 
-  /**
-   * The player's word filter. Choosing a stricter level is instant; a looser
-   * one than the player had asks a times-table question first, so it's a
-   * grown-up's choice.
-   */
-  private wordFilter(e: NonNullable<Menu['editing']>): HTMLElement {
-    const rank = (level: ContentLevel) => CONTENT_LEVELS.indexOf(level);
-    const pick = (level: ContentLevel) => {
-      if (rank(level) <= rank(e.savedLevel)) {
-        e.contentLevel = level;
-        e.check = null;
-      } else {
-        // Two digits by one (e.g. 17 × 8): easy for a grown-up, hard for a young child to guess.
-        const between = (lo: number, hi: number) => lo + Math.floor(Math.random() * (hi - lo + 1));
-        e.check = { level, a: between(12, 19), b: between(3, 9), answer: '', wrong: false };
-      }
-      this.render(false);
-      if (e.check) this.panel.querySelector<HTMLInputElement>('#grown-up-answer')?.focus();
-    };
-    const check = e.check;
-    const confirmCheck = () => {
-      if (!check) return;
-      if (Number(check.answer.trim()) === check.a * check.b) {
-        e.contentLevel = check.level;
-        e.check = null;
-        this.render(false);
-        this.panel.querySelector<HTMLElement>(`[data-id="filter-${e.contentLevel}"]`)?.focus();
-      } else {
-        check.wrong = true;
-        check.answer = '';
-        this.render(false);
-        this.panel.querySelector<HTMLInputElement>('#grown-up-answer')?.focus();
-      }
-    };
-    return h('fieldset', { className: 'st-group' }, [
-      h('legend', {}, [t('filter.title')]),
-      h('p', { className: 'st-help' }, [t('filter.intro')]),
-      h(
-        'div',
-        { className: 'menu-filters', role: 'radiogroup', 'aria-label': t('filter.title') },
-        CONTENT_LEVELS.map((level) =>
-          h(
-            'button',
-            {
-              type: 'button',
-              role: 'radio',
-              className: 'menu-btn menu-filter',
-              'aria-checked': String(level === e.contentLevel),
-              'data-id': `filter-${level}`,
-              onClick: () => pick(level),
-            },
-            [
-              h('span', { className: 'menu-label' }, [t(`filter.${level}` as MessageKey)]),
-              h('span', { className: 'menu-detail' }, [t(`filter.${level}.detail` as MessageKey)]),
-            ],
-          ),
-        ),
-      ),
-      check
-        ? h('div', { className: 'menu-grown-up', role: 'group', 'aria-labelledby': 'grown-up-question' }, [
-            h('label', { id: 'grown-up-question', for: 'grown-up-answer' }, [
-              t('filter.check', { a: check.a, b: check.b }),
-            ]),
-            h('div', { className: 'menu-grown-up-row' }, [
-              h('input', {
-                id: 'grown-up-answer',
-                className: 'menu-input',
-                type: 'text',
-                inputmode: 'numeric',
-                autocomplete: 'off',
-                value: check.answer,
-                'data-id': 'grown-up-answer',
-                onInput: (event) => {
-                  check.answer = (event.target as HTMLInputElement).value;
-                },
-                onKeydown: (event) => {
-                  // Enter answers the question rather than saving the form.
-                  if ((event as KeyboardEvent).key === 'Enter') {
-                    event.preventDefault();
-                    confirmCheck();
-                  }
-                },
-              }),
-              h('button', { type: 'button', className: 'tc-primary', 'data-id': 'grown-up-ok', onClick: confirmCheck }, [t('filter.checkOk')]),
-              h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'grown-up-cancel', onClick: () => {
-                e.check = null;
-                this.render(false);
-              } }, [t('players.cancel')]),
-            ]),
-            check.wrong ? h('p', { className: 'tc-warning', role: 'alert' }, [t('filter.checkWrong')]) : null,
-          ])
-        : null,
-    ]);
-  }
-
   /** What Inky Keys is, why it exists, and where its code lives. */
   private about(): HTMLElement[] {
-    const link = (id: string, href: string, label: string, detail: string, icon: string | null) =>
-      h('a', { className: 'menu-btn menu-link-card', href, target: '_blank', rel: 'noopener noreferrer', 'data-id': id }, [
-        icon ? artElement(icon, 'menu-link-icon') : null,
-        h('span', { className: 'menu-label' }, [label, h('span', { className: 'visually-hidden' }, [' ', t('about.newTab')])]),
-        h('span', { className: 'menu-detail' }, [detail]),
+    const link = (id: string, href: string, label: string, icon: string) => {
+      const art = h('span', { className: 'menu-tile-icon' });
+      art.innerHTML = icon;
+      return h('a', { className: 'menu-tile menu-tile-third', href, target: '_blank', rel: 'noopener noreferrer', 'data-id': id }, [
+        art,
+        h('span', { className: 'menu-tile-text' }, [
+          h('span', { className: 'menu-label' }, [label, h('span', { className: 'visually-hidden' }, [' ', t('about.newTab')])]),
+        ]),
       ]);
+    };
+    const news = this.tile('whats-new', 'third', t('about.whatsNew'), () => this.hooks.onWhatsNew(), { icon: 'stickers', key: 'n' });
     return [
       h('h2', { id: 'menu-title' }, [t('about.title')]),
       h('p', { className: 'menu-version' }, [t('about.version', { version: this.hooks.appVersion() })]),
       h('p', { className: 'tc-intro' }, [t('about.what')]),
-      h('p', { className: 'tc-intro' }, [t('about.why')]),
-      h('p', { className: 'tc-intro' }, [t('about.private')]),
-      h('nav', { className: 'menu-list' }, [
-        this.button('whats-new', t('about.whatsNew'), () => this.hooks.onWhatsNew(), { detail: t('about.whatsNewDetail'), key: 'n' }),
-        link('source', REPO_URL, t('about.source'), t('about.sourceDetail'), GITHUB_SVG),
-        link('suggest', ISSUES_URL, t('about.suggest'), t('about.suggestDetail'), null),
+      h('nav', { className: 'menu-tiles' }, [
+        news,
+        link('source', REPO_URL, t('about.source'), GITHUB_SVG),
+        link('suggest', ISSUES_URL, t('about.suggest'), iconSvg('words')),
       ]),
+      h('p', { className: 'menu-best' }, [t('about.why')]),
       h('div', { className: 'tc-actions' }, [
         h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', 'data-autofocus': true, onClick: () => this.show('title') }, [
           t('menu.back'),
@@ -1259,7 +1211,8 @@ export class Menu {
       return;
     }
     // Typing a name: leave the keys to the text box (Enter submits the form).
-    if (event.target instanceof HTMLInputElement) return;
+    // Checkboxes only need Space, so shortcuts still work from them.
+    if (event.target instanceof HTMLInputElement && event.target.type !== 'checkbox') return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       const step = event.key === 'ArrowDown' ? 1 : -1;
@@ -1284,7 +1237,7 @@ export class Menu {
       return;
     }
     // Shortcut letters (and 1–4 for difficulty).
-    if ([...event.key].length === 1 && !event.repeat) {
+    if ([...event.key].length === 1 && !event.repeat && performance.now() - this.shownAt >= GAME_CONFIG.menu.shortcutDelayMs) {
       const match = this.panel.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(event.key.toLowerCase())}"]`);
       if (match) {
         event.preventDefault();

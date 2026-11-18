@@ -42,6 +42,15 @@ export const WORLD_HEIGHT = 720;
 /** The red margin line the Nib defends (DESIGN §2). */
 export const MARGIN_X = 140;
 
+/** Squid ink over a lane (see World.smudges). */
+export interface Smudge {
+  lane: number;
+  ms: number;
+  x: number;
+  fromX: number;
+  fromY: number;
+}
+
 /** Ruled-line spacing on the page. Targets travel along these lines. */
 export const LINE_SPACING = 48;
 export const FIRST_LINE_Y = 120;
@@ -86,6 +95,10 @@ export interface Target {
   partIndex?: number;
   /** Bookworm: this segment is the head, the only one that can be started. */
   head?: boolean;
+  /** Squid tentacle: how far right of the body it holds, so it stays attached as the body moves. */
+  partDx?: number;
+  /** Squid body: how many tentacles it started with (one bubble segment each). */
+  guards?: number;
   /** Shuffler: time to the next reshuffle. Squid tentacle: to the next squirt. Quill: before it starts writing (ms). */
   bossTimerMs?: number;
   /** Rival Quill: letters the rival has written of the current word. */
@@ -262,8 +275,11 @@ export interface World {
   eraserRun: number;
   /** Time left after the Eraser was used in which wrong keys are quietly ignored (ms). */
   eraserGraceMs: number;
-  /** Lanes a Squid has squirted ink over: their words are hidden for `ms` more. */
-  smudges: { lane: number; ms: number }[];
+  /**
+   * Lanes a Squid has squirted ink over: their words are hidden for `ms`
+   * more. The ink landed at `x`, squirted from (`fromX`, `fromY`).
+   */
+  smudges: Smudge[];
   /** Blotting paper is held: the next creature to reach the margin is soaked up. */
   shield: boolean;
   /** Blotting paper was earned on the page just cleared (shown on the graded page). */
@@ -849,9 +865,15 @@ export function stepWorld(world: World, stepMs: number): void {
   const dt = stepMs / 1000;
   const survivors: Target[] = [];
 
+  const byId = new Map(world.targets.map((t) => [t.id, t]));
   for (const target of world.targets) {
     target.prevX = target.x;
-    if (target.entering) enter(world, target, dt);
+    // A Squid's tentacles keep their place beside its body (moved earlier in this loop).
+    const anchor = target.partDx !== undefined && target.partOf !== undefined ? byId.get(target.partOf) : undefined;
+    if (anchor) {
+      target.x = anchor.x + target.partDx!;
+      target.entering = false;
+    } else if (target.entering) enter(world, target, dt);
     else target.x -= target.speed * slow * dt;
 
     if (target.x > MARGIN_X) {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createContentSource } from '../content/contentSource';
-import { canStart, shuffleRest } from './bosses';
+import { aboutToSquirt, canStart, shuffleRest, squidGuards } from './bosses';
 import { GAME_CONFIG, type BossKind } from './config';
 import { cycleLock, typeChar, useBlotter } from './input';
-import { WORLD_WIDTH, createWorld, estimateWidth, spawnBoss, stepWorld, type Target, type World } from './world';
+import { MARGIN_X, WORLD_WIDTH, createWorld, estimateWidth, spawnBoss, stepWorld, type Target, type World } from './world';
 
 /** A small seeded random source, so runs repeat but never get stuck on one value. */
 function seeded(seed = 7): () => number {
@@ -114,6 +114,32 @@ describe('the Inkwell Squid', () => {
     expect(world.events.some((e) => e.type === 'bossDefeated')).toBe(true);
   });
 
+  it('keeps its tentacles attached as it moves, and loses a guard for each one beaten', () => {
+    const { world, boss } = bossWorld('squid');
+    settle(world);
+    const tentacles = world.targets.filter((t) => t.partOf === boss.id);
+    const offsets = tentacles.map((t) => t.x - boss.x);
+    for (let i = 0; i < 40; i++) stepWorld(world, 50);
+    expect(tentacles.map((t) => t.x - boss.x)).toEqual(offsets);
+    expect(squidGuards(world, boss).left.size).toBe(tentacles.length);
+    expect(squidGuards(world, boss).total).toBe(tentacles.length);
+    type(world, tentacles[0]!.text);
+    expect(squidGuards(world, boss).left.has(tentacles[0]!.partIndex!)).toBe(false);
+    expect(squidGuards(world, boss).left.size).toBe(tentacles.length - 1);
+  });
+
+  it('warns before a tentacle squirts, but not while it is being typed', () => {
+    const { world, boss } = bossWorld('squid');
+    settle(world);
+    const tentacle = world.targets.find((t) => t.partOf === boss.id)!;
+    tentacle.bossTimerMs = GAME_CONFIG.boss.squid.warnMs + 100;
+    expect(aboutToSquirt(world, tentacle)).toBe(false);
+    tentacle.bossTimerMs = GAME_CONFIG.boss.squid.warnMs - 100;
+    expect(aboutToSquirt(world, tentacle)).toBe(true);
+    world.lockedId = tentacle.id;
+    expect(aboutToSquirt(world, tentacle)).toBe(false);
+  });
+
   it('squirts ink over a lane when a tentacle is left alone', () => {
     const { world, boss } = bossWorld('squid');
     settle(world);
@@ -126,6 +152,11 @@ describe('the Inkwell Squid', () => {
     }
     expect(squirted).toBe(true);
     expect(world.smudges.length).toBeGreaterThan(0);
+    // It lands on the page, in line with where it came from.
+    for (const smudge of world.smudges) {
+      expect(smudge.x).toBeGreaterThan(MARGIN_X);
+      expect(smudge.x).toBeLessThan(WORLD_WIDTH);
+    }
     stepWorld(world, GAME_CONFIG.boss.squid.smudgeMs + 16);
     // That smudge has worn off (another tentacle may have squirted meanwhile).
     expect(world.smudges.every((s) => s.ms <= GAME_CONFIG.boss.squid.smudgeMs)).toBe(true);

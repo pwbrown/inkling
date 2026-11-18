@@ -175,8 +175,8 @@ const TOUR: Step[] = [
   { eval: SAMPLE_STICKERS }, { click: 'Sticker book' }, { eval: SCROLL_TOP }, { shot: 'stickers' }, { key: 'Escape' },
   // A challenge link from a friend (M22).
   { eval: SAMPLE_CHALLENGE }, { wait: 500 }, { shot: 'challenge' }, { click: 'Not now' },
-  // Moving to another device (M23): the transfer row in Manage saves, then opening a link.
-  { click: 'Manage saves' }, { shot: 'save-data' }, { key: 'Escape' },
+  // Moving to another device (M23): the transfer row in Saves ("Manage saves" before M24), then opening a link.
+  { click: 'Manage saves|Saves' }, { shot: 'save-data' }, { key: 'Escape' },
   { eval: SAMPLE_TRANSFER }, { wait: 800 }, { shot: 'transfer' }, { click: 'Not now' },
   { click: FREE_WRITE }, { shot: 'practice' },
   { click: 'Change keys' }, { shot: 'type-case' }, { key: 'Escape' },

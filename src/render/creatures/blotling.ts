@@ -103,10 +103,26 @@ export function createBlotling(target: Target, scale: number): CreatureView {
         } else {
           // A tentacle: a curl at the back and suckers along the bottom.
           const sway = ctx.reducedMotion ? 0 : Math.sin(ctx.timeMs * 0.005 + (t.partIndex ?? 0)) * 6 * scale;
+          // About to squirt: the curl swells and it's ringed in red pen, with a "!" over it.
+          const pulse = ctx.warning ? (ctx.reducedMotion ? 1 : 0.5 + 0.5 * Math.sin(ctx.timeMs * 0.03)) : 0;
+          const curl = 9 * scale * (1 + 0.6 * pulse);
           extras
             .moveTo(shake + width - 4 * scale, 0)
             .bezierCurveTo(shake + width + 22 * scale, -6 * scale + sway, shake + width + 26 * scale, 18 * scale, shake + width + 10 * scale, 14 * scale)
-            .stroke({ width: 9 * scale, color, cap: 'round' });
+            .stroke({ width: curl, color, cap: 'round' });
+          if (ctx.warning) {
+            extras
+              .roundRect(shake - 6 * scale, -height / 2 - 6 * scale, width + 12 * scale, height + 12 * scale, height / 2 + 6 * scale)
+              .stroke({ width: (2 + 2 * pulse) * scale, color: COLORS.margin });
+            const bx = shake + width - 6 * scale;
+            const by = -height / 2 - 14 * scale;
+            extras
+              .moveTo(bx, by - 12 * scale)
+              .lineTo(bx, by - 2 * scale)
+              .stroke({ width: 4 * scale, color: COLORS.margin, cap: 'round' })
+              .circle(bx, by + 4 * scale, 2.4 * scale)
+              .fill(COLORS.margin);
+          }
           for (let x = shake + 14 * scale; x < shake + width - 8 * scale; x += 16 * scale) {
             extras.circle(x, height / 2 - 2 * scale, 3.5 * scale).fill(COLORS.inkLight);
           }
@@ -217,6 +233,7 @@ export function createBlotling(target: Target, scale: number): CreatureView {
       drawBossExtras(t, ctx, shake, color, eyeX, eyeY, eyeR);
       highlight.visible = ctx.locked;
       applyGhost(t, root, [typedLabel, restLabel], ctx.timeMs, ctx.reducedMotion);
+      restLabel.alpha = ctx.guarded ? 0.45 : 1;
     },
   };
   view.update(target, { timeMs: 0, dtMs: 0, locked: false, lookX: -500, lookY: 0, reducedMotion: true });

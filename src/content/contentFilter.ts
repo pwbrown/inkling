@@ -1,36 +1,14 @@
 /**
- * The word filter (REQUIREMENTS §6): how much the word list leaves out.
+ * The word filter (REQUIREMENTS §6). Every player gets the family-friendly
+ * filter: swearing, slurs and explicit words are blocked, and so are the
+ * words grouped below, which aren't swearing but don't suit young children.
  *
- * Swearing, slurs and explicit words are always blocked. On top of that,
- * words that aren't swearing but don't suit young children are grouped
- * here, and each filter level says which groups it lets through:
- *
- * - family (default): none of them.
- * - olderKids: identity words, toilet humor and mild insults.
- * - grownUps: everything here, including body and reproduction words,
- *   drugs and alcohol, violence and grown-up themes.
- *
- * Self-contained (no imports) so the Node build script can use it too:
- * `npm run words:build` sorts every word into the level that first allows it.
+ * Self-contained (no imports) so the Node build script can use it too.
  * Inflections are matched automatically; terms of 5+ letters also match
  * longer words containing them (see blocklist.ts).
  */
 
-export type ContentLevel = 'family' | 'olderKids' | 'grownUps';
-
-/** Strictest first. */
-export const CONTENT_LEVELS: readonly ContentLevel[] = ['family', 'olderKids', 'grownUps'];
-
-export const DEFAULT_CONTENT_LEVEL: ContentLevel = 'family';
-
 export type ContentGroup = 'identity' | 'toilet' | 'insults' | 'body' | 'substances' | 'violence' | 'mature';
-
-/** The groups each level lets through. Levels are nested: each allows everything the one before does. */
-export const LEVEL_ALLOWS: Record<ContentLevel, readonly ContentGroup[]> = {
-  family: [],
-  olderKids: ['identity', 'toilet', 'insults'],
-  grownUps: ['identity', 'toilet', 'insults', 'body', 'substances', 'violence', 'mature'],
-};
 
 /** Terms in each group (reviewed by hand against the word pack, 2026-11). */
 export const GROUP_TERMS: Record<ContentGroup, readonly string[]> = {
@@ -90,8 +68,7 @@ export const GROUP_TERMS: Record<ContentGroup, readonly string[]> = {
 };
 
 /**
- * Blocked at every level, beyond the LDNOOBW list: slurs, crude words and
- * sensitive topics it misses.
+ * Slurs, crude words and sensitive topics the LDNOOBW list misses.
  */
 export const ALWAYS_BLOCKED: readonly string[] = [
   'retard', 'chink', 'dyke', 'gook', 'gyp', 'gypped', 'damn', 'crap', 'crappy', 'piss', 'bugger', 'prick',
@@ -100,17 +77,5 @@ export const ALWAYS_BLOCKED: readonly string[] = [
   'redskin', 'squaw', 'gypsy', 'satanic', 'satanism', 'satanically',
 ];
 
-/** Groups a level still blocks. */
-export function blockedGroups(level: ContentLevel): ContentGroup[] {
-  const allowed = new Set(LEVEL_ALLOWS[level]);
-  return (Object.keys(GROUP_TERMS) as ContentGroup[]).filter((g) => !allowed.has(g));
-}
-
-/** Every term a level blocks, on top of the always-blocked ones. */
-export function levelTerms(level: ContentLevel): string[] {
-  return blockedGroups(level).flatMap((g) => GROUP_TERMS[g]);
-}
-
-export function isContentLevel(value: unknown): value is ContentLevel {
-  return CONTENT_LEVELS.includes(value as ContentLevel);
-}
+/** Every term the filter blocks on top of the LDNOOBW list. */
+export const FILTER_TERMS: readonly string[] = [...ALWAYS_BLOCKED, ...Object.values(GROUP_TERMS).flat()];

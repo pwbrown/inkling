@@ -40,7 +40,6 @@ import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, ran
 import { SaveFormatError, defaultSave, migrate, type SaveData } from './storage/schema';
 import { MAX_TRANSFER_LENGTH, canTransfer, decodeTransfer, encodeTransfer, hasTransfer, type Transfer } from './storage/transfer';
 import { PlayerStore, cleanName, saveKeyFor, uniqueName, type Player } from './storage/profiles';
-import { DEFAULT_CONTENT_LEVEL, type ContentLevel } from './content/contentFilter';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
 import { loadFonts } from './fonts';
 import { registerOffline } from './pwa';
@@ -76,7 +75,6 @@ import { openUnlockDialog, type UnlockedItem } from './ui/unlockDialog';
 import { openWordLists } from './ui/wordLists';
 import { openWhatsNewDialog } from './ui/whatsNewDialog';
 import { showStickerToast } from './ui/stickerToast';
-import { shareCard } from './ui/shareCard';
 import { STICKERS, type StickerFacts, type StickerGroup } from './core/stickers';
 import { RELEASES, compareVersions, releasesToAnnounce, MAX_NEW_RELEASES_SHOWN, type Release } from './core/releases';
 import { APP_VERSION, loadSeenVersion, saveSeenVersion } from './version';
@@ -234,15 +232,15 @@ async function main(): Promise<void> {
   const contentFor = (keys: readonly string[], focus: readonly string[] = []) => {
     const weights = keyWeights(store.data.keyStats, keys);
     for (const key of focus) weights[key] = (weights[key] ?? 1) * NEW_KEY_WEIGHT;
-    // The player's word filter (content/contentFilter.ts) decides which words appear.
-    const blocklist = pack.blocklistFor(store.data.contentLevel);
+    // The family-friendly word filter (content/contentFilter.ts) decides which words appear.
+    const blocklist = pack.blocklist;
     return createContentSource({
       keys,
-      words: pack.wordsFor(store.data.contentLevel),
+      words: pack.words,
       blocklist,
       trustedWords: true,
       keyWeights: weights,
-      // Downloaded words are checked again, in case the filter is stricter than when they were fetched.
+      // Downloaded words are checked again, in case the filter changed since they were fetched.
       topicWords: store.data.vocab
         .filter((list) => list.enabled)
         .flatMap((list) => list.words)
@@ -252,13 +250,13 @@ async function main(): Promise<void> {
 
   /**
    * The Daily Page's content: the same for everyone on a layout, so the
-   * strictest word filter, no downloaded words and no weak-key weighting.
+   * no downloaded words and no weak-key weighting.
    */
   const dailyContent = () =>
     createContentSource({
       keys: dailyKeys(layout()),
-      words: pack.wordsFor('family'),
-      blocklist: pack.blocklistFor('family'),
+      words: pack.words,
+      blocklist: pack.blocklist,
       trustedWords: true,
     });
 
@@ -431,7 +429,7 @@ async function main(): Promise<void> {
     const challenge = decodeChallenge(location.hash, isLayoutId);
     history.replaceState(null, '', `${location.pathname}${location.search}`);
     if (!challenge) return;
-    if (challenge.name && pack.blocklistFor('family').blocksString(challenge.name)) challenge.name = null;
+    if (challenge.name && pack.blocklist.blocksString(challenge.name)) challenge.name = null;
     pendingChallenge = challenge;
     if (game.phase === 'ready' && !dialogOpen) menu.show('challenge');
   };
@@ -510,7 +508,7 @@ async function main(): Promise<void> {
       customPresets: customPresets(),
       initial: store.data.keys,
       keyStats: store.data.keyStats,
-      countWords: (keys) => countTypeableWords(pack.wordsFor(store.data.contentLevel), keys),
+      countWords: (keys) => countTypeableWords(pack.words, keys),
       minWords: MIN_WORD_POOL,
       onDone: (keys) => {
         dialogOpen = false;
@@ -615,7 +613,7 @@ async function main(): Promise<void> {
     const refresh = () => setContent(game, contentFor(store.data.keys));
     openWordLists(document.body, {
       lists: store.data.vocab,
-      blocklist: pack.blocklistFor(store.data.contentLevel),
+      blocklist: pack.blocklist,
       countFitting: (words) =>
         countTypeableWords(
           words.map((word) => ({ word, tier: 0 })),
@@ -671,8 +669,6 @@ async function main(): Promise<void> {
 
   /** "Level 5 · Apprentice chapter 4"-style summaries of each player, read from their saves. */
   const playerDetails = new Map<string, string>();
-  /** Other players' word filters, read from their saves. */
-  const playerLevels = new Map<string, ContentLevel>();
   const describePlayer = (save: Readonly<SaveData>) => {
     const level = levelForInk(save.profile.ink);
     return t('players.detail', {
@@ -688,7 +684,6 @@ async function main(): Promise<void> {
         const raw = await backend.load(saveKeyFor(p.id));
         const save = raw === undefined ? defaultSave() : migrate(raw);
         playerDetails.set(p.id, describePlayer(save));
-        playerLevels.set(p.id, save.contentLevel);
       } catch {
         playerDetails.delete(p.id);
       }
@@ -724,41 +719,15 @@ async function main(): Promise<void> {
     });
   };
 
-  const savePlayer = async (id: string | null, name: string, badge: Player['badge'], contentLevel: ContentLevel) => {
+  const savePlayer = async (id: string | null, name: string, badge: Player['badge']) => {
     if (!cleanName(name)) return false;
-    let target = id;
-    if (target === null) {
-      const added = await players.add(name, badge);
-      if (!added) return false;
-      target = added.id;
+    if (id === null) {
+      if (!(await players.add(name, badge))) return false;
     } else {
-      await players.edit(target, name, badge);
+      await players.edit(id, name, badge);
     }
-    await setContentLevel(target, contentLevel);
     void refreshPlayerDetails();
     return true;
-  };
-
-  /** Change a player's word filter, in their own save. */
-  const setContentLevel = async (id: string, level: ContentLevel) => {
-    if (id === players.active.id) {
-      if (store.data.contentLevel === level) return;
-      store.update((save) => {
-        save.contentLevel = level;
-      });
-      // New words (or fewer) from the next page on.
-      setContent(game, contentFor(store.data.keys));
-      return;
-    }
-    playerLevels.set(id, level);
-    const key = saveKeyFor(id);
-    try {
-      const raw = await backend.load(key);
-      const save = raw === undefined ? defaultSave() : migrate(raw);
-      if (save.contentLevel !== level) await backend.save({ ...save, contentLevel: level }, key);
-    } catch {
-      // Leave an unreadable save alone.
-    }
   };
 
   const deletePlayer = async (id: string) => {
@@ -811,7 +780,7 @@ async function main(): Promise<void> {
     handsPicture: () => {
       const keys = store.data.keys;
       if (keys.length === 0) return null;
-      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(themedHandsArt(layout(), keys).svg)}`;
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(themedHandsArt(layout(), keys, { redPen: false, hands: false }).svg)}`;
     },
     apprenticeDetail: () => {
       const { earned, max } = totalStars(store.data.apprentice.stars);
@@ -882,7 +851,6 @@ async function main(): Promise<void> {
         ...p,
         active: p.id === players.active.id,
         detail: p.id === players.active.id ? describePlayer(store.data) : (playerDetails.get(p.id) ?? ''),
-        contentLevel: p.id === players.active.id ? store.data.contentLevel : (playerLevels.get(p.id) ?? DEFAULT_CONTENT_LEVEL),
       })),
     activePlayer: () => players.active,
     canAddPlayer: () => players.canAdd,
@@ -976,20 +944,6 @@ async function main(): Promise<void> {
       } catch {
         return false;
       }
-    },
-    onShareImage: async () => {
-      const id = dailyId(new Date());
-      const result = store.data.daily.results[id];
-      if (!result) return 'cancelled';
-      return shareCard({
-        id,
-        score: result.score,
-        wpm: result.wpm,
-        accuracy: result.accuracy,
-        pages: dailyPages(result.grades),
-        streak: currentStreak(store.data.daily, id),
-        site: location.host,
-      });
     },
     canRestart: () => canRestart(game),
     stickerDetail: () => {

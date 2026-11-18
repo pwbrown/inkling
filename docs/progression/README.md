@@ -39,7 +39,7 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 | M9 | M12 | M13 | M14 | Latest |
 |---|---|---|---|---|
 | <img src="m09/menu.png" width="170" alt="M9 main menu"> | <img src="m12/menu.png" width="170" alt="M12 menu with Apprentice and Practice"> | <img src="m13/menu.png" width="170" alt="M13 menu with Desk and rank"> | <img src="m14/menu.png" width="170" alt="M14 menu with player badge and About"> | <img src="latest/menu.png" width="170" alt="Latest menu"> |
-| A real **main menu** with a logo replaces the card. | **Apprentice** and **Practice** replace New notebook and Choose keys. | **Desk** button, and your rank and ink along the bottom. | **Player** badge and **About**. The course is now 27 chapters long. | **Free Write** (formerly Practice) comes first; new players start on letters, capitals and space. A **Daily Page** button (M20) and a **Sticker book** (M21). |
+| A real **main menu** with a logo replaces the card. | **Apprentice** and **Practice** replace New notebook and Choose keys. | **Desk** button, and your rank and ink along the bottom. | **Player** badge and **About**. The course is now 27 chapters long. | **Free Write** (formerly Practice) comes first, with a **Daily Page** (M20) and a **Sticker book** (M21). Since M24, a **tile grid** with an icon on each tile. |
 
 ### Type Case (choosing keys)
 
@@ -50,10 +50,10 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 
 ### End of a page
 
-| M2 | M7 | M12 | M13 | M15 | M17 | M20 |
+| M2 | M7 | M12 | M13 | M15 | M17 | M20 | M24 |
 |---|---|---|---|---|---|---|
-| <img src="m02/page-done.png" width="140" alt="M2 page complete card"> | <img src="m07/page-done.png" width="140" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="140" alt="M12 page with stars"> | <img src="m13/page-done.png" width="140" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="140" alt="M15 page with handwritten title, drawn stars and best run"> | <img src="m17/page-done.png" width="140" alt="M17 page card with a Main menu (M) link"> | <img src="m20/page-done.png" width="140" alt="M20 page card with a points line: 490 for keys + 175 combo"> |
-| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. | A **Main menu (M)** link, so you can stop without starting the next page. | A **points** line: what came from the keys, the combo and the Highlighter. |
+| <img src="m02/page-done.png" width="140" alt="M2 page complete card"> | <img src="m07/page-done.png" width="140" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="140" alt="M12 page with stars"> | <img src="m13/page-done.png" width="140" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="140" alt="M15 page with handwritten title, drawn stars and best run"> | <img src="m17/page-done.png" width="140" alt="M17 page card with a Main menu (M) link"> | <img src="m20/page-done.png" width="140" alt="M20 page card with a points line: 490 for keys + 175 combo"> | <img src="m24/page-done.png" width="140" alt="M24 page card with score, WPM, accuracy, combo and best run in boxes"> |
+| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. | A **Main menu (M)** link, so you can stop without starting the next page. | A **points** line: what came from the keys, the combo and the Highlighter. | The numbers in **boxes**, news as yellow pills. |
 
 ### Starting a chapter
 
@@ -294,15 +294,32 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 
 **New:** **transfer links** move a player to another device with no server. **Copy transfer link** in Manage saves compresses the player's name, badge and save (without downloaded word lists) into the part of a link after `#t=`, which browsers never send to the host. Opening it on the other device offers **Add as a new player** (numbered if the name is taken) or **Replace** the current player's progress, after a second confirmation. The save is checked just like an imported backup file; damaged links, saves from a newer version, and saves too big for a link each get a clear message.
 
+### M24: Tidy-up
+
+| Main menu | Page complete |
+|---|---|
+| <img src="m24/menu.png" width="420" alt="The main menu as a tile grid: Free Write and Daily Page, a wide Apprentice tile, Desk and Sticker book, then smaller Word lists, How to play, Settings, Saves and About tiles, each with a line icon and its shortcut key"> | <img src="m24/page-done.png" width="420" alt="A page card with Score, WPM, Accuracy, Combo and Best run in labelled boxes and a yellow +112 ink pill"> |
+| A **tile grid** with hand-drawn icons and short status lines. | The numbers in **boxes** instead of lines of text. |
+
+**Changed:**
+- **Main menu:** a tile grid (Continue, then Free Write and Daily Page, Apprentice, Desk and Sticker book, then smaller tiles), each with a line icon in ink and red pen.
+- **Page cards:** Page Complete, Game Over and Notebook Complete show Score, WPM, Accuracy and (when there are any) combo, highlighter, best run, wrong keys and leaks as boxes; news (new best, stickers, ink) as pills.
+- **Inkwell Squid:** its tentacles stay attached by arms, and its body sits in a locked ink bubble that breaks a piece per tentacle and pops when the last goes. Tentacles flash red pen before they squirt, and the squirt is a stream and a smear, not a row of blots.
+- **Type Case:** ten presets (Apprentice, Home row, Home + top row, All lowercase, All letters, Sentences, Numbers, Number-row symbols, All symbols, Everything) and five groups. Every preset but Apprentice includes Space, and new players start on Everything.
+- **Less text:** How to play uses icon tiles and a powers grid, its keyboard picture drops the hands and red circles, and About, Settings, Saves, Word lists and the Daily Page say less.
+- **Word filter:** one family-friendly filter for everyone; the per-player choice is gone (save version 11).
+- **Removed:** the Daily share picture (copying the text and challenge link stays).
+- **Fixed:** Enter on the main menu opens Continue or Free Write, not the player list; menu letters ignore typing carried over from play; shortcuts work after ticking the name box.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m23
+npm run snapshots -- m24
 ```
 
-That writes a standard set of shots to `docs/progression/m23/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m24/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

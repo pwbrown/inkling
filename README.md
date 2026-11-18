@@ -49,13 +49,7 @@ The game builds everything from your keys: drips use them directly, and word pag
 
 Several people can share one browser. Each player has their own notebook, stars, ink, desk and key stats; display and sound settings are shared. Press **U** on the main menu (or click **Writing as…**) to switch, add, rename or delete players. With more than one player, the game asks **Who's writing?** when it opens.
 
-Each player also has a **word filter**, set under **Edit**:
-
-- **Family friendly** (the default): for young children.
-- **Older kids:** adds toilet humor, mild insults like "stupid", and identity words like "gay".
-- **Grown-ups:** also adds words about bodies and reproduction, drinking and drugs, violence and grown-up topics.
-
-Swear words and slurs are always left out. Making the filter looser asks a quick grown-up question (a times-table sum); making it stricter doesn't. The word groups live in `src/content/contentFilter.ts`.
+Every player gets the same family-friendly word filter: swear words, slurs and words that don't suit young children are always left out. The word groups live in `src/content/contentFilter.ts`.
 
 ### Ink, ranks and your desk
 

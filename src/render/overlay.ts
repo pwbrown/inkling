@@ -11,7 +11,7 @@ import type { KeyboardLayout, LayoutId } from '../content/layouts/types';
 import { accuracy, topMissedKeys, wpm, type Stats } from '../core/stats';
 import { WORLD_HEIGHT, WORLD_WIDTH, isLastPageOfChapter, type World } from '../core/world';
 import { formatNumber, t, type MessageKey } from '../i18n';
-import { handsArt, type HandsArt } from './handsArt';
+import { handsArt, type HandsArt, type HandsOptions } from './handsArt';
 import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, TEXT_FONT, keyLabel } from './theme';
 import { outBack, outCubic } from './tween';
 
@@ -22,7 +22,7 @@ const HANDS_WIDTH = 500;
 const HAND_WASH = 0.13;
 
 /** The hands-on-keyboard picture for `keys`, in the current theme's colors. */
-export function themedHandsArt(layout: KeyboardLayout, keys: readonly string[]): HandsArt {
+export function themedHandsArt(layout: KeyboardLayout, keys: readonly string[], options?: HandsOptions): HandsArt {
   const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
   /** `a` with `amount` of `b` mixed in, channel by channel. */
   const mix = (a: number, b: number, amount: number) =>
@@ -38,7 +38,7 @@ export function themedHandsArt(layout: KeyboardLayout, keys: readonly string[]):
     highlight: hex(COLORS.highlighter),
     margin: hex(COLORS.margin),
     rim: hex(COLORS.inkFaded),
-  });
+  }, options);
 }
 const PAD = 32;
 export type OverlayLinkId = 'retry' | 'mainMenu';
@@ -54,7 +54,12 @@ export interface OverlayContent {
   grade?: Grade;
   /** Stars earned on an Apprentice page, out of three. */
   stars?: number;
+  /** A sentence or two of prose under the title (often empty). */
   lines: string[];
+  /** The numbers, each in its own labelled box (Score, WPM, …). */
+  tiles?: StatTile[];
+  /** Short news under the boxes: new best, level up, a sticker. */
+  chips?: string[];
   /** Keys drawn circled in red, the teacher's way of flagging them. */
   circled?: string[];
   /** Label before the circled keys (default "Keys to watch:"). */
@@ -66,6 +71,12 @@ export interface OverlayContent {
   /** Clickable links above the prompt (e.g. "Main menu"). */
   links?: OverlayLink[];
   prompt: string;
+}
+
+/** One labelled number on the card. */
+export interface StatTile {
+  label: string;
+  value: string;
 }
 
 /** App state the overlay shows that isn't part of the game world (it comes from the save). */
@@ -84,41 +95,24 @@ const NO_CONTEXT: OverlayContext = {
   extraLines: () => [],
 };
 
-function summaryLine(stats: Stats): string {
-  return t('overlay.stats', {
-    score: formatNumber(stats.score),
-    wpm: formatNumber(Math.round(wpm(stats))),
-    accuracy: formatNumber(Math.round(accuracy(stats) * 100)),
-  });
-}
-
-/** What mistakes cost and the best run of keys, for the graded page. */
-function mistakeLines(stats: Stats): string[] {
-  const lines: string[] = [];
-  if (stats.errors > 0) lines.push(t('overlay.mistakes', { count: stats.errors, points: formatNumber(stats.penalty) }));
-  if (stats.bestCombo >= 10) lines.push(t('overlay.bestCombo', { combo: stats.bestCombo }));
-  return lines;
-}
-
 /**
- * Where the points came from, when there's more to it than the keys:
- * "Points: 1,200 for keys + 800 combo + 120 highlighter". With `lost`, what
- * wrong keys cost too (on cards that don't say it on a line of its own).
+ * The numbers for a run of play, as boxes: always score, speed and accuracy;
+ * then combo and highlighter points, the best run, wrong keys and creatures
+ * that reached the margin, when there are any.
  */
-function pointsLine(stats: Stats, lost = false): string[] {
-  if (stats.comboPoints <= 0 && stats.bonusPoints <= 0) return [];
-  const parts = [t('overlay.points.keys', { points: formatNumber(Math.round(stats.basePoints)) })];
-  if (stats.comboPoints > 0) parts.push(t('overlay.points.combo', { points: formatNumber(Math.round(stats.comboPoints)) }));
-  if (stats.bonusPoints > 0) parts.push(t('overlay.points.bonus', { points: formatNumber(Math.round(stats.bonusPoints)) }));
-  if (lost && stats.penalty > 0) parts.push(t('overlay.points.lost', { points: formatNumber(Math.round(stats.penalty)) }));
-  return [t('overlay.points', { parts: parts.join(' ') })];
-}
-
-function statLines(stats: Stats): string[] {
-  const lines = [summaryLine(stats), ...mistakeLines(stats)];
-  const missed = topMissedKeys(stats);
-  if (missed.length > 0) lines.push(t('overlay.missed', { keys: missed.map(keyLabel).join('  ') }));
-  return lines;
+function statTiles(stats: Stats, opts: { leaks?: boolean } = {}): StatTile[] {
+  const tile = (key: string, value: string): StatTile => ({ label: t(`overlay.tile.${key}` as MessageKey), value });
+  const tiles = [
+    tile('score', formatNumber(stats.score)),
+    tile('wpm', formatNumber(Math.round(wpm(stats)))),
+    tile('accuracy', `${formatNumber(Math.round(accuracy(stats) * 100))}%`),
+  ];
+  if (stats.comboPoints > 0) tiles.push(tile('combo', `+${formatNumber(Math.round(stats.comboPoints))}`));
+  if (stats.bonusPoints > 0) tiles.push(tile('bonus', `+${formatNumber(Math.round(stats.bonusPoints))}`));
+  if (stats.bestCombo >= 10) tiles.push(tile('bestRun', formatNumber(stats.bestCombo)));
+  if (stats.errors > 0) tiles.push(tile('mistakes', `${formatNumber(stats.errors)} · −${formatNumber(Math.round(stats.penalty))}`));
+  if (opts.leaks && stats.leaks > 0) tiles.push(tile('leaks', formatNumber(stats.leaks)));
+  return tiles;
 }
 
 export function difficultyLabel(difficulty: Difficulty): string {
@@ -143,13 +137,11 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
       const stats = world.pageStats;
       const grade = pageGrade(stats, world.page.params.size);
       const note = teacherNote(stats, grade);
-      const lines = [summaryLine(stats), ...pointsLine(stats)];
-      lines.push(...mistakeLines(stats));
-      if (stats.leaks > 0) lines.push(t('overlay.leaks', { leaks: stats.leaks }));
       const lastPage = isLastPageOfChapter(world.page);
-      if (lastPage && world.inkRefilled > 0) lines.push(t('overlay.chapterCleared.refill', { ink: world.inkRefilled }));
-      if (world.shieldEarned) lines.push(t('overlay.shieldEarned'));
-      lines.push(...extra);
+      const chips: string[] = [];
+      if (lastPage && world.inkRefilled > 0) chips.push(t('overlay.chapterCleared.refill', { ink: world.inkRefilled }));
+      if (world.shieldEarned) chips.push(t('overlay.shieldEarned'));
+      chips.push(...extra);
       const daily = world.mode === 'daily' && world.daily;
       return {
         title: daily
@@ -159,7 +151,9 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
             : t('overlay.pageCleared.title', { page }),
         grade,
         ...(world.mode === 'apprentice' ? { stars: starsForGrade(grade) } : {}),
-        lines,
+        lines: [],
+        tiles: statTiles(stats, { leaks: true }),
+        chips,
         circled: topMissedKeys(stats),
         note: t(`note.${note.kind}` as MessageKey, { key: note.key ? keyLabel(note.key) : '' }),
         links: [{ id: 'mainMenu', label: t('overlay.gameOver.mainMenu') }],
@@ -175,11 +169,10 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
       if (world.mode === 'daily' && world.daily) {
         return {
           title: t('overlay.gameOver.title'),
-          lines: [
-            t('overlay.daily.reached', { id: world.daily.id, page, pages: world.page.pageCount }),
-            ...statLines(world.stats),
-            ...extra,
-          ],
+          lines: [t('overlay.daily.reached', { id: world.daily.id, page, pages: world.page.pageCount })],
+          tiles: statTiles(world.stats),
+          chips: extra,
+          circled: topMissedKeys(world.stats),
           links: [
             { id: 'retry', label: t('overlay.daily.retry') },
             { id: 'mainMenu', label: t('overlay.gameOver.mainMenu') },
@@ -189,11 +182,10 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
       }
       return {
         title: t('overlay.gameOver.title'),
-        lines: [
-          t('overlay.gameOver.reached', { difficulty: difficultyLabel(world.difficulty), chapter, page }),
-          ...statLines(world.stats),
-          ...extra,
-        ],
+        lines: [t('overlay.gameOver.reached', { difficulty: difficultyLabel(world.difficulty), chapter, page })],
+        tiles: statTiles(world.stats),
+        chips: extra,
+        circled: topMissedKeys(world.stats),
         links: [
           { id: 'retry', label: t('overlay.gameOver.retry') },
           { id: 'mainMenu', label: t('overlay.gameOver.mainMenu') },
@@ -229,13 +221,17 @@ export function overlayContent(world: World, context: OverlayContext = NO_CONTEX
       if (world.mode === 'daily' && world.daily) {
         return {
           title: t('overlay.daily.doneTitle', { id: world.daily.id }),
-          lines: [summaryLine(world.stats), ...pointsLine(world.stats, true), ...extra],
+          lines: [],
+          tiles: statTiles(world.stats),
+          chips: extra,
           prompt: t('overlay.daily.donePrompt'),
         };
       }
       return {
         title: t('overlay.complete.title'),
-        lines: [t('overlay.complete.body'), ...statLines(world.stats).slice(0, 1), ...extra],
+        lines: [t('overlay.complete.body')],
+        tiles: statTiles(world.stats).slice(0, 3),
+        chips: extra,
         prompt: t('overlay.complete.prompt'),
       };
     // (The briefing is a DOM dialog, ui/briefingDialog.ts, so screen readers can read it.)
@@ -256,6 +252,8 @@ export class Overlay {
   private readonly linksLayer = new Container();
   private readonly gradeText: Text;
   private readonly circledLayer = new Container();
+  private readonly tilesLayer = new Container();
+  private readonly chipsLayer = new Container();
   /** Three stars under the title; the earned ones fill in one by one. */
   private readonly starsLayer = new Container();
   private starsEarned = 0;
@@ -318,6 +316,8 @@ export class Overlay {
       this.gradeText,
       this.starsLayer,
       this.body,
+      this.tilesLayer,
+      this.chipsLayer,
       this.circledLayer,
       this.hands,
       this.note,
@@ -403,6 +403,10 @@ export class Overlay {
 
     this.title.text = content.title;
     this.body.text = content.lines.join('\n');
+    this.body.visible = content.lines.length > 0;
+    const bodyHeight = this.body.visible ? this.body.height + 12 : 0;
+    const tilesHeight = this.layoutTiles(content.tiles ?? []);
+    const chipsHeight = this.layoutChips(content.chips ?? []);
     this.prompt.text = content.prompt;
 
     const linksHeight = this.layoutLinks(content.links ?? []);
@@ -419,8 +423,10 @@ export class Overlay {
       this.title.height +
       14 +
       starsHeight +
-      this.body.height +
-      16 +
+      bodyHeight +
+      tilesHeight +
+      chipsHeight +
+      4 +
       circledHeight +
       handsHeight +
       noteHeight +
@@ -445,11 +451,13 @@ export class Overlay {
     this.body.position.set(cx, this.title.y + this.title.height + 14 + starsHeight);
 
     this.gradeText.position.set(left + CARD_WIDTH - 62, top + 52);
-    this.circledLayer.position.set(cx, this.body.y + this.body.height + 12);
+    this.tilesLayer.position.set(cx, this.body.y + bodyHeight);
+    this.chipsLayer.position.set(cx, this.tilesLayer.y + tilesHeight);
+    this.circledLayer.position.set(cx, this.chipsLayer.y + chipsHeight);
     this.hands.position.set(cx, this.circledLayer.y + circledHeight);
     this.note.position.set(cx, this.hands.y + handsHeight);
 
-    const linksTop = this.body.y + this.body.height + 16 + circledHeight + handsHeight + noteHeight;
+    const linksTop = this.circledLayer.y + 4 + circledHeight + handsHeight + noteHeight;
     this.linksLayer.position.set(cx, linksTop);
     this.prompt.position.set(cx, linksTop + linksHeight);
   }
@@ -494,6 +502,82 @@ export class Overlay {
         // The picture is a helper; the card still says which finger to use.
       });
     return height + 10;
+  }
+
+  /**
+   * The numbers as a grid of boxes, three to a row (a short last row is
+   * centred): a small label over a big value. Returns the height used.
+   */
+  private layoutTiles(tiles: StatTile[]): number {
+    for (const child of this.tilesLayer.removeChildren()) child.destroy({ children: true });
+    if (tiles.length === 0) return 0;
+    const perRow = 3;
+    const gap = 10;
+    const w = (CARD_WIDTH - PAD * 2 - gap * (perRow - 1)) / perRow;
+    const h = 66;
+    tiles.forEach((tile, i) => {
+      const row = Math.floor(i / perRow);
+      const inRow = Math.min(perRow, tiles.length - row * perRow);
+      const col = i % perRow;
+      const x = -(inRow * w + (inRow - 1) * gap) / 2 + col * (w + gap);
+      const box = new Container();
+      box.position.set(x, row * (h + gap));
+      const label = new Text({
+        text: tile.label.toUpperCase(),
+        style: { fontFamily: TEXT_FONT, fontSize: 12, fontWeight: '700', letterSpacing: 1, fill: COLORS.inkLight },
+      });
+      label.anchor.set(0.5, 0);
+      label.position.set(w / 2, 9);
+      const value = new Text({ text: tile.value, style: { fontFamily: TEXT_FONT, fontSize: 26, fontWeight: '700', fill: COLORS.ink } });
+      value.anchor.set(0.5, 0);
+      value.position.set(w / 2, 26);
+      if (value.width > w - 12) value.scale.set((w - 12) / value.width);
+      box.addChild(new Graphics().roundRect(0, 0, w, h, 10).stroke({ width: 2, color: COLORS.ink }), label, value);
+      this.tilesLayer.addChild(box);
+    });
+    const rows = Math.ceil(tiles.length / perRow);
+    return rows * h + (rows - 1) * gap + 12;
+  }
+
+  /** Short news as highlighter pills, wrapped and centred. Returns the height used. */
+  private layoutChips(chips: string[]): number {
+    for (const child of this.chipsLayer.removeChildren()) child.destroy({ children: true });
+    if (chips.length === 0) return 0;
+    const gap = 8;
+    const h = 30;
+    const maxWidth = CARD_WIDTH - PAD * 2;
+    const pills = chips.map((chip) => {
+      const pill = new Container();
+      const text = new Text({ text: chip, style: { fontFamily: TEXT_FONT, fontSize: 15, fontWeight: '600', fill: COLORS.ink } });
+      if (text.width > maxWidth - 24) text.scale.set((maxWidth - 24) / text.width);
+      text.anchor.set(0.5);
+      const w = text.width + 24;
+      text.position.set(w / 2, h / 2);
+      pill.addChild(new Graphics().roundRect(0, 0, w, h, h / 2).fill(COLORS.highlighter), text);
+      return { pill, w };
+    });
+    const rows: { pill: Container; w: number }[][] = [[]];
+    let rowWidth = 0;
+    for (const p of pills) {
+      const row = rows[rows.length - 1]!;
+      if (row.length > 0 && rowWidth + gap + p.w > maxWidth) {
+        rows.push([p]);
+        rowWidth = p.w;
+      } else {
+        row.push(p);
+        rowWidth += (row.length > 1 ? gap : 0) + p.w;
+      }
+    }
+    rows.forEach((row, r) => {
+      const total = row.reduce((sum, p) => sum + p.w, 0) + gap * (row.length - 1);
+      let x = -total / 2;
+      for (const p of row) {
+        p.pill.position.set(x, r * (h + gap));
+        x += p.w + gap;
+        this.chipsLayer.addChild(p.pill);
+      }
+    });
+    return rows.length * (h + gap) + 4;
   }
 
   /** "Keys to watch:" with each key circled in red pen. Returns the height used. */

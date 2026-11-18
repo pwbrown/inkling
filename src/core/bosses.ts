@@ -9,7 +9,7 @@
  * started, and what happens when a part is beaten.
  */
 import { DIFFICULTY_PROFILES, GAME_CONFIG, type BossKind } from './config';
-import { SPAWN_X, WORLD_WIDTH, estimateWidth, laneCount, laneY, rngFor, spawnTarget, type Target, type World } from './world';
+import { MARGIN_X, SPAWN_X, WORLD_WIDTH, estimateWidth, laneCount, laneY, rngFor, spawnTarget, type Target, type World } from './world';
 
 /** The word complexity bosses use: a notch above the page. */
 function bossComplexity(world: World): number {
@@ -103,7 +103,12 @@ function spawnBookworm(world: World, lane: number): Target {
   return head!;
 }
 
-/** A body word in the middle, with tentacle words above and below that must go first. */
+/**
+ * A body word in the middle, held in an ink bubble by tentacle words above
+ * and below it. The tentacles are attached: they keep their place beside the
+ * body as it moves (`partDx`), and each one beaten breaks a piece of the
+ * bubble. The body can only be typed once they're all gone.
+ */
 function spawnSquid(world: World, middle: number): Target {
   const s = GAME_CONFIG.boss.squid;
   const speed = world.page.params.speed * s.speedFactor;
@@ -120,12 +125,13 @@ function spawnSquid(world: World, middle: number): Target {
   })!;
   const lanes = laneCount(world.laneStep);
   const used = new Set([middle]);
-  const offsets = [-2, 2, -4, 4, -1, 1, -3, 3];
-  for (let i = 0, made = 0; i < offsets.length && made < s.tentacles; i++) {
-    const lane = middle + offsets[i]!;
+  let made = 0;
+  for (let i = 0; i < s.laneOffsets.length && made < s.tentacles; i++) {
+    const lane = middle + s.laneOffsets[i]!;
     if (lane < 0 || lane >= lanes || used.has(lane)) continue;
     used.add(lane);
-    const x = SPAWN_X + 50 * (made + 1);
+    const partDx = Math.round(estimateWidth(body, world.targetScale) * s.tentacleDx + s.tentacleDxStep * made);
+    const x = body.x + partDx;
     spawnTarget(world, {
       kind: 'blotling',
       lane,
@@ -138,15 +144,23 @@ function spawnSquid(world: World, middle: number): Target {
       boss: true,
       bossKind: 'squid',
       partOf: body.id,
+      partDx,
       speed,
-      entering: true,
       partIndex: made,
       // Staggered, so the squirts don't all come at once.
       bossTimerMs: s.squirtMs * (1 + made * 0.35),
     });
     made++;
   }
+  body.guards = made;
   return body;
+}
+
+/** A Squid body's guard: which of its tentacles (by partIndex) are still on the page, and how many it started with. */
+export function squidGuards(world: World, body: Target): { left: Set<number>; total: number } {
+  const left = new Set<number>();
+  for (const t of world.targets) if (t.partOf === body.id && t.partIndex !== undefined) left.add(t.partIndex);
+  return { left, total: body.guards ?? left.size };
 }
 
 /** Can typing start on this target? Only a Bookworm's head, and a Squid's body once its tentacles are gone. */
@@ -207,13 +221,27 @@ export function stepBosses(world: World, stepMs: number): void {
       if (t.bossTimerMs <= 0) {
         t.bossTimerMs = b.squid.squirtMs;
         const lane = squirtLane(world, t);
-        world.smudges = [...world.smudges.filter((s) => s.lane !== lane), { lane, ms: b.squid.smudgeMs }];
+        // It lands in line with the tentacle, kept on the page.
+        const x = Math.min(WORLD_WIDTH - 80, Math.max(MARGIN_X + 80, t.x + 30));
+        const smudge = { lane, ms: b.squid.smudgeMs, x, fromX: t.x, fromY: t.y };
+        world.smudges = [...world.smudges.filter((s) => s.lane !== lane), smudge];
         world.events.push({ type: 'squirt', target: t, lane });
       }
     } else if (t.bossKind === 'quill') {
       stepQuill(world, t, stepMs);
     }
   }
+}
+
+/** Is this tentacle about to squirt (GAME_CONFIG.boss.squid.warnMs)? Not while it's being typed. */
+export function aboutToSquirt(world: World, t: Target): boolean {
+  return (
+    t.bossKind === 'squid' &&
+    t.partOf !== undefined &&
+    world.lockedId !== t.id &&
+    t.bossTimerMs !== undefined &&
+    t.bossTimerMs <= GAME_CONFIG.boss.squid.warnMs
+  );
 }
 
 /** The lane a tentacle squirts: one with a creature in it, preferring one near the tentacle. */

@@ -65,10 +65,9 @@ describe('save schema', () => {
     expect(prac.notebook?.chapter).toBe(2);
   });
 
-  it('upgrades version 5 saves to the family-friendly word filter, and keeps a valid choice', () => {
-    expect(migrate({ version: 5, keys: ['a'] }).contentLevel).toBe('family');
-    expect(migrate({ version: 6, contentLevel: 'olderKids' }).contentLevel).toBe('olderKids');
-    expect(migrate({ version: 6, contentLevel: 'anything' }).contentLevel).toBe('family');
+  it('drops the old per-player word filter level from version 6–10 saves', () => {
+    expect('contentLevel' in migrate({ version: 5, keys: ['a'] })).toBe(false);
+    expect('contentLevel' in migrate({ version: 10, contentLevel: 'grownUps', keys: ['a'] })).toBe(false);
   });
 
   it('upgrades version 6 saves with tips on, crediting mechanics the player has already met', () => {

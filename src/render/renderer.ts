@@ -28,11 +28,12 @@ import { t, type MessageKey } from '../i18n';
 import type { MechanicId } from '../core/mechanics';
 import { intercept, type Point } from './aim';
 import { GAME_CONFIG } from '../core/config';
+import { aboutToSquirt, canStart, squidGuards } from '../core/bosses';
 import { createCreature, type CreatureView } from './creatures';
-import { drawFace, type Mood } from './creatures/common';
+import { bodyColor, drawFace, type Mood } from './creatures/common';
 import { InkShots, SHOT_SPEED } from './shots';
 import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, glyph, prefersReducedMotion } from './theme';
-import { Punch, approach, mix } from './tween';
+import { Punch, approach, mix, outCubic } from './tween';
 
 const NIB_LENGTH = 56;
 /** Tutorial notes stay below the HUD row. */
@@ -221,6 +222,9 @@ export async function createRenderer(
   let targetLayer!: Container;
   /** Squid ink squirted over a lane, drawn on top of the creatures in it. */
   let smudgeLayer!: Graphics;
+  /** Squid arms, behind the creatures, and its bubble and lock, in front of its body. */
+  let squidArms!: Graphics;
+  let squidBubble!: Graphics;
   let nib!: Container;
   let nibFace!: Graphics;
   let nibStyle: Cosmetics['nib'] = DEFAULT_COSMETICS.nib;
@@ -249,6 +253,11 @@ export async function createRenderer(
     targetLayer = new Container();
     // The locked creature is drawn on top of any it overlaps.
     targetLayer.sortableChildren = true;
+    squidArms = new Graphics();
+    squidArms.zIndex = -2;
+    squidBubble = new Graphics();
+    squidBubble.zIndex = 2;
+    targetLayer.addChild(squidArms, squidBubble);
     smudgeLayer = new Graphics();
     nibStyle = cosmetics.nib;
     nib = new Container();
@@ -406,6 +415,7 @@ export async function createRenderer(
         break;
       }
       case 'destroyed': {
+        if (event.target.bossKind === 'squid' && event.target.partOf !== undefined) shatterBubble(world, event.target);
         const view = views.get(event.target.id);
         const finish = (at: { x: number; y: number }) => {
           if (event.target.kind === 'drip') effects.flick(at.x, at.y);
@@ -648,18 +658,184 @@ export async function createRenderer(
     drawFace(nibFace, f.x, f.y, f.r, mood, m.blinkMs > 0, f.x + 100, f.y, COLORS.ink);
   };
 
-  /** Squid ink over lanes: blots that fade in, hold, then fade away. */
+  /**
+   * Squid ink over a lane: a stream shoots from the tentacle, then a splat
+   * lands, thickest where it hit and trailing off along the line (still dark
+   * enough to hide the words), with drips running down. It fades away at the end.
+   */
   const drawSmudges = (world: World) => {
     smudgeLayer.clear();
     const full = GAME_CONFIG.boss.squid.smudgeMs;
+    const flyMs = 180;
     for (const smudge of world.smudges) {
-      const fade = Math.min(1, smudge.ms / 500, (full - smudge.ms) / 150);
+      const age = full - smudge.ms;
       const cy = laneY(smudge.lane, world.laneStep) - LINE_SPACING / 2;
-      for (let x = MARGIN_X + 20, i = 0; x < WORLD_WIDTH; x += 46, i++) {
-        const wobble = Math.sin(i * 2.1 + smudge.lane);
-        smudgeLayer.ellipse(x, cy + wobble * 5, 40 + wobble * 8, 26 + Math.cos(i * 1.3) * 6);
+      const fromY = smudge.fromY - LINE_SPACING / 2;
+      if (age < flyMs && !reducedMotion) {
+        // The squirt in flight: a thick stroke from the tentacle toward where it lands.
+        const u = outCubic(age / flyMs);
+        const tipX = smudge.fromX + (smudge.x - smudge.fromX) * u;
+        const tipY = fromY + (cy - fromY) * u;
+        smudgeLayer.moveTo(smudge.fromX, fromY).lineTo(tipX, tipY).stroke({ width: 10, color: COLORS.ink, cap: 'round' });
+        smudgeLayer.circle(tipX, tipY, 9).fill(COLORS.ink);
+        continue;
       }
-      smudgeLayer.fill({ color: COLORS.ink, alpha: 0.9 * fade });
+      // Grows out from where it hit, then holds, then fades.
+      const grow = reducedMotion ? 1 : Math.min(1, (age - flyMs) / 220);
+      const fade = Math.min(1, smudge.ms / 500);
+      // One smear with ragged edges: fattest where it hit, tapering to a
+      // round end each way, but always tall enough to cover the words.
+      const left = Math.max(MARGIN_X + 10, smudge.x - (smudge.x - MARGIN_X) * grow);
+      const right = Math.min(WORLD_WIDTH + 20, smudge.x + (WORLD_WIDTH + 20 - smudge.x) * grow);
+      const half = (x: number) => {
+        const near = 1 - Math.min(1, Math.abs(x - smudge.x) / 240);
+        const ragged = Math.sin(x * 0.09 + smudge.lane * 2) * 2.5 + Math.sin(x * 0.23 + smudge.lane) * 1.8;
+        return 21 + near * 14 + ragged;
+      };
+      const top: number[] = [];
+      const bottom: number[] = [];
+      for (let x = left; x <= right; x += 12) {
+        top.push(x, cy - half(x));
+        bottom.push(x, cy + half(x + 37));
+      }
+      const outline = [...top];
+      for (let i = bottom.length - 2; i >= 0; i -= 2) outline.push(bottom[i]!, bottom[i + 1]!);
+      if (outline.length >= 6) {
+        smudgeLayer.poly(outline);
+        smudgeLayer.circle(left, cy, half(left)).circle(right, cy, half(right));
+        // A splash where it hit.
+        smudgeLayer.circle(smudge.x, cy, 36 * grow);
+      }
+      smudgeLayer.fill({ color: COLORS.ink, alpha: 0.92 * fade });
+      // Drips running down from the thick middle, and a few flecks.
+      for (let i = -2; i <= 2; i++) {
+        const x = smudge.x + i * 26 + Math.sin(i * 3.1 + smudge.lane) * 8;
+        const len = (14 + ((i * 7 + smudge.lane * 5) % 4 + 4) * 4) * grow;
+        smudgeLayer.roundRect(x - 3.5, cy + 10, 7, len + 12, 3.5).circle(x, cy + 22 + len, 6);
+      }
+      for (let i = 0; i < 6; i++) {
+        const a = i * 1.9 + smudge.lane;
+        smudgeLayer.circle(smudge.x + Math.cos(a) * 70 * grow, cy + Math.sin(a) * 40 * grow, 3 + (i % 3) * 1.5);
+      }
+      smudgeLayer.fill({ color: COLORS.ink, alpha: 0.92 * fade });
+    }
+  };
+
+  /** The Squid's bubble round its body: an ellipse a little bigger than the body. */
+  const bubbleOf = (view: CreatureView) => ({
+    cx: view.root.x + view.width / 2,
+    cy: view.root.y,
+    rx: view.width / 2 + 16 * textScale,
+    ry: view.height / 2 + 20 * textScale,
+  });
+  /** Where on the bubble the piece for tentacle `index` of `total` sits (its middle angle). */
+  const bubbleAngle = (index: number, total: number) => -Math.PI / 2 + ((index + 0.5) / total) * Math.PI * 2;
+
+  /**
+   * The Inkwell Squid's guard: an arm from its body to each tentacle, and an
+   * ink bubble round the body with one piece per tentacle. Beaten tentacles
+   * take their piece with them; a padlock sits on top while any are left.
+   */
+  const drawSquids = (world: World) => {
+    squidArms.clear();
+    squidBubble.clear();
+    for (const body of world.targets) {
+      if (body.bossKind !== 'squid' || body.partOf !== undefined) continue;
+      const bodyView = views.get(body.id);
+      if (!bodyView) continue;
+      const bubble = bubbleOf(bodyView);
+      const k = textScale;
+
+      for (const tentacle of world.targets) {
+        if (tentacle.partOf !== body.id) continue;
+        const view = views.get(tentacle.id);
+        if (!view) continue;
+        // From the bubble's rim, on the tentacle's side, to the tentacle's front.
+        const x1 = view.root.x + 8 * k;
+        const y1 = view.root.y;
+        const toward = Math.atan2((y1 - bubble.cy) / bubble.ry, (x1 - bubble.cx) / bubble.rx);
+        const x0 = bubble.cx + Math.cos(toward) * bubble.rx * 0.9;
+        const y0 = bubble.cy + Math.sin(toward) * bubble.ry * 0.9;
+        const sway = reducedMotion ? 0 : Math.sin(timeMs * 0.004 + (tentacle.partIndex ?? 0) * 1.7) * 8 * k;
+        const qx = x0 + (x1 - x0) * 0.15 + sway;
+        const qy = y1;
+        const color = bodyColor(tentacle.lives);
+        const steps = 14;
+        let px = x0;
+        let py = y0;
+        for (let i = 1; i <= steps; i++) {
+          const u = i / steps;
+          const nx = (1 - u) * (1 - u) * x0 + 2 * (1 - u) * u * qx + u * u * x1;
+          const ny = (1 - u) * (1 - u) * y0 + 2 * (1 - u) * u * qy + u * u * y1;
+          // Thick at the body, tapering toward the tentacle.
+          squidArms.moveTo(px, py).lineTo(nx, ny).stroke({ width: (16 - 9 * u) * k, color, cap: 'round' });
+          px = nx;
+          py = ny;
+        }
+        // Suckers along the arm.
+        for (const u of [0.35, 0.55, 0.75]) {
+          const sx = (1 - u) * (1 - u) * x0 + 2 * (1 - u) * u * qx + u * u * x1;
+          const sy = (1 - u) * (1 - u) * y0 + 2 * (1 - u) * u * qy + u * u * y1;
+          squidArms.circle(sx, sy, 2.6 * k).fill(COLORS.inkLight);
+        }
+      }
+
+      const { left, total } = squidGuards(world, body);
+      if (left.size === 0 || total === 0) continue;
+      const { cx, cy, rx, ry } = bubble;
+      // A faint wash over the body: it's behind glass for now.
+      squidBubble.ellipse(cx, cy, rx, ry).fill({ color: COLORS.paper, alpha: 0.35 });
+      const gap = 0.32;
+      const span = (Math.PI * 2) / total - gap;
+      for (let i = 0; i < total; i++) {
+        if (!left.has(i)) continue;
+        const mid = bubbleAngle(i, total);
+        const from = mid - span / 2;
+        const steps = 16;
+        squidBubble.moveTo(cx + Math.cos(from) * rx, cy + Math.sin(from) * ry);
+        for (let j = 1; j <= steps; j++) {
+          const a = from + (span * j) / steps;
+          squidBubble.lineTo(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry);
+        }
+        squidBubble.stroke({ width: 4.5 * k, color: COLORS.ink, cap: 'round' });
+      }
+      // A shine, so it reads as a bubble.
+      squidBubble
+        .moveTo(cx - rx * 0.62, cy - ry * 0.45)
+        .quadraticCurveTo(cx - rx * 0.45, cy - ry * 0.78, cx - rx * 0.15, cy - ry * 0.82)
+        .stroke({ width: 3 * k, color: COLORS.paper, alpha: 0.9, cap: 'round' });
+      // A padlock on top: it can't be typed yet.
+      // On the front (left) of the bubble, clear of the arms.
+      const lx = cx - rx - 2 * k;
+      const ly = cy - ry * 0.55;
+      const w = 16 * k;
+      const h = 12 * k;
+      squidBubble
+        .moveTo(lx - w * 0.3, ly - h / 2)
+        .arc(lx, ly - h / 2, w * 0.3, Math.PI, 0)
+        .stroke({ width: 3 * k, color: COLORS.ink })
+        .roundRect(lx - w / 2, ly - h / 2, w, h, 3 * k)
+        .fill(COLORS.ink)
+        .circle(lx, ly, 2 * k)
+        .fill(COLORS.paper);
+    }
+  };
+
+  /** A tentacle was beaten: its piece of the bubble shatters, and the last one pops the whole bubble. */
+  const shatterBubble = (world: World, tentacle: Target) => {
+    const body = world.targets.find((t) => t.id === tentacle.partOf);
+    const view = body && views.get(body.id);
+    if (!body || !view) return;
+    const { cx, cy, rx, ry } = bubbleOf(view);
+    const { left, total } = squidGuards(world, body);
+    const a = bubbleAngle(tentacle.partIndex ?? 0, Math.max(1, total));
+    const x = cx + Math.cos(a) * rx;
+    const y = cy + Math.sin(a) * ry;
+    effects.splatter(x, y, 6, COLORS.inkLight);
+    effects.ring(x, y, COLORS.inkLight, 18, 260);
+    if (left.size === 0) {
+      effects.ring(cx, cy, COLORS.margin, rx, 420);
+      effects.popup(cx, cy - ry - 20, t('boss.squidOpen'), { color: COLORS.margin, size: 24 });
     }
   };
 
@@ -717,12 +893,15 @@ export async function createRenderer(
           lookY: nib.y - y,
           reducedMotion,
           taunting,
+          guarded: target.bossKind === 'squid' && target.partOf === undefined && !canStart(world, target),
+          warning: aboutToSquirt(world, target),
         });
         if (isLocked) {
           locked = { x, y };
           lockedView = view;
         }
       }
+      drawSquids(world);
       for (const [id, view] of views) {
         if (!live.has(id)) {
           view.root.destroy({ children: true });
