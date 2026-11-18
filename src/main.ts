@@ -3,6 +3,7 @@ import 'pixi.js/unsafe-eval';
 import './style.css';
 import { countTypeableWords, createContentSource, MIN_WORD_POOL } from './content/contentSource';
 import { loadEnglishPack } from './content/en';
+import type { Dictionary } from './content/vocabApi';
 import { isLayoutId, layoutById } from './content/layouts';
 import type { LayoutId } from './content/layouts/types';
 import {
@@ -606,13 +607,17 @@ async function main(): Promise<void> {
     });
   };
 
+  /** Word -> tier, for picking a downloaded article's words (built on first use). */
+  let vocabDictionary: Dictionary | null = null;
   const openVocab = () => {
     if (dialogOpen || game.phase !== 'ready') return;
+    vocabDictionary ??= new Map(pack.words.map((entry) => [entry.word, entry.tier]));
     dialogOpen = true;
     /** Rebuild content so word pages pick up list changes. */
     const refresh = () => setContent(game, contentFor(store.data.keys));
     openWordLists(document.body, {
       lists: store.data.vocab,
+      dictionary: vocabDictionary,
       blocklist: pack.blocklist,
       countFitting: (words) =>
         countTypeableWords(

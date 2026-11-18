@@ -295,7 +295,7 @@ Inky Keys is **open source** and will be **publicly hosted** as a static web app
 - [ ] Health or lives? (DESIGN.md proposes an ink-reservoir health meter.) Does game-over restart the level or the campaign?
 - [ ] Which additional locales to add first, and which layouts after Dvorak and Colemak (§11)? AZERTY and QWERTZ need dead keys, accented letters and Shift for digits (which affects the 1/2/3 ability shortcuts).
 - [x] Word-list source: SCOWL levels 10–50 (via `wordlist-english`) plus the LDNOOBW blocklist. See CREDITS.md.
-- [x] Vocabulary API: Datamuse (`api.datamuse.com/words?ml=<topic>`). No key needed, CORS-enabled, sends only the topic. See PRIVACY.md.
+- [x] Vocabulary API: Wikipedia (`en.wikipedia.org/w/api.php`, search + plain-text extract). No key, CORS via `origin=*`, sends only the topic; words are picked on the device. Replaced Datamuse in 2.15.0, which needs an API key from February 2027. See PRIVACY.md.
 - [ ] Confirm the code license (MIT vs GPL-3.0) and the art/audio license.
 - [ ] Pick the public repo/site name (§12). Host: GitHub Pages via `.github/workflows/deploy.yml` (any static host works).
 - [x] An endless or practice mode alongside the campaign? Yes: Free Write (formerly Practice), listed first since milestone 17.

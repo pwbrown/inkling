@@ -19,8 +19,8 @@ Third-party content bundled with Inky Keys, with its source and license (REQUIRE
 ## Topic word lists (optional download)
 
 - **What:** words downloaded on request in the Word lists screen. Nothing is bundled.
-- **Source:** the [Datamuse API](https://www.datamuse.com/api/), a free word-finding service that needs no key.
-- **Use:** requests only the `ml` (related words) query with the player's topic. Results are filtered to single lowercase words and run through the blocklist before use.
+- **Source:** the plain text of the best-matching [Wikipedia](https://en.wikipedia.org/) article, fetched through the public MediaWiki API (no key). Article text is © Wikipedia contributors under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- **Use:** only individual dictionary words are kept (no sentences or passages), ranked by how much more often they appear in the article than in everyday English, and run through the blocklist. The article text itself is discarded. (Before 2.15.0, lists came from the [Datamuse API](https://www.datamuse.com/api/); lists downloaded then still work.)
 
 ## Fonts
 

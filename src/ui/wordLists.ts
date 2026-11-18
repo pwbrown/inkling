@@ -4,7 +4,7 @@
  * right next to the button, so it's clear what gets sent before anything is.
  */
 import './dialog.css';
-import { VocabError, fetchTopicWords } from '../content/vocabApi';
+import { VocabError, fetchTopicWords, type Dictionary } from '../content/vocabApi';
 import type { Blocklist } from '../content/blocklist';
 import { formatNumber, t, type MessageKey } from '../i18n';
 import type { VocabList } from '../storage/schema';
@@ -12,6 +12,8 @@ import { h, trapFocus } from './dom';
 
 export interface WordListsOptions {
   lists: readonly VocabList[];
+  /** The word pack, to pick an article's words from. */
+  dictionary: Dictionary;
   blocklist: Blocklist;
   /** How many of these words the player's keys can type. */
   countFitting(words: readonly string[]): number;
@@ -95,7 +97,7 @@ export function openWordLists(host: HTMLElement, options: WordListsOptions): { c
         button.disabled = true;
         status.textContent = t('vocab.downloading', { topic });
         try {
-          const result = await fetchTopicWords(input.value, options.blocklist, options.fetchImpl);
+          const result = await fetchTopicWords(input.value, options.dictionary, options.blocklist, options.fetchImpl);
           const list: VocabList = {
             id: `vocab-${Date.now()}`,
             topic: result.topic,

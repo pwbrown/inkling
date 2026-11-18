@@ -14,7 +14,7 @@ When the game is served from a website (for example GitHub Pages), that host rec
 
 ## Word lists (optional download)
 
-Pressing **W** opens **Word lists**, where you can download words related to a topic. Only when you click **Download words**, Inky Keys sends the topic you typed, and nothing else, to the free [Datamuse API](https://www.datamuse.com/api/) at `api.datamuse.com`. The request carries no cookies, no referrer and no identifiers. Datamuse receives the request like any web server would (including your IP address) under its own terms. The downloaded words are saved on your device and work offline.
+Pressing **W** opens **Word lists**, where you can download words related to a topic. Only when you click **Download words**, Inky Keys sends the topic you typed, and nothing else, to [Wikipedia's public API](https://www.mediawiki.org/wiki/API:Main_page) at `en.wikipedia.org`, which returns the best-matching article. The request carries no cookies, no referrer and no identifiers (just a header naming the game, as Wikimedia asks of apps). Wikipedia receives the request like any web server would (including your IP address) under the [Wikimedia privacy policy](https://foundation.wikimedia.org/wiki/Policy:Privacy_policy). Inky Keys picks the article's words on your device, keeps only those, and saves them on your device to work offline.
 
 This is the only network request the game makes beyond loading itself, and it never happens unless you ask.
 

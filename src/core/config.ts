@@ -477,6 +477,24 @@ export const GAME_CONFIG = {
      */
     shortcutDelayMs: 400,
   },
+  /** Word lists downloaded from a topic's Wikipedia article (src/content/vocabApi.ts). */
+  vocab: {
+    /** Most words kept from one article. */
+    maxWords: 300,
+    /** Fewer usable words than this and the download counts as empty. */
+    minWords: 20,
+    /**
+     * How much an appearance counts, by word-pack tier (0 = most common).
+     * Tier 0 ("the", "and", "water") is too everyday to say anything about a topic.
+     */
+    tierWeights: [0, 1, 2.5, 4, 4],
+    /** Words of the commoner tiers must appear at least this often to count as related. */
+    minCount: 2,
+    /** From this tier on, a single appearance is enough (rare words are telling). */
+    rareTier: 3,
+    /** A word capitalised at least this share of the time is taken for a name and dropped. */
+    nameShare: 0.6,
+  },
 };
 
 /** Page types for chapter `chapter` (0-based). */

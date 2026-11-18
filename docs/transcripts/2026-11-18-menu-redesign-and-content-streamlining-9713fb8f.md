@@ -2608,3 +2608,54 @@ When you want to commit, just say so. I'll then export the transcript (checking 
   ```
 
 </details>
+
+### 🤖 Claude
+
+Scanning the transcript files with generic patterns, and checking why an older one changed.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Diff and scan transcripts for private data
+
+  ```bash
+  git diff --stat docs/transcripts; git diff docs/transcripts/2026-11-17-game-competitiveness-and-sharing-c10c68be.md | head -30; for f in docs/transcripts/2026-11-18-*.md docs/transcripts/2026-11-17-game-competitiveness-*.md; do echo "== $f"; grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | sort -u | head; grep -noE "/Users/[^ )\`\"]*|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9]{10,}|gho_[A-Za-z0-9]+" "$f" | head; done
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Both transcripts are clean: no emails, the home folder is replaced with `[removed]`, and there are no tokens. The older file only gained the end of its own session. Committing.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Commit, merge, delete branch, tag release
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Milestone 24: Tidy-up (2.14.0)
+
+  - Main menu is a tile grid with hand-drawn line icons (src/ui/icons.ts) and short status lines
+  - Page Complete, Game Over and Notebook Complete cards show stats as labelled boxes, news as pills
+  - Inkwell Squid: tentacles stay attached by arms; its body sits in a locked ink bubble that breaks a piece per tentacle and pops when the last goes; tentacles warn in red pen before squirting, and the squirt is a stream and a ragged smear
+  - Type Case: ten presets and five groups; every preset but Apprentice includes Space; new play
+  … (741 more characters)
+  ```
+- **Shell:** Push main and the v2.14.0 tag
+
+  ```bash
+  git push origin main 2>&1 | tail -2 && git push origin v2.14.0 2>&1 | tail -2 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Milestone 24 (version 2.14.0) is committed, merged into `main` and pushed, along with its `v2.14.0` tag.
+
+- **Commit:** `33aa85c` "Milestone 24: Tidy-up (2.14.0)". It includes this session's transcript, which I scanned before committing: no emails or tokens, and home-folder paths show as `[removed]`.
+- **Merge:** `main` now points at that commit, and I deleted `feat/m24-tidy-up` locally.
+- **Push:** `main` and the tag are both on GitHub, and `main` is in sync with `origin/main`.
+- **Release:** pushing the tag should start the workflow that creates the GitHub Release with the 2.14.0 notes. I haven't checked that it ran.
+
+The copy-twice bug is still unexplained: I couldn't reproduce it. If you see it again, tell me the browser, the app you pasted into, and whether you used the button, C or ⌘C.

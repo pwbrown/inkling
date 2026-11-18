@@ -1,8 +1,42 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_CONFIG } from '../core/config';
 import { Blocklist } from './blocklist';
-import { VocabError, cleanTopic, cleanWords, fetchTopicWords, topicUrl } from './vocabApi';
+import { VocabError, articleText, cleanTopic, fetchTopicWords, topicUrl, wordsFromArticle, type Dictionary } from './vocabApi';
 
 const blocklist = new Blocklist(['darn']);
+
+/** Tier 0 is everyday English; higher tiers are rarer. */
+const dictionary: Dictionary = new Map([
+  ['the', 0],
+  ['and', 0],
+  ['water', 0],
+  ['is', 0],
+  ['ocean', 1],
+  ['sea', 1],
+  ['reef', 2],
+  ['reefs', 2],
+  ['tide', 2],
+  ['coral', 2],
+  ['salinity', 3],
+  ['pelagic', 4],
+  ['john', 2],
+  ['mid', 2],
+  ['darn', 2],
+  ['mi', 2],
+]);
+
+const ARTICLE = [
+  'The ocean is water. The sea and the ocean meet the reef, and reefs grow coral.',
+  'Coral reefs line the shore at high tide and low tide.',
+  'Salinity varies, as shown by John Smith, and John wrote a mid-ocean survey of 40 mi. Darn.',
+  'Pelagic fish swim far out.',
+].join(' ');
+
+/** Enough distinct rare words to pass the minimum. */
+const bigDictionary: Dictionary = new Map(Array.from({ length: 40 }, (_, i) => [`word${String.fromCharCode(97 + (i % 26))}${String.fromCharCode(97 + Math.floor(i / 26))}`, 4]));
+const BIG_ARTICLE = [...bigDictionary.keys()].join(' ').repeat(30);
+
+const pageResponse = (extract: string, extra: object = {}) => ({ query: { pages: [{ title: 'Ocean', extract, ...extra }] } });
 
 const fakeFetch = (body: unknown, status = 200) => {
   const calls: { url: string; init?: RequestInit }[] = [];
@@ -22,30 +56,54 @@ describe('vocabulary download', () => {
     expect(cleanTopic('x'.repeat(41))).toBeNull();
   });
 
-  it('asks only for related words, with nothing identifying', async () => {
-    const { impl, calls } = fakeFetch([{ word: 'sea' }, { word: 'reef' }]);
-    const result = await fetchTopicWords('Ocean', blocklist, impl);
-    expect(result).toEqual({ topic: 'ocean', words: ['sea', 'reef'] });
-    expect(calls[0]?.url).toBe(topicUrl('ocean'));
-    expect(calls[0]?.url).toBe('https://api.datamuse.com/words?ml=ocean&max=500');
-    expect(calls[0]?.init).toMatchObject({ credentials: 'omit', referrerPolicy: 'no-referrer' });
+  it('ranks words that stand out in the article, dropping names, prefixes and everyday words', () => {
+    const words = wordsFromArticle(ARTICLE, 'ocean', dictionary, blocklist);
+    expect(words[0]).toBe('ocean');
+    expect(words).toEqual(expect.arrayContaining(['reef', 'coral', 'tide', 'salinity', 'pelagic']));
+    // Everyday (tier 0), a name, a hyphen prefix, too short, blocked, a plural of a kept word.
+    for (const dropped of ['the', 'water', 'john', 'mid', 'mi', 'darn', 'reefs']) expect(words).not.toContain(dropped);
+    // A commoner word seen once doesn't count; a rare one does.
+    expect(wordsFromArticle('sea pelagic', 'fish', dictionary, blocklist)).toEqual(['pelagic']);
   });
 
-  it('keeps single lowercase words and drops blocked or malformed ones', () => {
-    expect(
-      cleanWords([{ word: 'Sea' }, { word: 'deep sea' }, { word: 'darn' }, { word: 'x' }, { word: 'reef' }, { word: 'reef' }, 'junk'], blocklist),
-    ).toEqual(['sea', 'reef']);
-    expect(cleanWords({ not: 'a list' }, blocklist)).toEqual([]);
+  it('keeps at most the configured number of words', () => {
+    const letters = (i: number) => [i % 26, Math.floor(i / 26) % 26].map((n) => String.fromCharCode(97 + n)).join('');
+    const many: Dictionary = new Map(Array.from({ length: 400 }, (_, i) => [`word${letters(i)}`, 4]));
+    const text = [...many.keys()].join(' ');
+    expect(wordsFromArticle(text, 'x', many, blocklist)).toHaveLength(GAME_CONFIG.vocab.maxWords);
+  });
+
+  it('reads the article and refuses disambiguation pages and stubs', () => {
+    expect(articleText(pageResponse(BIG_ARTICLE))).toBe(BIG_ARTICLE);
+    expect(articleText(pageResponse(BIG_ARTICLE, { pageprops: { disambiguation: '' } }))).toBeNull();
+    expect(articleText(pageResponse('Too short.'))).toBeNull();
+    expect(articleText({ batchcomplete: true })).toBeNull();
+    expect(articleText(null)).toBeNull();
+  });
+
+  it('asks Wikipedia for the topic only, with nothing identifying', async () => {
+    const { impl, calls } = fakeFetch(pageResponse(BIG_ARTICLE));
+    const result = await fetchTopicWords('Ocean', bigDictionary, blocklist, impl);
+    expect(result.topic).toBe('ocean');
+    expect(result.words).toHaveLength(40);
+    const url = new URL(calls[0]?.url ?? '');
+    expect(calls[0]?.url).toBe(topicUrl('ocean'));
+    expect(url.origin).toBe('https://en.wikipedia.org');
+    expect(url.searchParams.get('gsrsearch')).toBe('ocean');
+    expect(url.searchParams.get('origin')).toBe('*');
+    expect(calls[0]?.init).toMatchObject({ credentials: 'omit', referrerPolicy: 'no-referrer' });
   });
 
   it('reports failures with a reason', async () => {
     const reason = async (p: Promise<unknown>) => p.then(() => 'ok', (e: VocabError) => e.reason);
-    expect(await reason(fetchTopicWords('?', blocklist, fakeFetch([]).impl))).toBe('invalid-topic');
-    expect(await reason(fetchTopicWords('ocean', blocklist, fakeFetch([], 500).impl))).toBe('failed');
-    expect(await reason(fetchTopicWords('ocean', blocklist, fakeFetch([{ word: 'darn' }]).impl))).toBe('empty');
+    const get = (body: unknown, status?: number) => fetchTopicWords('ocean', bigDictionary, blocklist, fakeFetch(body, status).impl);
+    expect(await reason(fetchTopicWords('?', bigDictionary, blocklist, fakeFetch({}).impl))).toBe('invalid-topic');
+    expect(await reason(get({}, 500))).toBe('failed');
+    expect(await reason(get({ batchcomplete: true }))).toBe('empty');
+    expect(await reason(get(pageResponse(ARTICLE.repeat(20))))).toBe('empty');
     const offline = (async () => {
       throw new TypeError('network');
     }) as unknown as typeof fetch;
-    expect(await reason(fetchTopicWords('ocean', blocklist, offline))).toBe('offline');
+    expect(await reason(fetchTopicWords('ocean', bigDictionary, blocklist, offline))).toBe('offline');
   });
 });
