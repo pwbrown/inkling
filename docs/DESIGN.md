@@ -18,6 +18,7 @@
 ## 2. Setting & Player
 
 - **The page:** a ruled notebook page on cream paper. The red **margin line** on the left is the line you defend.
+- **The manuscript (what you defend):** a little ink-drop **scribe** with a quill sits on the free line below the last lane and fills the page with faint, illegible cursive as you clear it. The writing grows with each creature cleared, not with time, so the last stroke lands with the last one (on a boss page the last bit waits for the boss). A creature that reaches the margin drops an ink blot on the writing on its line, and the scribe winces. It also looks up when one gets close, and cheers when the page is done. At the start of a page it writes the heading ("Chapter 3 · Page 2"). The writing is scribbles, never words, so it can't compete with text you read; it's very faint (`GAME_CONFIG.manuscript`) and can be switched off in Settings (**Page writing**), which keeps the heading.
 - **The player, "the Nib":** a small fountain-pen nib character that sits in the left margin. It leans toward the target it's locked onto.
 - **Health, the ink reservoir:** an ink gauge shown as a small inkwell in the corner. Every blot that reaches the margin drains ink, and the game is over when the well runs dry. *(This settles the "health vs lives" question in REQUIREMENTS §13 unless we change it.)*
 
@@ -75,7 +76,7 @@ This is where the Spellbook mechanic comes in. The key-selection screen is a **l
 
 - **Title:** a closed notebook. Opening it shows the table of contents (Continue, New Notebook, Type Case, Settings).
 - **Menus:** notebook tabs along the edge, with settings as **sticky notes**.
-- **HUD:** the inkwell (health) in the top-left, the score written in pencil in the top-right, and the page number as a footer.
+- **HUD:** the inkwell (health) in the top-left, the score written in pencil in the top-right, and the page number and progress as a footer. The chapter is in the scribe's heading on the page.
 - **Graded page (summary):** a red-pen grade, WPM and accuracy written in the margin, the most-missed keys circled, and teacher-style notes ("Watch your **R**!"). It also shows which sorts gained mastery on this page.
 - **Pause:** a bookmark ribbon drops down.
 

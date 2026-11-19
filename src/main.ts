@@ -152,6 +152,7 @@ async function main(): Promise<void> {
       textScale: TEXT_SCALE[settings.textSize],
       reducedMotion: reducedMotion(settings, prefersReducedMotion()),
       screenEffects: settings.screenEffects,
+      pageWriting: settings.pageWriting === 'on',
       cosmetics: store.data.profile.cosmetics,
     })),
   ]);
@@ -573,7 +574,7 @@ async function main(): Promise<void> {
     openSettings(document.body, {
       settings,
       onChange: (next) => {
-        const redraw = next.theme !== settings.theme || next.textSize !== settings.textSize || next.motion !== settings.motion || next.screenEffects !== settings.screenEffects;
+        const redraw = next.theme !== settings.theme || next.textSize !== settings.textSize || next.motion !== settings.motion || next.screenEffects !== settings.screenEffects || next.pageWriting !== settings.pageWriting;
         settings = next;
         saveSettings(settings);
         applyColors();

@@ -12,6 +12,7 @@ import {
   MARGIN_X,
   WORLD_HEIGHT,
   WORLD_WIDTH,
+  laneCount,
   laneY,
   renderX,
   sizeScale,
@@ -21,6 +22,10 @@ import {
   type World,
 } from '../core/world';
 import { Effects } from './effects';
+import { Manuscript } from './manuscript';
+import { hashSeed } from '../core/rng';
+import { APPRENTICE_CHAPTERS } from '../core/campaign';
+import { Scribe } from './scribe';
 import { Hud } from './hud';
 import { Overlay, type OverlayActions } from './overlay';
 import { DEFAULT_COSMETICS, type Cosmetics } from '../core/rewards';
@@ -39,6 +44,10 @@ const NIB_LENGTH = 56;
 /** Tutorial notes stay below the HUD row. */
 const CALLOUT_MIN_Y = 64;
 const NIB_HOME = { x: MARGIN_X - 90, y: WORLD_HEIGHT / 2 };
+/** The lowest lane's line; the scribe sits on the line below it. */
+const LAST_LANE_Y = laneY(laneCount() - 1);
+/** The manuscript is written on every lane's line. */
+const MANUSCRIPT_BASELINES = Array.from({ length: laneCount() }, (_, lane) => laneY(lane));
 
 export interface Renderer {
   app: Application;
@@ -60,6 +69,8 @@ export interface DisplayOptions {
   screenEffects?: 'full' | 'gentle';
   /** Equipped cosmetics (unlocked by leveling up). */
   cosmetics?: Cosmetics;
+  /** The faint manuscript and its scribe (default on). Off keeps only the page heading. */
+  pageWriting?: boolean;
 }
 
 const GOLD = 0xc9a227;
@@ -229,6 +240,13 @@ export async function createRenderer(
   let nibFace!: Graphics;
   let nibStyle: Cosmetics['nib'] = DEFAULT_COSMETICS.nib;
   let hud!: Hud;
+  /** The faint writing that fills the page as targets are cleared, and the scribe writing it. */
+  let manuscript!: Manuscript;
+  let scribe!: Scribe;
+  /** Which page the manuscript is for, how many of its creatures are gone, and whether its boss is beaten. */
+  let manuscriptPage = '';
+  let manuscriptCleared = 0;
+  let manuscriptBossDone = false;
   let overlay!: Overlay;
   /** A handwritten note pointing at a creature on its guided first try. */
   let callout!: Container;
@@ -265,6 +283,11 @@ export async function createRenderer(
     nib.addChild(drawNib(nibStyle), nibFace);
     nib.position.set(NIB_HOME.x, NIB_HOME.y);
     hud = new Hud();
+    manuscript = new Manuscript();
+    scribe = new Scribe(MARGIN_X + 30, LAST_LANE_Y + LINE_SPACING - 4);
+    manuscriptPage = '';
+    manuscript.root.visible = options.pageWriting ?? true;
+    scribe.showFigure(options.pageWriting ?? true);
     overlay = new Overlay(actions, reducedMotion);
     scene = new Container();
     const wash = (color: number) => {
@@ -281,7 +304,7 @@ export async function createRenderer(
     calloutId = null;
     slowWash = wash(COLORS.inkFaded);
     glowWash = wash(COLORS.highlighter);
-    scene.addChild(drawPage(cosmetics.paper), glowWash, slowWash, effects.stainLayer, guide, targetLayer, smudgeLayer, nib, shots.layer, effects.particleLayer, callout);
+    scene.addChild(drawPage(cosmetics.paper), manuscript.root, scribe.root, glowWash, slowWash, effects.stainLayer, guide, targetLayer, smudgeLayer, nib, shots.layer, effects.particleLayer, callout);
     vignette = new Graphics();
     const bands = 7;
     for (let i = 0; i < bands; i++) {
@@ -663,6 +686,67 @@ export async function createRenderer(
    * lands, thickest where it hit and trailing off along the line (still dark
    * enough to hide the words), with drips running down. It fades away at the end.
    */
+  /**
+   * Fill the manuscript as the page goes on; start it afresh on a new or
+   * restarted page. Progress counts the page's creatures as they go (cleared,
+   * or through the margin), so boss parts and Inkmites don't throw it off.
+   * On a boss page the last share waits for the boss, and a finished page
+   * always finishes the writing.
+   */
+  const syncManuscript = (world: World, frameMs: number) => {
+    const { params, chapter, index, hasBoss } = world.page;
+    const key = `${world.mode}:${world.daily?.id ?? ''}:${chapter}:${index}`;
+    if (key !== manuscriptPage || (world.page.spawned === 0 && manuscriptCleared > 0)) {
+      manuscriptPage = key;
+      manuscriptCleared = 0;
+      manuscriptBossDone = false;
+      manuscript.reset(hashSeed(key), MANUSCRIPT_BASELINES);
+      const heading = { chapter: chapter + 1, chapters: APPRENTICE_CHAPTERS, page: index + 1 };
+      scribe.start(t(world.mode === 'apprentice' ? 'manuscript.headingApprentice' : 'manuscript.heading', heading), reducedMotion);
+    }
+    const bossShare = hasBoss ? GAME_CONFIG.manuscript.bossShare : 0;
+    const share = params.size > 0 ? Math.min(1, manuscriptCleared / params.size) : 0;
+    const fraction = world.phase === 'pageCleared' ? 1 : share * (1 - bossShare) + (manuscriptBossDone ? bossShare : 0);
+    const playing = world.phase === 'playing';
+    const danger = world.targets.some((target) => !target.bottle && target.x < MARGIN_X + GAME_CONFIG.manuscript.glanceDistance);
+    manuscript.update(fraction, world.phase === 'paused' ? 0 : frameMs, reducedMotion);
+    scribe.update(world.phase === 'paused' ? 0 : frameMs, reducedMotion, playing && danger);
+  };
+
+  /** A creature of the page is gone (not a bottle or part of a boss). */
+  const manuscriptCounts = (target: Target) => !target.bottle && !target.boss;
+
+  /** The manuscript and scribe react: writing grows as creatures go, and blots where one got through. */
+  const manuscriptEvent = (event: GameEvent) => {
+    switch (event.type) {
+      case 'destroyed':
+      case 'shieldUsed':
+        if (manuscriptCounts(event.target)) {
+          manuscriptCleared++;
+          scribe.write();
+        }
+        break;
+      case 'marginHit':
+        if (manuscriptCounts(event.target)) manuscriptCleared++;
+        manuscript.blot(event.target.y);
+        scribe.wince();
+        break;
+      case 'bossDefeated':
+      case 'split':
+        // The Spill splits when beaten; the other bosses are defeated.
+        manuscriptBossDone = true;
+        scribe.write();
+        break;
+      case 'reset':
+        // A restarted or abandoned page starts its writing over.
+        manuscriptPage = '';
+        break;
+      case 'phase':
+        if (event.phase === 'pageCleared') scribe.cheer();
+        break;
+    }
+  };
+
   const drawSmudges = (world: World) => {
     smudgeLayer.clear();
     const full = GAME_CONFIG.boss.squid.smudgeMs;
@@ -842,7 +926,10 @@ export async function createRenderer(
   return {
     app,
     sync(world, alpha, frameMs) {
-      for (const event of world.events) handleEvent(world, event);
+      for (const event of world.events) {
+        manuscriptEvent(event);
+        handleEvent(world, event);
+      }
       world.events.length = 0;
       drawSmudges(world);
 
@@ -1020,6 +1107,7 @@ export async function createRenderer(
       }
       shots.update(frameMs);
       effects.update(frameMs);
+      syncManuscript(world, frameMs);
       hud.update(world, frameMs, reducedMotion);
       overlay.update(world, frameMs);
     },

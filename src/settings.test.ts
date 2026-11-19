@@ -9,6 +9,8 @@ describe('settings', () => {
       theme: 'night',
       volume: 1,
     });
+    expect(parseSettings({ pageWriting: 'off' }).pageWriting).toBe('off');
+    expect(parseSettings({ pageWriting: 'sometimes' }).pageWriting).toBe('on');
   });
 
   it('round-trips through storage', () => {

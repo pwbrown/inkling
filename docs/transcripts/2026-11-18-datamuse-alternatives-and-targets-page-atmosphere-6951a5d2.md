@@ -1,6 +1,6 @@
 # Datamuse alternatives and targets page atmosphere
 
-Claude Code session started 2026-11-18. 3 prompts.
+Claude Code session started 2026-11-18. 11 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -583,12 +583,1001 @@ When I commit, I'll also export the transcript and scan it before it goes in. Af
 
 > Commit, merge, go on
 
-<details><summary>1 tool call</summary>
+<details><summary>5 tool calls</summary>
 
 - **Shell:** Read scan note and export transcript
 
   ```bash
   cat /Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/memory/transcript-scan-no-secrets.md; npm run transcript 2>&1 | tail -5; git status --short
+  ```
+- **Shell:** Scan transcripts for private details
+
+  ```bash
+  for f in docs/transcripts/2026-11-18-datamuse-*.md docs/transcripts/2026-11-18-menu-*.md; do echo "== $f"; grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|/Users/[^ )\`'\"]*|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9-]{10,}|/private/tmp[^ ]*" "$f" | sort -u -t: -k2 | head -20; done; git diff --stat docs/transcripts/README.md
+  ```
+- **Shell:** Check transcript for the derived user name
+
+  ```bash
+  n="$(git config user.name)"; first="${n%% *}"; grep -ci -- "$first" docs/transcripts/2026-11-18-datamuse-*.md; grep -c "claude-501" docs/transcripts/2026-11-18-datamuse-*.md
+  ```
+- **Shell:** Commit, fast-forward merge to main, delete branch
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Word lists from Wikipedia (2.15.0)
+
+  - Download a topic's Wikipedia article instead of Datamuse related words (Datamuse needs an API key from Feb 2027)
+  - Rank the article's words on the device: in the word pack, not blocked, frequent for how rare they are; drop names, hyphen prefixes and duplicate plurals
+  - Treat disambiguation pages and stubs as empty, with a hint to be more specific
+  - CSP connect-src now allows only en.wikipedia.org
+  - Update PRIVACY, README, CREDITS, REQUIREMENTS and dialog strings
+  - Release 2.15.0 notes and version bump
+  - Update build
+  … (198 more characters)
+  ```
+- **Shell:** Tag 2.15.0 locally and start manuscript branch
+
+  ```bash
+  npm run release:tag 2>&1 | tail -3 && git switch -q -c feat/manuscript && git branch --show-current
+  ```
+
+</details>
+
+### 🤖 Claude
+
+2.15.0 is merged and tagged locally (not pushed). Now on `feat/manuscript`, reading the renderer to place the manuscript layer.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Read renderer setup and theme colors
+
+  ```bash
+  sed -n 1,80p src/render/renderer.ts; sed -n 240,300p src/render/renderer.ts; cat src/render/theme.ts | sed -n 1,107p
+  ```
+- **Shell:** Read HUD layout, face drawing and sync loop
+
+  ```bash
+  grep -n "position.set\|\.x = \|\.y = " src/render/hud.ts | head -30; grep -n "export function drawFace" -A25 src/render/creatures/common.ts | head -40; grep -n "export type Mood" -A3 src/render/creatures/common.ts; grep -n "sync(world" -A30 src/render/renderer.ts | sed -n 1,60p | head -60
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"left_click","coordinate":[300,256],"action_summary":"Starts Free Write mode"}},{"name":"computer","input":{"action":"wait","durati
+… (61 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[546,496],"action_summary":"Starts writing in Free Write"}},{"name":"computer","input":{"action":"wait","duration":6}},{"name":"computer","input":{"action":"screenshot"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[580,439],"action_summary":"Dismisses the tips card"}},{"name":"computer","input":{"action":"wait","duration":5}},{"name":"computer","input":{"action":"screenshot"}}]}`
+- **Shell:** Read HUD element positions and lane geometry
+
+  ```bash
+  sed -n 40,90p src/render/hud.ts; sed -n 150,170p src/render/hud.ts; grep -n "export function laneY\|LANES\|laneCount" -A4 src/core/world.ts | head -20
+  ```
+
+</details>
+
+## 🧑 Prompt
+
+> actually finish that up and then let's pause on the manuscript prototype
+
+### 🤖 Claude
+
+Pausing the manuscript work now. No manuscript code was written; the only thing to tidy up is the empty `feat/manuscript` branch.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Return to main and remove the empty manuscript branch
+
+  ```bash
+  git status --short && git switch -q main && git branch -d feat/manuscript && git status -sb | head -1 && git tag --points-at HEAD
+  ```
+- **Edited** `/Users/[removed]/.claude/plans/let-s-explore-2-more-graceful-mochi.md`
+
+</details>
+
+### 🤖 Claude
+
+I've paused the manuscript prototype; the Wikipedia word lists are finished, merged and tagged.
+
+- **Word lists (2.15.0):** committed with the updated transcripts (checked for private details) and merged into `main`. The branch is deleted, and `npm run release:tag` created `v2.15.0` locally. Nothing is pushed yet: `main` is one commit ahead of `origin`, and the tag is local only.
+- **Manuscript:** no code was written. I removed the empty `feat/manuscript` branch, so you're back on a clean `main`. I added a status line and layout notes to the plan file so it's easy to pick up later. The top strip is already busy, so the scribe and heading will most likely go in its left part, after the power labels, or in the space left of the margin above the nib. I'll settle that with screenshots when we resume.
+
+The dev server is still running in the browser pane if you want to try the word lists yourself (press **W**).
+
+## 🧑 Prompt
+
+> Push both
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main and the v2.15.0 tag
+
+  ```bash
+  git push origin main 2>&1 | tail -2 && git push origin v2.15.0 2>&1 | tail -2 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` (now level with `origin`) and the `v2.15.0` tag. The tag should start the Release workflow, which publishes 2.15.0 on GitHub; I didn't check that the workflow ran. The manuscript prototype is still paused.
+
+## 🧑 Prompt
+
+> continue
+
+### 🤖 Claude
+
+Picking the manuscript prototype back up, building only the static look for the screenshot check-in. Checking the ink-drop art first.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Branch and read drop art, drip shape, rng
+
+  ```bash
+  git switch -q -c feat/manuscript && sed -n 20,80p src/ui/art.ts; sed -n 1,40p src/render/creatures/drip.ts; cat src/core/rng.ts | head -30; grep -n "phase ===\|case 'phase'" src/render/renderer.ts | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Building the prototype now: a seeded squiggle generator first, then the scribe and heading.
+
+<details><summary>4 tool calls</summary>
+
+- **Edited** `src/core/config.ts`
+- **Wrote** `src/render/manuscript.ts`
+- **Wrote** `src/render/manuscript.test.ts`
+- **Shell:** Run manuscript tests
+
+  ```bash
+  npx vitest run src/render/manuscript.test.ts 2>&1 | grep -E "Tests|FAIL|Assert|Error" | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Generator works and is tested. Now the scribe and heading.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Check face args and page strings
+
+  ```bash
+  sed -n 186,200p src/render/creatures/common.ts; grep -n "'hud.page'\|'hud.apprentice'" src/i18n/en.ts
+  ```
+- **Wrote** `src/render/scribe.ts`
+- **Edited** `src/render/scribe.ts`
+
+</details>
+
+### 🤖 Claude
+
+Now wiring it into the renderer.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Find renderer state and hud update call
+
+  ```bash
+  grep -n "^  let \|  let hud\|hud.update(" src/render/renderer.ts | head -40
+  ```
+- **Shell:** Add manuscript and scribe to renderer
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/renderer.ts'; s=open(p).read()
+  def rep(old,new):
+      global s
+      assert s.count(old)==1, old[:50]
+      s=s.replace(old,new)
+  rep("import { Effects } from './effects';","import { Effects } from './effects';\nimport { Manuscript } from './manuscript';\nimport { Scribe } from './scribe';")
+  rep("  let hud!: Hud;\n","""  let hud!: Hud;
+    /** The faint writing that fills the page as targets are cleared, and the scribe writing it. */
+    let manuscript!: Manuscript;
+    let scribe!: Scribe;
+    /** Which page the manuscript is for, and how much was done last frame (it restart
+  … (804 more characters)
+  ```
+- **Shell:** Add manuscript sync helper and typecheck
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/renderer.ts'; s=open(p).read()
+  helper = """  /** Fill the manuscript as the page goes on; start it afresh on a new or restarted page. */
+    const syncManuscript = (world: World, frameMs: number) => {
+      const { spawned, params, chapter, index } = world.page;
+      const done = Math.max(0, spawned - world.targets.filter((target) => !target.bottle).length);
+      const key = `${world.mode}:${world.daily?.id ?? ''}:${chapter}:${index}`;
+      if (key !== manuscriptPage || done < manuscriptDone) {
+        manuscriptPage = key;
+        manuscript.reset(hashSeed(key), MANUSCRIP
+  … (1356 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck passes. Checking it in the running game.
+
+<details><summary>5 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"left_click","coordinate":[300,256],"action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1}
+… (223 more characters)`
+- **preview_start** `{"name":"inky-keys-dev"}`
+- **computer** `{"action":"screenshot","tabId":"tab-1","scale":0.5}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[300,256],"tabId":"tab-1","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"computer","input":{"action":"left_click","coordinate":[546,496],"tabId":"tab-
+… (183 more characters)`
+- **Shell:** Look for a dev debug hook
+
+  ```bash
+  grep -rn "window as\|globalThis\.\(__\|game\)\|import.meta.env.DEV" src/main.ts | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+There's a dev hook. I'll use it to read the drips and type the right keys, so the manuscript fills part-way.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[580,385],"tabId":"tab-1","action_summary":"Dismisses the tips card"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w = window.inkling.world; const sleep = (ms) => new Promise(r 
+… (648 more characters)`
+- **computer** `{"action":"zoom","tabId":"tab-1","region":[80,120,480,320],"scale":0.7}`
+- **computer** `{"action":"zoom","tabId":"tab-1","region":[80,440,330,500],"scale":0.6}`
+
+</details>
+
+### 🤖 Claude
+
+Classic theme looks right. Now night mode.
+
+<details><summary>4 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"const s = JSON.parse(localStorage.getItem('inkling.settings') || '{}'); s.theme = 'night'; localStorage.setItem('inkling.settings', JSON.stringify(s)); location.reload(); 'ok'"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-1","scale":0.5}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[300,256],"tabId":"tab-1","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"computer","input":{"action":"left_click","coordinate":[546,496],"tabId":"tab-
+… (174 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_33","tabId":"tab-1","action_summary":"Dismisses the tips card"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w = window.inkling.world; const sleep = (ms) => new Promise(r => setTi
+… (623 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Night mode works too. Restoring the classic theme and running the checks.
+
+<details><summary>3 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"const s = JSON.parse(localStorage.getItem('inkling.settings') || '{}'); s.theme = 'classic'; localStorage.setItem('inkling.settings', JSON.stringify(s)); 'ok'"}`
+- **Shell:** Run typecheck, lint and tests
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|warning|Tests|failed" | head -10
+  ```
+- **SendUserFile** `{"files":["/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/6951a5d2-433c-45b5-81ff-b07c88abb6fe/tool-results/mcp-Claude_Browser-blob-1795062296133-ayeard.jpg","/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/6951a5d2-433c-45b5-81ff-b07c88abb6fe/too
+… (172 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+I've built the manuscript look prototype and played it in the dev game; this is the second check-in, so I've stopped here for your feedback. The two screenshots I sent show the classic theme at 11 of 20 targets and night mode at 7 of 20.
+
+**What's in it:**
+- **Manuscript:** faint handwriting-like scribbles on each lane's line, starting with a paragraph indent. They fill in as targets are cleared and finish on the last one. They aren't real words, so there's nothing to read behind the targets. The scribbles are the same for a given page every time, so a restarted page starts empty and refills the same way.
+- **Scribe:** a small ink drop with a quill, on the free line below the bottom lane next to the margin. It points up like your profile badge, so it doesn't look like a Drip. At the start of each page it writes "Chapter 1 · Page 1" in the handwritten font, and its quill wiggles whenever the writing grows. With reduced motion on, the heading appears at once and the scribe stays still.
+- **Code:** [manuscript.ts](src/render/manuscript.ts) (with tests), [scribe.ts](src/render/scribe.ts), a few lines in [renderer.ts](src/render/renderer.ts), and a `manuscript` block in [config.ts](src/core/config.ts). `npm run check` passes (416 tests).
+
+**What I'd like your opinion on:**
+1. **Faintness:** the scribbles are at 13% strength. In both themes they read as texture to me, not as clutter.
+2. **Scribble shape:** the strokes are a bit regular and spiky, like "mmm". I can add loops and rounder letters if you want them to look more like real cursive.
+3. **Scribe placement:** bottom-left is the only free spot that's out of the lanes. The top strip is full with the ink bar, powers, score and the current target. One catch is that it writes at the bottom while the text fills from the top.
+4. **Footer:** it still says "Chapter 1 · Page 1 of 4 · 11/20", so the chapter appears twice. I could shorten the footer to "Page 1 of 4 · 11/20" now that the heading is on the page.
+
+**Not built yet:** ink blots when a target reaches the margin, the scribe looking up nervously, wincing and cheering, the "Page writing" on/off setting, and boss-page timing. I haven't tried the parchment and graph paper styles. Nothing is committed.
+
+## 🧑 Prompt
+
+> I have tweaks
+
+### 🤖 Claude
+
+I'm ready for your tweaks: tell me what you'd like changed and I'll do it.
+
+The four things I flagged are a good place to start:
+- **Faintness:** stronger or fainter than the current 13%?
+- **Scribble shape:** more loopy cursive, or keep it as it is?
+- **Scribe placement:** keep it bottom-left, or move it somewhere else?
+- **Footer:** drop "Chapter 1" from it, since the heading now shows it?
+
+Anything else about the look is fair game too: the scribe's design, the heading's size or font, the paragraph indent, or how the writing spreads across the lines.
+
+## 🧑 Prompt
+
+> Faitness is fine, I do like the idea of adding more loops to the scribbles. Scribe placement is fine for now, and I think we could remove the Chapter number from the footer as you suggested
+
+### 🤖 Claude
+
+Two tweaks: loopier, more cursive scribbles, and no chapter number in the footer. Starting with the scribble shape.
+
+<details><summary>5 tool calls</summary>
+
+- **Edited** `src/core/config.ts`
+- **Edited** `src/render/manuscript.ts`
+- **Shell:** Find the daily footer string
+
+  ```bash
+  grep -n "'hud.daily'" src/i18n/en.ts
+  ```
+- **Shell:** Shorten footer, add apprentice heading, run checks
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:40]); open(p,'w').write(s.replace(old,new))
+  rep('src/i18n/en.ts', "'hud.page': 'Chapter {chapter} · Page {page} of {pages} · {done}/{total}',", "'hud.page': 'Page {page} of {pages} · {done}/{total}',")
+  rep('src/i18n/en.ts', "'hud.apprentice': 'Chapter {chapter} of {chapters} · Learning {keys} · Page {page} of {pages} · {done}/{total}',", "'hud.apprentice': 'Learning {keys} · Page {page} of {pages} · {done}/{total}',")
+  rep('src/i18n/en.ts', "  'manuscript.heading': 'Chapter {chapter} · Page {page}',\n
+  … (897 more characters)
+  ```
+- **Shell:** Confirm edits applied and run checks
+
+  ```bash
+  grep -n "'hud.page'\|'hud.apprentice'\|manuscript.heading" src/i18n/en.ts; grep -rn "APPRENTICE_CHAPTERS" src/render/renderer.ts | head -3; npm run check 2>&1 | grep -E "error|Tests|FAIL" | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks pass. Taking a fresh screenshot of the loopier writing.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/","tabId":"tab-1"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-1","scale":0.4}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[300,256],"tabId":"tab-1","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"computer","input":{"action":"left_click","coordinate":[546,496],"tabId":"tab-
+… (174 more characters)`
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w = window.inkling.world; const sleep = (ms) => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 400 && (w.page.spawned - w.targets.filter(t=>!t.bottle).length) < 11; i++) { const t = w.ta
+… (576 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The loops came out as thin spikes: at this size the backward curl is under 2px, so it disappears. I'll make the loop width scale with letter height, add more points and a slight slant.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Widen loops, add slant, rerun tests
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:40]); open(p,'w').write(s.replace(old,new))
+  rep('src/core/config.ts', """    /**
+       * How far each kind of letter curls back on itself: below 1 is an open
+       * hump, above 1 a loop (tall letters and descenders always loop).
+       */
+      humpCurl: [0.2, 0.6],
+      loopCurl: [1.3, 1.8],
+      /** Points per letter: more is smoother. */
+      letterSteps: 10,""", """    /** How far a hump leans back at its peak, as a share of its width (under 1 stays open). */
+      humpCurl: [0.2, 0.6],
+      /** How wide a 
+  … (1343 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/","tabId":"tab-1"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-1","scale":0.3}},{"name":"computer","input":{"action":"left_click","coord
+… (1210 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"const w = window.inkling.world; ({ done: w.page.spawned - w.targets.filter(t=>!t.bottle).length, phase: w.phase, chapter: w.page.chapter, index: w.page.index })"}`
+
+</details>
+
+### 🤖 Claude
+
+The browser pane is hidden, so the game is paused and I can't play it there. Instead I'll render the new scribbles straight from the generator to an image.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Render scribble previews to SVG
+
+  ```bash
+  cat > src/render/zz-preview.test.ts <<'EOF'
+  import { it } from 'vitest';
+  import { writeFileSync } from 'node:fs';
+  import { buildManuscript, revealWords } from './manuscript';
+  import { laneCount, laneY, MARGIN_X, WORLD_WIDTH } from '../core/world';
+  it('preview', () => {
+    const baselines = Array.from({ length: laneCount() }, (_, l) => laneY(l));
+    const words = revealWords(buildManuscript(12345, { baselines }), 0.55);
+    const rules = Array.from({ length: 13 }, (_, i) => 72 + i * 48).map((y) => `<line x1="0" x2="${WORLD_WIDTH}" y1="${y}" y2="${y}" stroke="#b9cfe0" stroke-width="1.5"/>`).join('')
+  … (1328 more characters)
+  ```
+- **Shell:** Convert previews to PNG for viewing
+
+  ```bash
+  cd <temp file> && qlmanage -t -s 1040 -o . scribbles-closeup.svg >/dev/null 2>&1; qlmanage -t -s 1280 -o . scribbles-ingame.svg >/dev/null 2>&1; ls *.png
+  ```
+- **Read** `<temp file>`
+
+</details>
+
+### 🤖 Claude
+
+That reads like real cursive now. Checking the faint in-game version too.
+
+<details><summary>3 tool calls</summary>
+
+- **Read** `<temp file>`
+- **SendUserFile** `{"files":["<temp file>"],"caption":"New loopy scribbles, drawn darker than in-game (60% vs 13%) so the shapes are easy to see","status":"normal","display":"render"}`
+- **Shell:** Run checks and show changed files
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL" | head -5; git status --short
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The scribbles now loop like real cursive, and the footer no longer shows the chapter number.
+
+- **Loops:** tall letters and letters that hang below the line always loop, about a third of the short letters become small "e"-style loops, and the rest stay as open humps. The writing also leans forward slightly. My first try showed up in the game as thin spikes because the loops were under 2px wide. Loop width now grows with letter height, which fixed it. The image I sent is drawn at 60% strength so you can see the shapes; in the game it stays at the 13% you approved.
+- **Footer:** it now reads "Page 1 of 4 · 11/20". In Apprentice it reads "Learning … · Page 1 of 4 · …". To keep the total number of chapters on screen there, the Apprentice heading says "Chapter 3 of 27 · Page 1".
+
+`npm run check` passes. I confirmed the shorter footer in the game. I haven't seen the loopy version in the live game: the browser pane was hidden, which pauses the game, so I drew the image straight from the code. Nothing is committed.
+
+Still to build after this check-in: ink blots when a target reaches the margin, the scribe glancing up, wincing and cheering, the Page writing on/off setting, and the boss-page timing.
+
+## 🧑 Prompt
+
+> Yes, go on
+
+### 🤖 Claude
+
+Building the behaviour now: blots, scribe reactions, and boss-page timing. Checking how "worried" and page end are detected first.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Find worried rule, phases and spawn counting
+
+  ```bash
+  grep -rn "worried" src/render/creatures/common.ts | head -8; grep -n "export type GamePhase" -A3 src/core/world.ts; grep -n "spawned++\|spawned +=\|bossSpawned = true\|params.size" src/core/world.ts | head -12
+  ```
+- **Shell:** Read worried rule, spawning and page-clear logic
+
+  ```bash
+  sed -n 160,180p src/render/creatures/common.ts; sed -n 725,770p src/core/world.ts; sed -n 910,925p src/core/world.ts; grep -n "pageCleared" src/render/renderer.ts | head
+  ```
+- **Shell:** Check target flags and reset event
+
+  ```bash
+  grep -n "export interface Target" -A40 src/core/world.ts | grep -n "boss\|split\|bottle\|parent" ; grep -n "type: 'reset'" src/core/*.ts | head; sed -n 485,500p src/core/world.ts; grep -n "case 'reset'" -A6 src/render/renderer.ts
+  ```
+- **Shell:** Read boss split spawning
+
+  ```bash
+  sed -n 822,840p src/core/world.ts
+  ```
+- **Shell:** Add blots to the manuscript
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  m='src/render/manuscript.ts'
+  rep(m, "import { Graphics } from 'pixi.js';", "import { Container, Graphics } from 'pixi.js';")
+  rep(m, """export interface ScribbleWord {
+    points: number[];
+    length: number;
+  }""", """export interface ScribbleWord {
+    points: number[];
+    length: number;
+    /** Which line (index into the layout's baselines) it's on. */
+    line: number;
+  }""")
+  rep(m, "function scribbleWord(random: () => number, x: number, baseline: number, maxX: num
+  … (5142 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Blots added. Now the scribe's reactions.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add scribe moods and movement
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  p='src/render/scribe.ts'
+  rep(p, "import { drawFace } from './creatures/common';", "import { drawFace, type Mood } from './creatures/common';")
+  rep(p, """  private writingMs = 0;
+  """, """  private writingMs = 0;
+    private winceMs = 0;
+    private cheerMs = 0;
+    /** The drop and its quill, which hop and shake together; the heading stays put. */
+    private readonly figure = new Container();
+  """)
+  rep(p, "    this.root.addChild(this.heading, this.headingMask, this.
+  … (3037 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Scribe reactions done. Now wiring events into the renderer and fixing the progress count.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Rewrite manuscript progress and find event cases
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  p='src/render/renderer.ts'
+  rep(p, """  /** Which page the manuscript is for, and how much was done last frame (it restarts if that drops). */
+    let manuscriptPage = '';
+    let manuscriptDone = 0;
+  """, """  /** Which page the manuscript is for, how many of its creatures are gone, and whether its boss is beaten. */
+    let manuscriptPage = '';
+    let manuscriptCleared = 0;
+    let manuscriptBossDone = false;
+  """)
+  s=open(p).read()
+  a=s.index("  /** Fill the manuscrip
+  … (2123 more characters)
+  ```
+- **Shell:** Route game events to manuscript and scribe
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  p='src/render/renderer.ts'
+  rep(p, "      for (const event of world.events) handleEvent(world, event);", """      for (const event of world.events) {
+          manuscriptEvent(event);
+          handleEvent(world, event);
+        }""")
+  rep(p, "  /** A creature of the page is gone (not a bottle or part of a boss). */\n  const manuscriptCounts = (target: Target) => !target.bottle && !target.boss;\n", """  /** A creature of the page is gone (not a bottle or part of a 
+  … (1029 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck and lint pass. Checking whether the browser pane is visible for a play-test.
+
+<details><summary>2 tool calls</summary>
+
+- **tabs_context** `{}`
+- **show_pane** `{"pane":"preview"}`
+
+</details>
+
+### 🤖 Claude
+
+Browser pane is showing. Play-testing: clear some targets, let one through, then finish the page.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/","tabId":"tab-1"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-1","scale":0.3}},{"name":"computer","input":{"action":"left_click","coord
+… (1027 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The layout shifted (the viewport changed and there's now a Continue button), so my clicks missed. Taking a fresh look.
+
+<details><summary>5 tool calls</summary>
+
+- **computer** `{"action":"screenshot","tabId":"tab-1","scale":0.5}`
+- **find** `{"query":"Free Write","tabId":"tab-1"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_17","tabId":"tab-1","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"find","input":{"query":"Start writing","tabId":"tab-1"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_60","tabId":"tab-1","action_summary":"Starts writing"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"find","input":{"query":"Got it","tabId":"tab-1"}},{"name":"javascript_tool","input":{"a
+… (120 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"window.__play = async (until, stopX = 1100, maxMs = 38000) => { const w = window.inkling.world; const sleep = (ms) => new Promise(r => setTimeout(r, ms)); const t0 = Date.now(); while (!until(w) && Date.now() - t0 < maxMs) { const t = w.targets.fil
+… (390 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Now letting one creature through: I'll stop typing until the ink drops.
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"await window.__play((w) => w.ink < 100, -1)"}`
+- **computer** `{"action":"screenshot","tabId":"tab-1"}`
+
+</details>
+
+### 🤖 Claude
+
+Blot and wince both show (the blot fell on a line with nothing written yet, near its start). Now finishing the page to see the writing complete and the scribe cheer.
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"await window.__play((w) => w.phase !== 'playing')"}`
+- **computer** `{"action":"screenshot","tabId":"tab-1"}`
+
+</details>
+
+### 🤖 Claude
+
+The page finishes the writing on the last target, and the scribe switches to its happy face. Running the full check, then sending the screenshots.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Run typecheck, lint and tests
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL" | head -5
+  ```
+- **SendUserFile** `{"files":["/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/6951a5d2-433c-45b5-81ff-b07c88abb6fe/tool-results/mcp-Claude_Browser-blob-1795063284385-uan6yq.jpg","/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/6951a5d2-433c-45b5-81ff-b07c88abb6fe/too
+… (290 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+This is the third check-in: blots and scribe reactions now work. I played a page in the dev game, let three Drips through, and finished it; the two screenshots I sent show a Drip getting through and the finished page.
+
+**What's new:**
+- **Blots:** when a creature reaches the margin, a lumpy ink blot with a few flung drops lands on the manuscript, on that creature's line. If the line has writing, the blot lands somewhere within it; if not, it lands near the start of the line. Blots are darker than the writing (38% against 13%) so the damage shows. They stay for the rest of the page and clear when the page restarts.
+- **Scribe reactions:** they all use the creatures' existing faces.
+  - It looks up worried when a creature gets within 240px of the margin, the same distance at which creatures look worried.
+  - It winces (> <), shivers and drops its quill when a creature gets through.
+  - It hops with its quill raised when the page is done.
+  - With reduced motion on, the faces still change but nothing moves.
+- **Progress:** the writing now grows each time a creature is cleared or gets through. I changed the way this is counted: the old count used the footer's numbers, and a boss splitting into Inkmites would have made the page look restarted and wiped the writing. On boss pages the last 12% of the writing waits for the boss to be beaten. When a page is complete the writing is always finished.
+
+`npm run check` passes (416 tests).
+
+**Not tested yet:** I haven't played a boss page. I also haven't tried the parchment and graph paper styles with the new look.
+
+**Still to build after your feedback:**
+- The "Page writing" on/off setting.
+- Tests for blot placement.
+- A short entry in `docs/DESIGN.md`.
+- Release notes for 2.16.0.
+
+Nothing is committed.
+
+**What I'd most like your opinion on:**
+1. **Blot size:** blots are 7–11px across. In the screenshot they are noticeable but easy to miss next to the larger red stain the game already puts on the margin. They could be bigger.
+2. **Cheer:** the happy face is visible behind the "Page complete" card, but the card covers the hop.
+
+## 🧑 Prompt
+
+> Good, finish it
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Read settings storage and how a setting is wired
+
+  ```bash
+  sed -n 40,120p src/settings.ts; grep -n "screenEffects" src/main.ts src/ui/*.ts src/settings.test.ts | head -20; grep -n "settings.screenEffects\|'settings\.\(effects\|screen\)" src/i18n/en.ts | head
+  ```
+- **Shell:** Read the settings dialog radio groups and display options
+
+  ```bash
+  sed -n 100,140p src/ui/settingsDialog.ts; sed -n 145,160p src/main.ts; grep -n "screenEffects" src/settings.test.ts src/ui/*.test.ts 2>/dev/null | head
+  ```
+- **Shell:** Add the Page writing setting end to end
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  p='src/settings.ts'
+  rep(p, "export const SCREEN_EFFECTS: readonly ScreenEffects[] = ['full', 'gentle'];", """export const SCREEN_EFFECTS: readonly ScreenEffects[] = ['full', 'gentle'];
+
+  /** The faint manuscript and its scribe behind play: 'off' leaves a plain page (the heading stays). */
+  export type PageWriting = 'on' | 'off';
+  export const PAGE_WRITING: readonly PageWriting[] = ['on', 'off'];""")
+  rep(p, "  screenEffects: ScreenEffects;\n  /** Sound", "  scr
+  … (2810 more characters)
+  ```
+- **Shell:** Finish wiring the setting into renderer and scribe
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  p='src/render/renderer.ts'
+  rep(p, "    scribe = new Scribe(MARGIN_X + 30, LAST_LANE_Y + LINE_SPACING - 4);\n    manuscriptPage = '';\n", "    scribe = new Scribe(MARGIN_X + 30, LAST_LANE_Y + LINE_SPACING - 4);\n    manuscriptPage = '';\n    manuscript.root.visible = options.pageWriting ?? true;\n    scribe.showFigure(options.pageWriting ?? true);\n")
+  p='src/render/scribe.ts'
+  rep(p, "  /** A creature got through: wince. */", """  /** Show or hide the scribe 
+  … (362 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Setting is wired. Adding tests for it and for blot placement.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** See existing settings tests
+
+  ```bash
+  grep -n "it(\|screenEffects" src/settings.test.ts | head
+  ```
+- **Shell:** Read first settings test
+
+  ```bash
+  sed -n 1,14p src/settings.test.ts
+  ```
+- **Shell:** Add setting and blot tests and run them
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  rep('src/settings.test.ts', """      volume: 1,
+      });
+    });
+  """, """      volume: 1,
+      });
+      expect(parseSettings({ pageWriting: 'off' }).pageWriting).toBe('off');
+      expect(parseSettings({ pageWriting: 'sometimes' }).pageWriting).toBe('on');
+    });
+  """)
+  rep('src/render/manuscript.test.ts', "import { buildManuscript, revealWords, totalLength } from './manuscript';", "import { blotSpot, buildManuscript, revealWords, totalLength } from './manuscript';")
+  … (1003 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Tests pass. Now DESIGN.md and the 2.16.0 release.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Read design doc sections and progression steps
+
+  ```bash
+  sed -n 18,30p docs/DESIGN.md; sed -n 66,82p docs/DESIGN.md; grep -n "^## \|^### " docs/DESIGN.md | head -30; grep -n "milestone\|Milestone" docs/RELEASING.md | head -3; tail -30 docs/progression/README.md | head -30
+  ```
+- **Shell:** Update DESIGN.md and add the 2.16.0 release
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  p='docs/DESIGN.md'
+  rep(p, "- **The page:** a ruled notebook page on cream paper. The red **margin line** on the left is the line you defend.\n",
+  """- **The page:** a ruled notebook page on cream paper. The red **margin line** on the left is the line you defend.
+  - **The manuscript (what you defend):** a little ink-drop **scribe** with a quill sits on the free line below the last lane and fills the page with faint, illegible cursive as you clear it. The writi
+  … (1637 more characters)
+  ```
+- **Shell:** Run checks and production build
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL|warn" | head -5 && npm run build 2>&1 | grep -iE "error|built in" | head -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Check and build pass. Now a boss page: looking for a way to jump straight to one.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Find page-jump helpers and boss timing
+
+  ```bash
+  grep -n "^export function \(start\|begin\|next\|advance\|goTo\)[A-Za-z]*" src/core/world.ts src/core/input.ts src/core/campaign.ts | head; grep -n "bossFor\|afterSpawned\|bossAt" src/core/bosses.ts src/core/config.ts | head -5
+  ```
+
+</details>
+
+### 🤖 Claude
+
+No jump helper, so I'll play through pages 1–3 with the script to reach chapter 1's boss page.
+
+<details><summary>1 tool call</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"const w = window.inkling.world; if (w.phase === 'pageCleared') window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true })); await new Promise(r => setTimeout(r, 1500)); ({ phase: w.phase, index: w.page.index, 
+… (28 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The page reloaded after my edits, so I'm starting a fresh run.
+
+<details><summary>6 tool calls</summary>
+
+- **find** `{"query":"Free Write","tabId":"tab-1"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_17","tabId":"tab-1","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"find","input":{"query":"Start writing","tabId":"tab-1"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_60","tabId":"tab-1","action_summary":"Starts writing"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"window.__r
+… (857 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"await window.__run()"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","tabId":"tab-1","action_summary":"Turns to the next page"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w 
+… (70 more characters)`
+- **computer** `{"action":"screenshot","tabId":"tab-1","scale":0.5}`
+
+</details>
+
+### 🤖 Claude
+
+Still play-testing toward the boss page (a level-up card from the test save popped up; dismissing it and carrying on).
+
+<details><summary>7 tool calls</summary>
+
+- **find** `{"query":"Keep going","tabId":"tab-1"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_69","tabId":"tab-1","action_summary":"Closes the unlock card"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"computer","input":{"action":"key","text":"Return","tabId":"tab-1","action_summa
+… (270 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"window.__run = async (maxMs = 40000) => { const w = window.inkling.world; const sleep = (ms) => new Promise(r => setTimeout(r, ms)); const t0 = Date.now(); while (Date.now() - t0 < maxMs && w.phase === 'playing' && !(w.page.hasBoss && w.page.spawne
+… (388 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","tabId":"tab-1","action_summary":"Closes the briefing"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"await windo
+… (14 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","tabId":"tab-1","action_summary":"Turns to the next page"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w 
+… (70 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","tabId":"tab-1","action_summary":"Closes the briefing"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"await windo
+… (14 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","tabId":"tab-1","action_summary":"Turns to the next page"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w 
+… (118 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Chapter 1's last page has no boss, and reaching a boss chapter would take several more minutes of play. So I'll mark this page as a Spill boss page through the dev hook, then play it.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w = window.inkling.world; Object.assign(w.page, { hasBoss: true, bossKind: 'spill', bossSpawned: false }); window.inkling.renderer.rebuild(); ({ hasBoss: w.page.hasBoss })"}},{"name":"computer","i
+… (1027 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The Spill opens the page. Beating it first, then checking the writing jumps by the boss's share.
+
+<details><summary>3 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"await window.__run2((w) => !w.targets.some(t => t.boss) && w.page.spawned >= 1)"}`
+- **computer** `{"action":"screenshot","tabId":"tab-1"}`
+- **Shell:** Find where boss events are emitted
+
+  ```bash
+  grep -rn "type: 'bossDefeated'\|type: 'split'" src/core/*.ts | grep -v test
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Only the multi-part bosses send 'bossDefeated'; the Spill sends 'split'. I'll count both. I'll also stop the footer going negative.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Count the Spill splitting as beaten; clamp footer
+
+  ```bash
+  python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  rep('src/render/renderer.ts', """      case 'bossDefeated':
+          manuscriptBossDone = true;""", """      case 'bossDefeated':
+        case 'split':
+          // The Spill splits when beaten; the other bosses are defeated.
+          manuscriptBossDone = true;""")
+  rep('src/render/hud.ts', "      done: spawned - world.targets.filter((target) => !target.bottle).length,", "      // Inkmites (from a split Spill) aren't counted in `spawned`, so don't let them take th
+  … (145 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Re-testing the boss page after the reload.
+
+<details><summary>5 tool calls</summary>
+
+- **find** `{"query":"Free Write","tabId":"tab-1"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_14","tabId":"tab-1","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"find","input":{"query":"Start writing","tabId":"tab-1"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_57","tabId":"tab-1","action_summary":"Starts writing"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w = window.inkling.world; Object.assign(w.page, { hasBoss: true, bossKind: 'spi
+… (702 more characters)`
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"await window.__run2((w) => w.page.bossSpawned && !w.targets.some(t => t.boss) && w.page.spawned >= 1)"}`
+- **computer** `{"action":"screenshot","tabId":"tab-1","scale":0.6}`
+
+</details>
+
+### 🤖 Claude
+
+After the Spill split, the boss's share of the writing appeared, and the footer reads 0/20 instead of a negative number. Playing to the end of the page.
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"await window.__run2(() => false)"}`
+- **computer** `{"action":"screenshot","tabId":"tab-1","scale":0.6}`
+
+</details>
+
+### 🤖 Claude
+
+The boss page finished with every line written. Last check: the Page writing "Off" setting.
+
+<details><summary>5 tool calls</summary>
+
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"const s = JSON.parse(localStorage.getItem('inkling.settings') || '{}'); s.pageWriting = 'off'; localStorage.setItem('inkling.settings', JSON.stringify(s)); location.reload(); 'ok'"}`
+- **find** `{"query":"Settings","tabId":"tab-1"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_35","tabId":"tab-1","action_summary":"Opens Settings"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"find","input":{"query":"Page writing","tabId":"tab-1"}}]}`
+- **computer** `{"action":"scroll_to","ref":"ref_85","tabId":"tab-1"}`
+- **computer** `{"action":"screenshot","tabId":"tab-1","scale":0.6}`
+
+</details>
+
+### 🤖 Claude
+
+The setting shows in Settings with Off selected. Switching it back On through the dialog to check the live redraw.
+
+<details><summary>3 tool calls</summary>
+
+- **find** `{"query":"radio On","tabId":"tab-1"}`
+- **javascript_tool** `{"action":"javascript_exec","tabId":"tab-1","text":"const shot = () => { const c = document.querySelector('canvas'); return c ? c.width : 0; }; JSON.parse(localStorage.getItem('inkling.settings')).pageWriting"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[128,497],"tabId":"tab-1","action_summary":"Selects Page writing: On"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1",
+… (475 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The setting saves from the dialog. Final check and build.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Run checks and build, list changes
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL" | head -5 && npm run build 2>&1 | grep -iE "error|built in" | head -3; git status --short
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The manuscript is finished on `feat/manuscript` as release 2.16.0. `npm run check` (417 tests) and `npm run build` pass. Nothing is committed yet.
+
+**What I added to finish it:**
+- **Page writing setting:** a new On/Off choice in Settings. Off hides the writing and the scribe but keeps the "Chapter · Page" heading, since the footer no longer shows the chapter. It's stored with the other settings in the browser, so the save format didn't change. I checked that it appears in Settings and that switching it saves. I didn't look at a live page with it set to Off.
+- **Tests:** for the new setting, and for where blots land (within the writing on that line, or near the start of a line with nothing written yet).
+- **Docs:** `docs/DESIGN.md` now describes the manuscript and scribe, and its HUD note says the chapter is in the heading.
+- **Release 2.16.0:** two player notes, one introducing the scribe and one about blots and the setting. The version is bumped in `package.json`.
+
+**Boss page test:** no boss appears in chapter 1, so I used the dev hook to make the current page a Spill page and played it. The page completed with every line written. The test turned up two bugs, both now fixed:
+- **Boss share never arrived on Spill pages:** the Spill sends a "split" event when it's beaten, not a "defeated" one, so the last part of the writing would never have appeared. Both events now count.
+- **Footer went negative:** with Inkmites on screen it showed "-3/12", because they aren't counted as spawned. This was already in the game before my change. It now stops at 0, so it reads 0/20 until regular creatures are cleared. It still isn't an exact count on Spill pages.
+
+That test also gave the browser pane's save a "Boss Beater" sticker and a level-up. Those only exist in that dev browser, not in anyone's real save.
+
+**Milestone snapshots:** CLAUDE.md asks for snapshots at the end of a milestone, but this release wasn't numbered as one. I can take them if you want 2.16.0 in `docs/progression/`.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  npm run transcript 2>&1 | grep -c Wrote; f=docs/transcripts/2026-11-18-datamuse-*.md; grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9-]{10,}" $f | sort -u | head; grep -oE "/Users/[^/ ]+" $f | sort -u; n="$(git config user.name)"; first="${n%% *}"; grep -ci -- "$first" $f; git status --short docs/transcripts
   ```
 
 </details>

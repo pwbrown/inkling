@@ -105,7 +105,8 @@ export class Hud {
       chapter: chapter + 1,
       page: index + 1,
       pages: pageCount,
-      done: spawned - world.targets.filter((target) => !target.bottle).length,
+      // Inkmites (from a split Spill) aren't counted in `spawned`, so don't let them take this below zero.
+      done: Math.max(0, spawned - world.targets.filter((target) => !target.bottle).length),
       total: params.size,
     };
     // In the Apprentice campaign, say what this chapter is teaching.

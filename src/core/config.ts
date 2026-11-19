@@ -477,6 +477,57 @@ export const GAME_CONFIG = {
      */
     shortcutDelayMs: 400,
   },
+  /** The faint manuscript the scribe writes as a page goes on (src/render/manuscript.ts). */
+  manuscript: {
+    /** How strong the scribbles are, 0..1. Faint, so they never compete with targets. */
+    alpha: 0.13,
+    strokeWidth: 1.6,
+    /** Left and right edges of the writing, in page pixels from the margin and the right edge. */
+    insetLeft: 28,
+    insetRight: 48,
+    /** The first line starts this much further in, like a paragraph. */
+    indent: 44,
+    /** Letter widths and heights (x-height, ascenders, descenders). */
+    letterWidth: [5, 9],
+    xHeight: 8,
+    ascender: 19,
+    descender: 9,
+    /** Chance a letter is tall or hangs below the line. */
+    ascenderChance: 0.16,
+    descenderChance: 0.1,
+    /** Chance a short letter is a small loop (like "e") rather than a hump (like "n"). */
+    loopChance: 0.35,
+    /** How far a hump leans back at its peak, as a share of its width (under 1 stays open). */
+    humpCurl: [0.2, 0.6],
+    /** How wide a loop is, as a share of its height (tall letters and descenders always loop). */
+    loopWidth: [0.2, 0.3],
+    /** Forward lean of the handwriting: sideways shift per pixel of height. */
+    slant: 0.28,
+    /** Points per letter: more is smoother. */
+    letterSteps: 18,
+    /** Letters per word, and the gap between words. */
+    wordLetters: [2, 9],
+    wordGap: [11, 17],
+    /** The last line ends somewhere in this share of the width. */
+    lastLine: [0.35, 0.7],
+    /** Revealed share eases toward progress at this rate per second. */
+    revealRate: 1.6,
+    /** The heading writes itself in over this long at the start of a page. */
+    headingMs: 1200,
+    headingAlpha: 0.55,
+    /** Blots where a creature got through: darker than the writing, so the damage shows. */
+    blotAlpha: 0.38,
+    blotRadius: [7, 11],
+    /** With nothing written on that line yet, a blot lands this far in from the start. */
+    blotNoWriting: 120,
+    /** On a boss page, this share of the writing waits for the boss. */
+    bossShare: 0.12,
+    /** The scribe winces this long when a creature gets through, and cheers this long at the end of a page. */
+    winceMs: 900,
+    cheerMs: 1400,
+    /** The scribe looks up when a creature is this close to the margin (creatures look worried here too). */
+    glanceDistance: 240,
+  },
   /** Word lists downloaded from a topic's Wikipedia article (src/content/vocabApi.ts). */
   vocab: {
     /** Most words kept from one article. */

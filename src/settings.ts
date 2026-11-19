@@ -11,6 +11,10 @@ export type MotionSetting = 'system' | 'reduced' | 'full';
 export type ScreenEffects = 'full' | 'gentle';
 export const SCREEN_EFFECTS: readonly ScreenEffects[] = ['full', 'gentle'];
 
+/** The faint manuscript and its scribe behind play: 'off' leaves a plain page (the heading stays). */
+export type PageWriting = 'on' | 'off';
+export const PAGE_WRITING: readonly PageWriting[] = ['on', 'off'];
+
 export const TEXT_SIZES: readonly TextSize[] = ['normal', 'large', 'larger'];
 export const MOTION_SETTINGS: readonly MotionSetting[] = ['system', 'reduced', 'full'];
 
@@ -22,6 +26,7 @@ export interface Settings {
   theme: ThemeId;
   motion: MotionSetting;
   screenEffects: ScreenEffects;
+  pageWriting: PageWriting;
   /** Sound effects volume, 0..1. */
   volume: number;
   muted: boolean;
@@ -32,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'classic',
   motion: 'system',
   screenEffects: 'full',
+  pageWriting: 'on',
   volume: 0.6,
   muted: false,
 };
@@ -50,6 +56,7 @@ export function parseSettings(raw: unknown): Settings {
     theme: pick(s.theme, THEMES, DEFAULT_SETTINGS.theme),
     motion: pick(s.motion, MOTION_SETTINGS, DEFAULT_SETTINGS.motion),
     screenEffects: pick(s.screenEffects, SCREEN_EFFECTS, DEFAULT_SETTINGS.screenEffects),
+    pageWriting: pick(s.pageWriting, PAGE_WRITING, DEFAULT_SETTINGS.pageWriting),
     volume,
     muted: typeof s.muted === 'boolean' ? s.muted : DEFAULT_SETTINGS.muted,
   };

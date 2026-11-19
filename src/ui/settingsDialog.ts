@@ -4,7 +4,7 @@ import { t, type MessageKey } from '../i18n';
 import { LAYOUT_IDS } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 import { THEMES } from '../render/theme';
-import { MOTION_SETTINGS, SCREEN_EFFECTS, TEXT_SIZES, type Settings } from '../settings';
+import { MOTION_SETTINGS, PAGE_WRITING, SCREEN_EFFECTS, TEXT_SIZES, type Settings } from '../settings';
 import { h, trapFocus } from './dom';
 
 export interface SettingsDialogOptions {
@@ -128,6 +128,14 @@ export function openSettings(host: HTMLElement, options: SettingsDialogOptions):
       settings.screenEffects,
       (v) => t(`settings.screenEffects.${v}` as MessageKey),
       (screenEffects) => change({ screenEffects }),
+    ),
+    radioGroup(
+      t('settings.pageWriting'),
+      t('settings.pageWriting.help'),
+      PAGE_WRITING,
+      settings.pageWriting,
+      (v) => t(`settings.pageWriting.${v}` as MessageKey),
+      (pageWriting) => change({ pageWriting }),
     ),
     options.layout
       ? radioGroup(
