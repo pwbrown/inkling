@@ -53,8 +53,12 @@ export interface Renderer {
   app: Application;
   /** Draw the current state. `frameMs` is real time since the last frame. */
   sync(world: World, alpha: number, frameMs: number): void;
-  /** Redraw everything, e.g. after the theme, text size or motion setting changes. */
-  rebuild(): void;
+  /**
+   * Redraw everything, e.g. after the theme, text size or motion setting changes.
+   * `keepCard` is for a cosmetic change (pen, ink, paper): the page card, the
+   * manuscript and the scribe carry on as they were instead of starting over.
+   */
+  rebuild(options?: { keepCard?: boolean }): void;
   /** A picture of the creature a tutorial is about, as an image URL, or null if it has none. */
   portrait(id: MechanicId): string | null;
   destroy(): void;
@@ -254,11 +258,18 @@ export async function createRenderer(
   let calloutArrow!: Graphics;
   let calloutId: MechanicId | null = null;
 
-  const build = () => {
+  const build = (keepCard = false) => {
     const options = display();
     ({ reducedMotion, textScale } = options);
     gentle = options.screenEffects === 'gentle';
     const cosmetics = options.cosmetics ?? DEFAULT_COSMETICS;
+    // Pull out what should survive before the rest is destroyed.
+    const kept = keepCard && overlay ? { overlay, manuscript, scribe } : null;
+    if (kept) {
+      kept.overlay.root.removeFromParent();
+      kept.manuscript.root.removeFromParent();
+      kept.scribe.root.removeFromParent();
+    }
     for (const child of stage.removeChildren()) child.destroy({ children: true });
     views.clear();
     reactions.clear();
@@ -283,12 +294,16 @@ export async function createRenderer(
     nib.addChild(drawNib(nibStyle), nibFace);
     nib.position.set(NIB_HOME.x, NIB_HOME.y);
     hud = new Hud();
-    manuscript = new Manuscript();
-    scribe = new Scribe(MARGIN_X + 30, LAST_LANE_Y + LINE_SPACING - 4);
-    manuscriptPage = '';
-    manuscript.root.visible = options.pageWriting ?? true;
-    scribe.showFigure(options.pageWriting ?? true);
-    overlay = new Overlay(actions, reducedMotion);
+    if (kept) {
+      ({ overlay, manuscript, scribe } = kept);
+    } else {
+      manuscript = new Manuscript();
+      scribe = new Scribe(MARGIN_X + 30, LAST_LANE_Y + LINE_SPACING - 4);
+      manuscriptPage = '';
+      manuscript.root.visible = options.pageWriting ?? true;
+      scribe.showFigure(options.pageWriting ?? true);
+      overlay = new Overlay(actions, reducedMotion);
+    }
     scene = new Container();
     const wash = (color: number) => {
       const g = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(color);
@@ -1111,8 +1126,8 @@ export async function createRenderer(
       hud.update(world, frameMs, reducedMotion);
       overlay.update(world, frameMs);
     },
-    rebuild() {
-      build();
+    rebuild(options) {
+      build(options?.keepCard ?? false);
     },
     portrait(id) {
       const target = portraitTarget(id);

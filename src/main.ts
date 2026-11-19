@@ -1071,7 +1071,8 @@ async function main(): Promise<void> {
     store.update((save) => {
       (save.profile.cosmetics as unknown as Record<string, string>)[slot] = item;
     });
-    renderer.rebuild();
+    // The page card behind the unlock card stays as it is (no replayed stars or fade-in).
+    renderer.rebuild({ keepCard: true });
   };
 
   /** Explain what's new on the page about to start; closing the card starts the page. */

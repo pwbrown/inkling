@@ -1,6 +1,6 @@
 # Datamuse alternatives and targets page atmosphere
 
-Claude Code session started 2026-11-18. 14 prompts.
+Claude Code session started 2026-11-18. 16 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1764,12 +1764,238 @@ The snapshots for 2.16.0 are taken and added to the progression page as **M25**,
 
 > Commit, merge, push
 
-<details><summary>1 tool call</summary>
+<details><summary>2 tool calls</summary>
 
 - **Shell:** Export transcript and scan for private details
 
   ```bash
   npm run transcript >/dev/null 2>&1; f=docs/transcripts/2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2.md; echo "emails/tokens: $(grep -cE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9-]{10,}' "$f")"; grep -oE "/Users/[^/ ]+" "$f" | sort -u; n="$(git config user.name)"; first="${n%% *}"; echo "name hits: $(grep -ci -- "$first" "$f")"; git status --short docs/transcripts
+  ```
+- **Shell:** Commit, merge, delete branch and push main
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Milestone 25 snapshots (2.15.0–2.16.0)
+
+  - Add M25 shots (play, page done, word lists) and a section in docs/progression
+  - Add an M25 column to "End of a page" and fix that table's header row
+  - Snapshot tour now captures the Word lists dialog
+  - Refresh the latest shots the page uses
+  - Update build transcripts
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git switch -q main && git merge --ff-only chore/m25-snapshots | tail -1 && git branch -d chore/m25-snapshots && git push origin main 2>&1 | tail -1 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The M25 snapshots and progression notes are committed, merged into `main` and pushed (commit `8dead2f`). `main` now matches `origin`.
+
+I scanned the transcript export before committing, and it's included in the commit; nothing private turned up. The `chore/m25-snapshots` branch is deleted. There's no new tag, because this commit only adds docs and screenshots, not a release.
+
+## 🧑 Prompt
+
+> when I click enter to "use" an unlocked item, the popup behind it also reacts. Can we fix that
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Find the unlock card code
+
+  ```bash
+  grep -rn "unlocked\.\|'unlock\.\|unlockCard\|openUnlock" src/i18n/en.ts | head -5; grep -rln "unlock.title\|showUnlock\|Unlock" src/ui src/main.ts | head
+  ```
+- **Shell:** Read unlock dialog and key listeners
+
+  ```bash
+  cat src/ui/unlockDialog.ts; grep -n "openUnlock\|unlockDialog" src/main.ts; grep -n "addEventListener('keydown'" src/main.ts src/core/*.ts src/ui/*.ts | head
+  ```
+- **Shell:** Read how the unlock dialog opens and how game keys are gated
+
+  ```bash
+  sed -n 1045,1085p src/main.ts; grep -n "dialogOpen" src/main.ts | head -40; grep -n "attachInput\|keydown" src/core/input.ts src/main.ts | head
+  ```
+- **Shell:** Read game key wiring and blocked check
+
+  ```bash
+  sed -n 1255,1285p src/main.ts; grep -rn "export function attach\|addEventListener('keydown'\|addEventListener(\"keydown\"" src --include=*.ts 2>/dev/null; grep -rln "addEventListener('keydown'" src
+  ```
+- **Shell:** Find the game keyboard listener
+
+  ```bash
+  grep -rn "keydown\|keyup" src/*.ts src/core/input.ts src/ui/keyboard*.ts 2>/dev/null | grep -v test | head; ls src
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Tracing where Enter goes: the game's key handler is in `src/input`, and I'm checking whether it ignores keys while the unlock card is open.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Read the keyboard input module
+
+  ```bash
+  ls src/input; grep -n "keydown\|keyup\|blocked\|Enter" src/input/*.ts | grep -v test | head -20
+  ```
+- **Shell:** Read key handler and when unlocks show
+
+  ```bash
+  sed -n 20,64p src/input/keyboard.ts; grep -n "onClose()\|onClose: () =>" -A3 src/ui/unlockDialog.ts | head; grep -n "showUnlocks()" -B5 src/main.ts | head -30
+  ```
+- **Shell:** Read rebuild and overlay state handling
+
+  ```bash
+  sed -n 238,262p src/render/renderer.ts; grep -n "rebuild" src/render/renderer.ts src/main.ts | head; grep -n "constructor\|show(\|private state\|phase" src/render/overlay.ts | head -20
+  ```
+- **Shell:** Read the rest of build and rebuild
+
+  ```bash
+  sed -n 262,300p src/render/renderer.ts; sed -n 1110,1120p src/render/renderer.ts; grep -n "build()" src/render/renderer.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Fix: give `rebuild` a mode for cosmetic changes that keeps the page card, the manuscript and the scribe as they are, and use that mode when equipping from the unlock card.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add keepCard rebuild and use it when equipping
+
+  ```bash
+  git switch -q -c fix/unlock-equip-redraw && python3 - <<'EOF'
+  def rep(p, old, new):
+      s=open(p).read(); assert s.count(old)==1, (p, old[:50]); open(p,'w').write(s.replace(old,new))
+  p='src/render/renderer.ts'
+  rep(p, """  /** Redraw everything, e.g. after the theme, text size or motion setting changes. */
+    rebuild(): void;""", """  /**
+     * Redraw everything, e.g. after the theme, text size or motion setting changes.
+     * `keepCard` is for a cosmetic change (pen, ink, paper): the page card, the
+     * manuscript and the scribe carry on as they were instead of starting over.
+     */
+    rebuild(opti
+  … (2261 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck passes. Reproducing it in the game: I'll set the test profile just under the next level, then finish a page so the unlock card appears.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Find the profile ink field
+
+  ```bash
+  grep -n "export interface Progression" -A12 src/storage/schema.ts
+  ```
+- **Shell:** Find level ink thresholds
+
+  ```bash
+  grep -n "export function levelFor\|LEVEL\|inkForLevel\|levels:" src/core/rewards.ts src/core/config.ts | head -8
+  ```
+- **Shell:** Read level formula and unlock levels
+
+  ```bash
+  sed -n 40,56p src/core/rewards.ts; grep -n "unlocks\|unlockAt\|level:" src/core/rewards.ts | head -12
+  ```
+- **Shell:** Read unlock levels and level step
+
+  ```bash
+  sed -n 20,33p src/core/rewards.ts; grep -n "levelStep" src/core/config.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Level 4 unlocks the quill at 1,200 ink. I'll set the test profile to 1,199 and finish a page.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/","tabId":"tab-1"}},{"name":"computer","input":{"action":"wait","duration":2,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"window.inkling.store.update((s) => { s.profile.ink
+… (155 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_17","tabId":"tab-1","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"find","input":{"query":"Start writing","tabId":"tab-1"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_60","tabId":"tab-1","action_summary":"Starts writing"}},{"name":"computer","input":{"action":"wait","duration":1,"tabId":"tab-1"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"const w = 
+… (597 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The unlock card is up with "Use it now: Quill" focused. Pressing Enter and taking a screenshot straight away.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","tabId":"tab-1","action_summary":"Equips the Quill with Enter"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-1","scale":0.6}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text"
+… (100 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Equipping worked: the quill shows behind the card, and so does the finished manuscript. Closing the unlock card to check the Page complete card underneath.
+
+<details><summary>2 tool calls</summary>
+
+- **find** `{"query":"Keep going","tabId":"tab-1"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_67","tabId":"tab-1","action_summary":"Closes the unlock card"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-1","scale":0.6}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text
+… (87 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+I clicked the wrong reference; clicking "Keep going" properly this time.
+
+<details><summary>2 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_69","tabId":"tab-1","action_summary":"Closes the unlock card"}},{"name":"computer","input":{"action":"screenshot","tabId":"tab-1","scale":0.6}}]}`
+- **Shell:** Add 2.16.1 fixes release and run checks
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/releases.ts'; s=open(p).read()
+  old="export const RELEASES: readonly Release[] = [\n"
+  assert s.count(old)==1
+  s=s.replace(old, old+"  {\n    version: '2.16.1',\n    date: '2026-11-18',\n    notes: [],\n    fixes: true,\n  },\n")
+  open(p,'w').write(s)
+  EOF
+  npm version 2.16.1 --no-git-tag-version >/dev/null && npm run check 2>&1 | grep -E "error|Tests|FAIL" | head -3 && npm run build 2>&1 | grep -iE "error|built in" | head -2; git status --short
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I've fixed it: equipping an item from the unlock card no longer disturbs the Page complete card behind it.
+
+**The cause:** Enter itself wasn't reaching the card behind; the game already ignores keys while the unlock card is open. The problem was that "Use it now" redrew the whole play field to show the new item, and that recreated the Page complete card from scratch, so it replayed its entrance and stars. The redraw also restarted the manuscript, which lost its blots and wrote the heading again.
+
+**The fix:** the redraw has a new mode for pen, ink and paper changes. In that mode the Page complete card, the manuscript and the scribe stay as they are and everything else is redrawn. Equipping from the unlock card uses it. The change is in [renderer.ts](src/render/renderer.ts) and [main.ts](src/main.ts).
+
+**Checked in the game:** I set the test profile 1 ink short of level 4 and finished a page. Pressing Enter on "Use it now: Quill" switched the pen to the quill. After I closed the unlock card, the Page complete card was unchanged and the finished manuscript was still there. I didn't run the old code through the same steps to watch the card replay; the cause is clear from the code.
+
+**Release:** I added 2.16.1 as a bug-fixes-only release (it shows "Bug fixes and small improvements") and bumped the version. `npm run check` and `npm run build` pass.
+
+It's on the branch `fix/unlock-equip-redraw`. Nothing is committed yet; say the word and I'll commit, merge, tag and push it.
+
+## 🧑 Prompt
+
+> Commit, merge, push
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; f=docs/transcripts/2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2.md; echo "emails/tokens: $(grep -cE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9-]{10,}' "$f")"; grep -oE "/Users/[^/ ]+" "$f" | sort -u; n="$(git config user.name)"; first="${n%% *}"; echo "name hits: $(grep -ci -- "$first" "$f")"; git status --short
   ```
 
 </details>
