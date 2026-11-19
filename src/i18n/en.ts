@@ -480,6 +480,7 @@ export const en = {
   'whatsNew.fixes': 'Bug fixes and small improvements.',
   'whatsNew.earlier': 'Earlier versions',
   'whatsNew.ok': 'Got it',
+  'release.2.21.2.nightEyes': 'Night mode faces now have light, friendly eyes.',
   'release.2.21.0.nudgeSetting': 'Turn “Ready for more?” suggestions on or off in Settings.',
   'release.2.20.0.letters': 'New players start Free Write on all letters, without numbers and symbols.',
   'release.2.20.0.more': 'Doing great from chapter 5? The game offers numbers and symbols, or a harder level.',

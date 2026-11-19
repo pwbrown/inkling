@@ -1,6 +1,6 @@
 # Game SEO and holiday skins
 
-Claude Code session started 2026-11-19. 25 prompts.
+Claude Code session started 2026-11-19. 26 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -3628,7 +3628,7 @@ Checking the scribe in all three themes with headless Chrome:
 
 Classic looks as before. In night the scribe now has visible pupils, in the same style as the night creatures. Before deciding that's good enough, I'm comparing it with the creatures in night mode:
 
-<details><summary>4 tool calls</summary>
+<details><summary>5 tool calls</summary>
 
 - **Shell:** Screenshot a night page with creatures
 
@@ -3667,6 +3667,162 @@ Classic looks as before. In night the scribe now has visible pupils, in the same
 
   - The scribe passed 0.5 as its pupil color (black), so on night's dark eye whites its eyes were solid black; pupils now use
   … (356 more characters)
+  ```
+- **Shell:** Wait for deploy and confirm the live build
+
+  ```bash
+  sleep 10; id=$(gh run list --workflow deploy.yml --limit 1 --json databaseId -q '.[0].databaseId'); timeout 400 gh run watch "$id" --exit-status >/dev/null 2>&1; echo "deploy exit $?"; sleep 15; gh run list --limit 3 --json name,conclusion,headBranch | cat; curl -s https://inkykeys.com/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'; ls dist/assets | grep '^index-.*\.js$'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The scribe's eyes are fixed and live on inkykeys.com as release 2.21.1. The Deploy, CI and Release workflows all passed, and the live page is serving the build I tested.
+
+**The cause:** the scribe passed `0.5` where its pupil colour should go, which comes out black.
+- **Classic theme:** the eye whites are light, so you couldn't tell.
+- **Night theme:** the eye whites use a dark colour, so dark whites plus black pupils made solid black eyes.
+
+The pupils now use the scribe's own body colour, which is how the creatures do it.
+
+**How it looks now (checked in headless Chrome):**
+- **Classic:** looks the same as before.
+- **Night:** the scribe has visible pale pupils, the same style as the creatures and the Nib at night. It's no longer the only face with empty black eyes. It's still a dark eye with a pale pupil, so if that still feels a bit eerie, the next step would be light eye whites for every face in night mode.
+
+**m29 snapshots:** I ran the full tour again. Only the three shots the progression page uses are kept; the rerun changed nothing in them, so the committed ones stay as they are.
+
+The fix is commit `655d2a3`, tagged `v2.21.1`. The transcript scan was clean, and the branch is deleted.
+
+## 🧑 Prompt
+
+> give every face light eye whites in night mode and ship it when you're done
+
+---
+
+*The conversation grew too long here, so Claude Code summarized the earlier part and carried on from the summary.*
+
+---
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Find eye white colour code and branch
+
+  ```bash
+  grep -rn "eyeWhite\|eye white\|whites\|function drawFace" src/render | head -40; git checkout -b fix/night-eye-whites
+  ```
+- **Shell:** Read drawFace and theme palette
+
+  ```bash
+  sed -n 170,260p src/render/creatures/common.ts; grep -n "paper\b\|paper:" src/render/theme.ts | head; grep -rn "drawFace(" src/render | grep -v "export function"
+  ```
+- **Shell:** Read theme palettes
+
+  ```bash
+  sed -n 1,110p src/render/theme.ts
+  ```
+- **Shell:** Add theme eye colours and use them in drawFace
+
+  ```bash
+  python3 - <<'EOF'
+  import re
+  p='src/render/theme.ts'; s=open(p).read()
+  s=s.replace("""  inkViolet: number;
+  };""","""  inkViolet: number;
+    /** Open eyes: the white, and (when set) the pupil and a ring that override the creature's own colours. */
+    eyeWhite: number;
+    eyePupil: number | null;
+    eyeRing: number | null;
+  };""")
+  s=s.replace("""    inkViolet: 0x5b2a86,
+    },""","""    inkViolet: 0x5b2a86,
+      eyeWhite: 0xf7f1e3,
+      eyePupil: null,
+      eyeRing: null,
+    },""")
+  s=s.replace("""    inkViolet: 0x5a00a0,
+    },""","""    inkViolet: 0x5a00a0,
+      eyeWhite: 0xffffff,
+      eyePupil: null,
+      eye
+  … (1514 more characters)
+  ```
+- **Shell:** Typecheck and inspect night test script
+
+  ```bash
+  SP=<temp file> ls $SP/slowtest; npx tsc --noEmit -p . 2>&1 | tail -5; head -40 $SP/slowtest/nightpage.mjs
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Typecheck passes. Now checking the night faces in headless Chrome.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** See how the night script is invoked
+
+  ```bash
+  SP=<temp file> sed -n 40,200p $SP/slowtest/nightpage.mjs | grep -n "url\|png\|theme\|localhost" | head; grep -n "argv\|png" $SP/slowtest/themes.mjs | head
+  ```
+- **Shell:** Run dev server and take night/theme screenshots
+
+  ```bash
+  SP=<temp file> (npx vite --port 5199 --strictPort >$SP/vite.log 2>&1 &) ; sleep 4; cd $SP/slowtest && OUT=$SP/slowtest timeout 90 node nightpage.mjs http://localhost:5199/ ; OUT=$SP/slowtest timeout 90 node themes.mjs http://localhost:5199/; pkill -f "vite --port 5199"
+  ```
+- **Read** `<temp file>`
+- **Read** `<temp file>`
+- **Read** `<temp file>`
+
+</details>
+
+### 🤖 Claude
+
+Night eyes look friendly now, and classic is unchanged. Quick check for DOM/SVG faces with their own night colours, then ship.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Check DOM eye styles and release entry format
+
+  ```bash
+  grep -rn "eye" src/ui/*.css | head; grep -n "version" package.json; sed -n 1,30p src/core/releases.ts | grep -n "2.21.1" ; grep -n "2.21.1" -A6 src/core/releases.ts | head
+  ```
+- **Shell:** Look at release note format
+
+  ```bash
+  sed -n 20,45p src/core/releases.ts; grep -n "2_21_0\|'2.21.0'\|release.2" src/i18n/en.ts | tail -4
+  ```
+- **Shell:** Add 2.21.2 release, run check and build
+
+  ```bash
+  grep -n "'release.2.21.0.nudgeSetting'" src/i18n/en.ts && python3 - <<'EOF'
+  p='src/core/releases.ts'; s=open(p).read()
+  s=s.replace("""  {
+      version: '2.21.1',""","""  {
+      version: '2.21.2',
+      date: '2026-11-19',
+      notes: ['release.2.21.2.nightEyes'],
+    },
+    {
+      version: '2.21.1',""",1)
+  open(p,'w').write(s)
+  p='src/i18n/en.ts'; s=open(p).read()
+  i=s.index("  'release.2.21.0.nudgeSetting'")
+  s=s[:i]+"  'release.2.21.2.nightEyes': 'In night mode, faces have light eyes again.',\n"+s[i:]
+  open(p,'w').write(s)
+  p='package.json'; s=open(p).read(); s=s.replace('"version": "2.21.1"','"version": "2
+  … (97 more characters)
+  ```
+- **Shell:** Reword note and confirm tests pass
+
+  ```bash
+  sed -i '' "s/'In night mode, faces have light eyes again.'/'Night mode faces now have light, friendly eyes.'/" src/i18n/en.ts && npm run check 2>&1 | grep -E "Tests|error|✗|FAIL" | head
+  ```
+- **Shell:** Rebuild and export transcript
+
+  ```bash
+  npm run build >/dev/null 2>&1 && npm run transcript 2>&1 | tail -2 && git status --short && git diff --name-only -- docs/transcripts | head -3
   ```
 
 </details>

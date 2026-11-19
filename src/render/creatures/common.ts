@@ -180,8 +180,9 @@ export class MoodTracker {
 
 /**
  * Two eyes (and optionally a mouth) at (cx, cy). `r` is the eye radius.
- * Pupils look toward (lookX, lookY). Eyes are drawn in the label color so
- * they stand out on any body color, with pupils in `pupil`.
+ * Pupils look toward (lookX, lookY). Eye marks are drawn in the label color so
+ * they stand out on any body color; open eyes use the theme's eye white, with
+ * pupils in `pupil` unless the theme sets its own (night mode).
  */
 export function drawFace(
   g: Graphics,
@@ -232,8 +233,10 @@ export function drawFace(
       g.moveTo(ex - r * 0.8, cy).lineTo(ex + r * 0.8, cy).stroke({ width: Math.max(1.5, r * 0.3), color: white, cap: 'round' });
     } else {
       const scared = mood === 'scared';
-      g.circle(ex, cy, r * (scared ? 1.15 : 1)).fill(white);
-      g.circle(ex + dx, cy + dy, r * (scared ? 0.32 : 0.55)).fill(pupil);
+      const eyeR = r * (scared ? 1.15 : 1);
+      g.circle(ex, cy, eyeR).fill(COLORS.eyeWhite);
+      if (COLORS.eyeRing !== null) g.circle(ex, cy, eyeR).stroke({ width: Math.max(1, r * 0.2), color: COLORS.eyeRing });
+      g.circle(ex + dx, cy + dy, r * (scared ? 0.32 : 0.55)).fill(COLORS.eyePupil ?? pupil);
       if (mood === 'angry') {
         // Brows slanting down toward the middle.
         g.moveTo(ex - side * r * 1.1, cy - r * 1.5)

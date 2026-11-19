@@ -19,6 +19,10 @@ type Palette = {
   inkCrimson: number;
   /** Violet ink: creatures that need three completions. */
   inkViolet: number;
+  /** Open eyes: the white, and (when set) the pupil and a ring that override the creature's own colours. */
+  eyeWhite: number;
+  eyePupil: number | null;
+  eyeRing: number | null;
 };
 
 /**
@@ -39,6 +43,9 @@ export const PALETTES: Record<ThemeId, Palette> = {
     label: 0xf7f1e3,
     inkCrimson: 0xa3203a,
     inkViolet: 0x5b2a86,
+    eyeWhite: 0xf7f1e3,
+    eyePupil: null,
+    eyeRing: null,
   },
   // Maximum contrast: pure black on white, with a strong blue margin.
   contrast: {
@@ -54,6 +61,9 @@ export const PALETTES: Record<ThemeId, Palette> = {
     label: 0xffffff,
     inkCrimson: 0xb00020,
     inkViolet: 0x5a00a0,
+    eyeWhite: 0xffffff,
+    eyePupil: null,
+    eyeRing: null,
   },
   // Dark paper, pale ink (DESIGN §7, "night mode").
   night: {
@@ -69,6 +79,11 @@ export const PALETTES: Record<ThemeId, Palette> = {
     label: 0x1d2130,
     inkCrimson: 0xff9aa8,
     inkViolet: 0xcfb2ff,
+    // Light eye whites with dark pupils, ringed so they stand out on the pale bodies:
+    // dark whites read as empty, creepy eyes.
+    eyeWhite: 0xfffbef,
+    eyePupil: 0x1d2130,
+    eyeRing: 0x1d2130,
   },
 };
 
