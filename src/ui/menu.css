@@ -1030,3 +1030,40 @@
   text-decoration-color: var(--tc-margin);
   text-underline-offset: 0.15em;
 }
+
+/* "Getting the words ready…" while the word pack finishes loading (ui/wordsNote.ts). */
+.words-note {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--tc-paper);
+  color: var(--tc-ink);
+  border: 2px solid var(--tc-ink);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 30%);
+  font-weight: 600;
+}
+
+.words-note-drop {
+  width: 12px;
+  height: 16px;
+  background: var(--tc-ink);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  animation: words-note-bob 0.9s ease-in-out infinite;
+}
+
+@keyframes words-note-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+:root[data-motion='reduced'] .words-note-drop {
+  animation: none;
+}

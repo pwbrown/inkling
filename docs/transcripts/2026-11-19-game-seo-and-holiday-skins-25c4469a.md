@@ -1,6 +1,6 @@
 # Game SEO and holiday skins
 
-Claude Code session started 2026-11-19. 18 prompts.
+Claude Code session started 2026-11-19. 21 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -2636,6 +2636,722 @@ One downside: on a very slow connection, clicking Start in that first moment giv
 **Also fixed along the way:** the snapshot tour's "page done" shot had been showing the holiday unlock card, because the holiday stickers went by the real date and today is in the Thanksgiving window. The committed `latest/page-done.png` from the last few releases showed it too. The stickers now go by the same season the game uses, which in production is still just the date. I retook the `latest` shots.
 
 The README's page-speed section, REQUIREMENTS row 28 and the M28 progression notes are updated, and the release note reads "The menu comes up sooner on slow connections."
+
+## 🧑 Prompt
+
+> Yes, ship it
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Export transcript and scan it
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; for f in $(git status --short docs/transcripts | awk '{print $2}'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[a-z][A-Za-z0-9._-]+" "$f" | head -3; done; git status --short docs/transcripts
+  ```
+- **Shell:** Commit, merge, tag, delete branch, push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Menu up sooner: words load after it, PixiJS setup bundled (2.19.1)
+
+  - Word pack downloads once the menu is showing; starting a page, Continue, Daily, Apprentice, Type Case, Word lists and challenge names wait for it (withWords, first request only)
+  - PixiJS's browser setup imported statically, saving a round trip after the fonts
+  - Menu ready 5.35 -> 4.3 s on a throttled slow phone connection; inky-keys:menu-ready performance mark
+  - Holiday stickers follow the game's season (calendar, or ?season= in dev), so snapshot tours stay season-free; latest shots r
+  … (389 more characters)
+  ```
+- **Shell:** Wait for deploy and confirm the live build
+
+  ```bash
+  sleep 10; id=$(gh run list --workflow deploy.yml --limit 1 --json databaseId -q '.[0].databaseId'); timeout 400 gh run watch "$id" --exit-status >/dev/null 2>&1; echo "deploy exit $?"; sleep 15; gh run list --limit 3 --json name,conclusion,headBranch | cat; curl -s https://inkykeys.com/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'; ls dist/assets | grep '^index-.*\.js$'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+2.19.1 is live on inkykeys.com. Deploy, CI and Release all passed, and the live page is serving exactly the build I tested locally.
+
+- **Commit:** `1fd69e0`, fast-forward merged into `main` and tagged `v2.19.1`. The transcript scan was clean.
+- **Branch:** `feat/background-words` is deleted.
+
+Players get the faster start on their next visit or two, once the service worker picks up the update.
+
+## 🧑 Prompt
+
+> add the getting the words ready note and then I want to start another milestone with 2 main features:
+>
+> * I want a disclaimer to popup for mobile browsers just to indicate that this is a typing game designed for physical keyboards. It won't prevent you from playing but it may not work as intended on a mobile phone.
+> * I want to change the default key preset to "All Letters" instead of everything, but I'd like to introduce a mechanism that will automatically suggest users to switch to everything mode or switch to a harder difficulty if the game notices that they are performing really well. This shouldn't really happen into chapter 5 or later. I don't want them to increase difficulty too early
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Branch; read toast, default keys and presets
+
+  ```bash
+  git checkout -q -b feat/m29-keyboards-and-nudges && cat src/ui/stickerToast.ts | head -50; grep -n "toast" src/ui/stickers.css | head -5; grep -n "DEFAULT_KEYS" -A 4 src/core/config.ts | head; grep -n "id: '\|presetId\|all-letters\|everything" src/core/keySelection.ts | head -30
+  ```
+- **Shell:** Read default keys, presets and their uses
+
+  ```bash
+  sed -n 15,40p src/core/config.ts; sed -n 60,95p src/core/keySelection.ts; grep -rn "DEFAULT_KEYS" src | grep -v test | head; grep -n "'preset\." src/i18n/en.ts | head -20
+  ```
+- **Shell:** See how difficulty is used in the world
+
+  ```bash
+  grep -n "difficulty" src/core/world.ts | head -40; grep -n "export function startPractice\|export function selectDifficulty\|export function confirm\|chapterCleared\|isLastPageOfChapter" src/core/world.ts | head
+  ```
+- **Shell:** Read page advance and chapter end logic
+
+  ```bash
+  sed -n 455,470p src/core/world.ts; sed -n 905,960p src/core/world.ts; grep -n "phase === 'chapterIntro'\|'intro'\|nextPage\|function advance" src/core/world.ts | head -20
+  ```
+- **Shell:** Add the words-loading note
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  edit('src/main.ts', """      if (waitingForWords) return;
+        waitingForWords = true;
+        void packReady().then(() => {
+          waitingForWords = false;
+          action(...args);
+          syncMenu();
+        });""", """      if (waitingForWords) return;
+        waitingForWords = true;
+        // Only on a slow connection: a quiet note so a click doesn't seem ignored.
+        const note = window.setTimeout(() => showWordsNote(document.body), 250);
+        void packReady().then(() => {
+
+  … (2198 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Testing it with the slow-network script (words held back):
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check the note shows and clears
+
+  ```bash
+  S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys
+  p=sys.argv[1]+'/run2.mjs'; s=open(p).read()
+  s=s.replace("console.log('after Start x2 while waiting:', await evaluate('window.inkling.world.phase'));","console.log('after Start x2 while waiting:', await evaluate('window.inkling.world.phase'), '| note:', await evaluate(\"document.querySelector('.words-note')?.textContent ?? 'none'\"));")
+  s=s.replace("console.log('after words arrive:',","console.log('note after:', await evaluate(\"d
+  … (192 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The test held back my new `wordsNote.ts` module too (its name matches "words"). Narrowing the pattern:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Narrow the held request pattern and rerun
+
+  ```bash
+  S="<temp file>"; sed -i '' 's#/words/.test(u)#/words\\.json|\\/words-/.test(u)#' "$S/run2.mjs" && grep -o "HOLD && [^)]*)" "$S/run2.mjs" && HOLD=1 node "$S/run2.mjs" "http://localhost:5173/?season=none"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The note works: it shows while the words load and goes away when they arrive, and the page then starts as before. Before building the milestone, a few choices that shape it:
+
+### ❓ Claude asked
+
+- What should count as 'performing really well' before the game suggests more keys or a harder difficulty (Free Write, chapter 5 or later)?
+  - Whole chapter at A or A+ (Recommended)
+  - Whole chapter at A+
+  - A grades plus a speed bar
+- When the player accepts a suggestion, how should it take effect?
+  - From the next chapter (Recommended)
+  - Start a fresh notebook
+- If the player says 'Not now', when may the game ask again?
+  - After 3 more chapters (Recommended)
+  - Next notebook only
+  - Never again
+- How often should the mobile 'designed for physical keyboards' notice appear?
+  - Once per browser (Recommended)
+  - Every visit
+
+**Answer:** Your questions have been answered: "What should count as 'performing really well' before the game suggests more keys or a harder difficulty (Free Write, chapter 5 or later)?"="Whole chapter at A or A+ (Recommended)", "When the player accepts a suggestion, how should it take effect?"="From the next chapter (Recommended)", "If the player says 'Not now', when may the game ask again?"="After 3 more chapters (Recommended)", "How often should the mobile 'designed for physical keyboards' notice appear?"="Once per browser (Recommended)". You can now continue with these answers in mind.
+
+<details><summary>2 tool calls</summary>
+
+- **Asked questions** (shown above)
+- **Shell:** Read the unlock dialog pattern and difficulties
+
+  ```bash
+  cat src/ui/unlockDialog.ts; grep -n "unlock-\|\.unlock" src/ui/unlock.css | head -20; grep -n "openWhatsNew\b\|const openWhatsNew" src/main.ts | head -3; grep -n "export const DIFFICULTIES\|export type Difficulty" src/core/config.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I'll write one small reusable choice dialog for both new cards. First, the mobile notice.
+
+<details><summary>4 tool calls</summary>
+
+- **Wrote** `src/ui/choiceDialog.ts`
+- **Shell:** Check link button styles and startup dialogs
+
+  ```bash
+  grep -n "linkish\|\.tc-actions {" src/ui/*.css | head -5; sed -n 1430,1445p src/main.ts; grep -n "MAX_NEW_RELEASES_SHOWN), true" -B 6 src/main.ts | head -12
+  ```
+- **Shell:** Read whatsNew opener and action styles
+
+  ```bash
+  sed -n 786,800p src/main.ts; sed -n 410,460p src/ui/dialog.css
+  ```
+- **Shell:** Add the mobile keyboard notice
+
+  ```bash
+  cat > src/ui/mobileNotice.ts <<'EOF'
+  /**
+   * "Made for a keyboard" (M29): a one-time note on phones and tablets with no
+   * mouse or trackpad, where the game may not work as intended. It never
+   * stops anyone playing. Remembered per browser in localStorage.
+   */
+  const STORAGE_KEY = 'inkling.keyboardNotice';
+
+  /** A touch screen is the only pointer: most likely a phone or tablet with no keyboard attached. */
+  export function isTouchOnly(media: (query: string) => boolean = (q) => globalThis.matchMedia?.(q).matches ?? false): boolean {
+    return media('(pointer: coarse)') && !media('(any-pointer: fine)
+  … (4367 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checking it in the browser with phone emulation:
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"resize_window","input":{"tabId":"seed","preset":"mobile"}},{"name":"navigate","input":{"tabId":"seed","url":"http://localhost:5173/?season=none"}},{"name":"javascript_tool","input":{"tabId":"seed","action":"javascript_exec","text":"localStorage.removeItem('inkling.keyboardNotice
+… (402 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The notice shows on a phone-sized touch screen. Clicking Play anyway should dismiss it for good:
+
+<details><summary>2 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"find","input":{"tabId":"seed","query":"Play anyway"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"tabId":"seed","action":"left_click","ref":"ref_46","action_summary":"Dismisses the keyboard notice"}},{"name":"javascript_tool","input":{"tabId":"seed","action":"javascript_exec","text":"const a = [!!document.querySelector('.dialog.choice'), localStorage.getI
+… (302 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The mobile notice is done and stays dismissed after a reload. Now the "ready for more?" suggestions, starting with the pure rules and the save change.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Read save schema patterns
+
+  ```bash
+  grep -n "tutorials" src/storage/schema.ts | head; sed -n 160,200p src/storage/schema.ts; grep -n "return {$" src/storage/schema.ts | tail -3; grep -n "tutorials: " src/storage/schema.ts
+  ```
+- **Shell:** Read SaveData shape and sanitize
+
+  ```bash
+  sed -n 130,150p src/storage/schema.ts; sed -n 300,330p src/storage/schema.ts; grep -n "function sanitizeTutorials" -A 8 src/storage/schema.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Writing the rules module, config, save change and tests.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Add nudge rules, config, default keys and save v13
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:70]); open(p,'w').write(s.replace(a,b,1))
+  # config: default keys + nudges
+  edit('src/core/config.ts', """/**
+   * Keys a brand-new player starts with in Free Write: every key on the
+   * keyboard (the "Everything" preset in keySelection.ts). Numbers and symbols
+   * get their own waves, so a mixed set still reads as real words and phrases.
+   * Beginners who want the home row start the Apprentice course instead.
+   */
+  export const DEFAULT_KEYS: readonly string[] = [
+    ...'abcdefghijklmnopqrstuvwxyz',
+    ...'ABCDEFGHIJKLMNOPQRSTUV
+  … (7914 more characters)
+  ```
+- **Shell:** Check imports to avoid a cycle
+
+  ```bash
+  head -12 src/core/config.ts | grep -n import; grep -n "import.*config" src/core/grade.ts
+  ```
+- **Shell:** Import Grade type into config; run tests
+
+  ```bash
+  head -5 src/core/config.ts && python3 - <<'EOF'
+  p='src/core/config.ts'; s=open(p).read()
+  # insert after the first comment block / before first export
+  i=s.index("export ")
+  s=s[:i]+"import type { Grade } from './grade';\n\n"+s[i:]
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit 2>&1 | head; npx vitest run src/core/nudges.test.ts src/storage 2>&1 | grep -E "×|Tests|Expected|Received" | head -20
+  ```
+- **Shell:** Find chapter length and Everything keys helper
+
+  ```bash
+  sed -n 390,400p src/core/world.ts; grep -n "case 'pageCleared':" -A 30 src/main.ts | grep -n "practice\|mode\|stars\|pageGrade" | head; grep -n "regionChars\|everythingKeys\|'everything'" src/core/keySelection.ts | head -5
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now wiring the suggestion into the page-cleared flow.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Read notebook snapshot and unlock flow
+
+  ```bash
+  grep -n "export function snapshotNotebook" -A 12 src/storage/progress.ts | head -16; grep -n "nextPagePosition\|snapshotNotebook" src/main.ts | head -4; sed -n 1105,1125p src/main.ts
+  ```
+- **Shell:** Wire the suggestion card into main
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:70]); open(p,'w').write(s.replace(a,b,1))
+  P='src/main.ts'
+  # 1. track grades and decide at chapter end
+  edit(P, """          // Ink (XP): level-ups and unlocks show on the graded page.
+            reward = earnInk(save, inkForPage(game.pageStats.score, stars));""", """          // "Ready for more?": every Free Write page's grade, for the check when its chapter ends.
+            if (game.mode === 'practice') {
+              const grade = pageGrade(game.pageStats, game.page.params.size);
+              if (game.page.index === 0 ||
+  … (5697 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Adding one safeguard: a suggestion that never got shown is cleared when the next page starts.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Clear stale suggestions on page start
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  a="""        if (lastPhase !== 'paused') recentStickers = [];"""
+  assert a in s
+  s=s.replace(a, a+"""
+          // A suggestion that never got its moment doesn't carry over to a later page.
+          if (lastPhase !== 'paused') pendingNudge = null;""",1)
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit && echo ok
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now an end-to-end test in the dev build. I'm lowering the chapter threshold to 1 at runtime only (the config file is untouched) and letting an auto-typer play a whole chapter:
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"resize_window","input":{"tabId":"seed","width":1280,"height":800}},{"name":"navigate","input":{"tabId":"seed","url":"http://localhost:5173/?season=none"}},{"name":"computer","input":{"tabId":"seed","action":"wait","duration":3}},{"name":"javascript_tool","input":{"tabId":"seed",
+… (389 more characters)`
+- **javascript_tool** `{"tabId":"seed","action":"javascript_exec","text":"const click = (label) => { const b = [...document.querySelectorAll('button')].find((e) => e.offsetParent && e.textContent.includes(label)); b?.click(); return !!b; };\nclick('Free Write'); await new Promise(r => setTimeout(r, 800)); click('Start wri
+… (1101 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"tabId":"seed","action":"wait","duration":10}},{"name":"computer","input":{"tabId":"seed","action":"wait","duration":10}},{"name":"computer","input":{"tabId":"seed","action":"wait","duration":10}},{"name":"javascript_tool","input":{"tabId":"seed","action":"jav
+… (184 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Still on the first page after 30 seconds, so the auto-typer isn't landing keys. Looking at the targets:
+
+<details><summary>2 tool calls</summary>
+
+- **javascript_tool** `{"tabId":"seed","action":"javascript_exec","text":"const w = window.inkling.world; [w.page.spawned, w.page.params.size, w.targets.map(t => [t.text, Math.round(t.x), t.typed, t.buffer]).slice(0,5), w.stats.correct, w.stats.errors]"}`
+- **tabs_context** `{}`
+
+</details>
+
+### 🤖 Claude
+
+The browser pane is hidden, so the game loop is paused there. I'll run the same test in headless Chrome instead.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Play a full chapter headless and check the suggestion
+
+  ```bash
+  S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys,re
+  d=sys.argv[1]; s=open(d+'/run2.mjs').read()
+  head=s[:s.index("await send('Fetch.enable'")]
+  body = r"""
+  await send('Page.navigate', { url });
+  for (let i = 0; i < 100 && !(await evaluate('Boolean(window.inkling)')); i++) await sleep(200);
+  await sleep(1500);
+  await evaluate(`(async () => { const { GAME_CONFIG } = await import('/src/core/config.ts'); GAME_CONFIG.nudges.fromChapter = 1; const s = window.inkling.store; s.data.nudges =
+  … (3947 more characters)
+  ```
+- **Shell:** Rerun the headless chapter test
+
+  ```bash
+  S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys
+  p=sys.argv[1]+'/nudge.mjs'; s=open(p).read()
+  s=s.replace("await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });\n","",1)
+  s=s.replace("\nawait send('Page.navigate', { url });","\nawait send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });\nawait send('Page.navigate', { url });",1)
+  open(p,'w').write(s)
+  EOF
+  cd /Use
+  … (131 more characters)
+  ```
+- **TaskStop** `{"task_id":"bol0h1pap"}`
+- **Shell:** Rerun with briefing handling
+
+  ```bash
+  pkill -f "remote-debugging-port=9333" 2>/dev/null; S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys
+  p=sys.argv[1]+'/nudge.mjs'; s=open(p).read()
+  s=s.replace("""  if (other) { (other.querySelector('[data-id=later]') || other.querySelector('.tc-primary'))?.click(); return 'closed dialog'; }""","""  if (other) { const later = other.querySelector('[data-id=later]'); if (later) { later.click(); return 'closed dialog'; } return 'enter:dialog:' + w.phase; }""")
+  open(p,'w').write(s)
+  EO
+  … (152 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+An invisible `.dialog` element stays in the page, so the script kept pressing Enter during play. Counting only visible dialogs:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Rerun counting only visible dialogs
+
+  ```bash
+  pkill -f "remote-debugging-port=9333" 2>/dev/null; S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys
+  p=sys.argv[1]+'/nudge.mjs'; s=open(p).read()
+  s=s.replace("""  const other = document.querySelector('.dialog');""","""  const other = [...document.querySelectorAll('.dialog')].find((d) => d.getClientRects().length > 0 && getComputedStyle(d).visibility !== 'hidden');""")
+  open(p,'w').write(s)
+  EOF
+  cd /Users/[removed]/projects/inky-keys && SHOT="$S/nudge.png" PICK=nudge-harder timeo
+  … (63 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Two full chapters went by without a suggestion. Logging each page's grade, and checking that my runtime threshold change reached the game's own copy of the config:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Log page grades and config identity
+
+  ```bash
+  pkill -f "remote-debugging-port=9333" 2>/dev/null; S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys
+  p=sys.argv[1]+'/nudge.mjs'; s=open(p).read()
+  s=s.replace("""  if (typeof r === 'string' && r.startsWith('enter:')) { if (seen.at(-1) !== r) seen.push(r);""","""  if (typeof r === 'string' && r.startsWith('enter:pageCleared')) {
+      const g = await evaluate(`(async () => { const { pageGrade } = await import('/src/core/grade.ts'); const w = window.inkling.world; return pageGrade(w.
+  … (954 more characters)
+  ```
+- **Shell:** Rerun with the game's own config module
+
+  ```bash
+  pkill -f "remote-debugging-port=9333" 2>/dev/null; S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys,re
+  p=sys.argv[1]+'/nudge.mjs'; s=open(p).read()
+  s=s.replace("""await evaluate(`(async () => { const { GAME_CONFIG } = await import('/src/core/config.ts');""","""await evaluate(`(async () => { const url = performance.getEntriesByType('resource').map((e) => e.name).find((n) => n.includes('/src/core/config.ts')); const { GAME_CONFIG } = await import(url);""")
+  i=s.index("console.log(
+  … (300 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Everything came back undefined, so the page itself didn't load. Checking the dev server:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Check the dev server and stray Chrome
+
+  ```bash
+  curl -s -o /dev/null -w "%{http_code}\n" "http://localhost:5173/?season=none"; pgrep -fl "remote-debugging-port=9333" | head -3
+  ```
+- **preview_list** `{}`
+
+</details>
+
+### 🤖 Claude
+
+I've paused. Both servers (dev and preview) were stopped from your side, along with one of my test runs, so I haven't restarted anything in case you wanted me to stop.
+
+Everything is on `feat/m29-keyboards-and-nudges`, and nothing is committed yet.
+
+**Done and tested:**
+- **"Getting the words ready…" note:** a small pill at the bottom of the screen, shown only if something has waited a quarter of a second for the word list. I checked it with the word list held back: it appears, clears when the words arrive, and the page then starts normally.
+- **Mobile keyboard notice:** a one-time "Made for a keyboard" card on touch-only screens, with **Play anyway**. It's remembered per browser. It doesn't show when a trackpad or mouse is connected, so a tablet with a keyboard cover and trackpad won't see it. I checked it with phone emulation, and it stays dismissed after a reload.
+- **New players start on All letters:** lowercase, capitals and space (53 keys). Existing players keep the keys they have.
+
+**Built but not yet checked end to end:**
+- **"Ready for more?" card (written, typechecks, unit-tested):** in Free Write, from chapter 5, after a chapter where every page got an A or A+, it offers **Add numbers and symbols** and/or **Try {next difficulty}**.
+  - Either change starts from the next page, and the notebook keeps going.
+  - **Not now** waits 3 chapters, and **Don't suggest this again** turns it off for that player.
+  - It waits for any unlock card to close first.
+  - The rules are in [nudges.ts](src/core/nudges.ts) with unit tests, and the tuning is in `GAME_CONFIG.nudges`.
+  - The answers are saved per player, which bumps the save to version 13 (with a migration).
+- **Where the end-to-end test stands:** the test plays a whole chapter in headless Chrome to see the card appear. My first runs never showed it, but the cause turned out to be the test, not the feature: my runtime change of the starting chapter (5 → 1) went to a second copy of the config module that the game wasn't using. I'd just fixed that when the servers stopped.
+
+**Still to do:**
+- That end-to-end test of the card, and a screenshot so you can see it.
+- The full check and build.
+- Docs, the release and snapshots.
+- One open question: once a player picks "Don't suggest this again", there's no way to turn suggestions back on. I can add a switch for it if you'd like.
+
+## 🧑 Prompt
+
+> Yes, keep going
+
+<details><summary>4 tool calls</summary>
+
+- **preview_start** `{"name":"inky-keys-dev"}`
+- **Shell:** Run the headless chapter test again
+
+  ```bash
+  pkill -f "remote-debugging-port=9333" 2>/dev/null; S="<temp file>"; cd /Users/[removed]/projects/inky-keys && SHOT="$S/nudge.png" PICK=nudge-harder timeout 220 node "$S/nudge.mjs" "http://localhost:5173/?season=none"; pkill -f "remote-debugging-port=9333" 2>/dev/null; true
+  ```
+- **Read** `<temp file>`
+- **Shell:** Test the Add numbers and symbols choice
+
+  ```bash
+  pkill -f "remote-debugging-port=9333" 2>/dev/null; S="<temp file>"; cd /Users/[removed]/projects/inky-keys && SHOT="$S/nudge2.png" PICK=nudge-everything timeout 220 node "$S/nudge.mjs" "http://localhost:5173/?season=none" | tail -1; pkill -f "remote-debugging-port=9333" 2>/dev/null; true
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Saving the keys works (95), but the world still reports 53. Checking how `setContent` updates the world:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Read setContent in the world
+
+  ```bash
+  grep -n "export function setContent" -A 12 src/core/world.ts; grep -n "world.keys\b\|\.keys = " src/core/world.ts | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+`setContent` only works on the menu, before a notebook starts. I'm adding a world function that swaps keys between pages, with a test:
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Add switchKeys and use it for the suggestion
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  edit('src/core/world.ts', """/**
+   * Remember how things stood as a page begins,""", """/**
+   * Switch keys between two pages of a notebook ("Ready for more?", M29): the
+   * next page and everything after it use `content`. Only on the menu or a
+   * page-cleared card, never mid-page.
+   */
+  export function switchKeys(world: World, content: ContentSource): void {
+    if (world.phase !== 'ready' && world.phase !== 'pageCleared') return;
+    world.content = content;
+    world.keys = content.ke
+  … (500 more characters)
+  ```
+- **Shell:** Fix import; look at world tests
+
+  ```bash
+  sed -i '' "s#^import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';#import { createWorld, isLastPageOfChapter, setContent, stepWorld, switchKeys, type GamePhase } from './core/world';#" src/main.ts && grep -n "^import\|^describe" src/core/world.test.ts | head -12; grep -n "setContent" src/core/world.test.ts | head -3
+  ```
+- **Shell:** Read the existing setContent test
+
+  ```bash
+  sed -n 205,232p src/core/world.test.ts
+  ```
+- **Shell:** Test switchKeys; rerun the Everything choice
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/world.test.ts'; s=open(p).read()
+  s=s.replace("""    setContent(world, createContentSource({ keys: ['x'] }));
+      expect(world.keys).toEqual(['1', '2']);
+    });
+  ""","""    setContent(world, createContentSource({ keys: ['x'] }));
+      expect(world.keys).toEqual(['1', '2']);
+    });
+
+    it('switches keys between pages, never mid-page', () => {
+      const world = createWorld({ keys: ['a'] });
+      world.phase = 'playing';
+      switchKeys(world, createContentSource({ keys: ['x'] }));
+      expect(world.keys).toEqual(['a']);
+      world.phase = 'pageCleared';
+      switchKeys(world, 
+  … (614 more characters)
+  ```
+- **Shell:** Add phone step to the tour; check and build
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/snapshots.ts'; s=open(p).read()
+  def rep(a,b):
+      global s
+      assert a in s, a[:60]; s=s.replace(a,b,1)
+  rep("""  /** Change the window size. */
+    | { viewport: [number, number] };""","""  /** Change the window size. */
+    | { viewport: [number, number] }
+    /** Act as a phone (touch only, M29) or go back to a desktop with a mouse. */
+    | { phone: boolean };""")
+  rep("""const MAIN_TOUR: Step[] = [
+    { open: '?season=none' },""","""const MAIN_TOUR: Step[] = [
+    // The one-time "Made for a keyboard" notice on a phone (M29), then back to a desktop.
+    { phone: true }, { o
+  … (868 more characters)
+  ```
+- **Shell:** Find the default-keys test
+
+  ```bash
+  grep -rn "start new players on the Everything preset" -A 8 src | head -12
+  ```
+- **Shell:** Update the default preset test; check and build
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/keySelection.test.ts'; s=open(p).read()
+  s=s.replace("""  it('start new players on the Everything preset', () => {
+      expect(matchingPreset(presets, DEFAULT_KEYS)?.id).toBe('everything');""","""  it('start new players on the All letters preset (M29)', () => {
+      expect(matchingPreset(presets, DEFAULT_KEYS)?.id).toBe('lettersCapitals');""")
+  open(p,'w').write(s)
+  p='src/core/keySelection.ts'; s=open(p).read()
+  s=s.replace("""    preset('lettersCapitals', [...r('lowercase'), ...r('uppercase')]),""","""    // What a brand-new player starts with (DEFAULT_KEYS in config.
+  … (455 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+All 441 tests and the build pass. Now docs and the release notes.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Find README spots to update
+
+  ```bash
+  grep -n "Free Write\*\* (formerly Practice) is the main mode\|New players start on all letters\|^### Players" README.md
+  ```
+- **Shell:** README, REQUIREMENTS, release 2.20.0
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  edit('README.md', "New players start on all letters, capitals and space (the **Letters + capitals + space** preset).", "New players start on all letters, capitals and space (the **All letters** preset).")
+  edit('README.md', "- **Free Write** (formerly Practice) is the main mode. It uses exactly the keys you choose in the Type Case, with endless chapters. New players start with all letters, capitals and space.\n", """- **Free Write** (formerly Practice) is the main mode. It uses
+  … (2218 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the m29 and latest snapshots.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Take m29 and latest snapshots
+
+  ```bash
+  npm run snapshots -- m29 2>&1 | grep -E "keyboard-notice|menu.png|skipped|rror|page-done"; npm run snapshots -- latest 2>&1 | tail -1
+  ```
+- **Read** `docs/progression/m29/keyboard-notice.png`
+- **Read** `docs/progression/m29/practice.png`
+
+</details>
+
+### 🤖 Claude
+
+The tour now shows the phone notice and "All letters · 53 keys" for a new player. Writing the M29 progression section, using the headless screenshot of the suggestion card:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Write M29 section and prune shots
+
+  ```bash
+  cp "<temp file>" docs/progression/m29/ready-for-more.png && python3 - <<'EOF'
+  p='docs/progression/README.md'; s=open(p).read()
+  sec='''### M29: Keyboards and nudges (2.20.0)
+
+  | Ready for more? | On a phone |
+  |---|---|
+  | <img src="m29/ready-for-more.png" width="420" alt="The Ready for more? card over a finished page: every page of chapter 1 got an A or better, with buttons Add numbers and symbols, Try Hard and Not now, and a link Don't suggest this again"> | <img src="m29
+  … (1900 more characters)
+  ```
+- **Shell:** Final build and check
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && npm run build 2>&1 | grep -E "error|larger"; npm run check 2>&1 | grep -E "error|×|Tests"; git status --short | wc -l
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Milestone 29 (Keyboards and nudges) is ready on `feat/m29-keyboards-and-nudges` as release 2.20.0. Checks (441 tests) and the build pass, and I tested each piece in a real browser. Nothing is committed yet.
+
+- **"Ready for more?" card:** tested end to end by having headless Chrome play a whole chapter, with the chapter threshold lowered to 1 for the test only.
+  - After a chapter with every page at A+, the card offered **Add numbers and symbols**, **Try Hard** and **Not now**, plus **Don't suggest this again**.
+  - **Try Hard** switched the game, the save and the saved notebook to Hard, so quitting from that card keeps the change.
+  - **Add numbers and symbols** first only saved the keys: the running notebook kept its old 53. Changing keys had only ever been allowed on the menu, so I added a small world function, `switchKeys`, that changes them between pages (never mid-page), with a test. It now goes to 95 keys from the next page.
+  - Both choices set the 3-chapter wait.
+- **New players start on All letters:** lowercase, capitals and space (53 keys), and the Free Write screen now says "All letters · 53 keys". Existing players keep their keys.
+- **"Made for a keyboard":** shows once on a phone-sized touch screen, and **Play anyway** dismisses it for good in that browser. The snapshot tour now captures it with touch emulation.
+- **"Getting the words ready…":** appears only if something has to wait for the word list, and goes away when the words arrive.
+- **Save version 13** stores each player's suggestion answers, with a migration for existing saves.
+- **Docs:** README, REQUIREMENTS row 29, an M29 progression section with three shots, and three release notes.
+
+Still open: once a player picks **Don't suggest this again**, there's no way to turn suggestions back on. The easy fix is a per-player switch in Settings next to the tips switch. I can add that before or after shipping.
 
 ## 🧑 Prompt
 

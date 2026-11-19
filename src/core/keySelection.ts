@@ -74,12 +74,13 @@ export function builtInPresets(layout: KeyboardLayout): Preset[] {
     preset('homeRow', home),
     preset('homeTopRows', [...home, ...topRow]),
     preset('allLetters', r('lowercase')),
+    // What a brand-new player starts with (DEFAULT_KEYS in config.ts), shown as "All letters".
     preset('lettersCapitals', [...r('lowercase'), ...r('uppercase')]),
     preset('lettersPunctuation', [...r('lowercase'), ...r('uppercase'), ',', '.', "'", '?', '!']),
     preset('numbers', r('digits')),
     preset('numberSymbols', r('symbols').filter((ch) => '!@#$%^&*()'.includes(ch))),
     preset('symbols', r('symbols')),
-    // What a brand-new player starts with (DEFAULT_KEYS in config.ts).
+    // Offered to players who do really well ("Ready for more?", core/nudges.ts).
     preset('everything', [...r('lowercase'), ...r('uppercase'), ...r('digits'), ...r('symbols')]),
   ];
 }

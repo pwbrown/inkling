@@ -49,7 +49,9 @@ type Step =
   /** Reload the game with this query string (e.g. `?season=christmas`; dev server only). */
   | { open: string }
   /** Change the window size. */
-  | { viewport: [number, number] };
+  | { viewport: [number, number] }
+  /** Act as a phone (touch only, M29) or go back to a desktop with a mouse. */
+  | { phone: boolean };
 
 /** Scroll every scrolled box back to the top, so long dialogs show their start. */
 const SCROLL_TOP = `document.querySelectorAll('*').forEach((e) => { if (e.scrollTop) e.scrollTop = 0; })`;
@@ -218,6 +220,8 @@ const SHOW_SPLASH = `(async () => {
 })()`;
 
 const MAIN_TOUR: Step[] = [
+  // The one-time "Made for a keyboard" notice on a phone (M29), then back to a desktop.
+  { phone: true }, { open: '?season=none' }, { shot: 'keyboard-notice' }, { click: 'Play anyway' }, { phone: false },
   { open: '?season=none' },
   { eval: SHOW_SPLASH }, { wait: 300 }, { shot: 'splash' }, { eval: `document.getElementById('splash')?.remove()` },
   { shot: 'menu' },
@@ -403,6 +407,14 @@ try {
   for (const step of TOUR) {
     if ('open' in step) {
       await open(step.open);
+    } else if ('phone' in step) {
+      if (step.phone) {
+        await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+        await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+      } else {
+        await send('Emulation.setTouchEmulationEnabled', { enabled: false });
+        await send('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
+      }
     } else if ('viewport' in step) {
       await send('Emulation.setDeviceMetricsOverride', { width: step.viewport[0], height: step.viewport[1], deviceScaleFactor: 1, mobile: false });
     } else if ('shot' in step) {

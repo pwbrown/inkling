@@ -385,15 +385,36 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 - The snapshot tour now starts with the splash.
 - **2.19.1:** the menu comes up about a second sooner on slow connections: the word pack downloads once the menu is showing, and PixiJS's browser setup comes with the main script. The holiday stickers now follow the same season as the looks, so the tour's `?season=none` keeps them (and their unlock card) out of the page-done shot.
 
+### M29: Keyboards and nudges (2.20.0)
+
+| Ready for more? | On a phone |
+|---|---|
+| <img src="m29/ready-for-more.png" width="420" alt="The Ready for more? card over a finished page: every page of chapter 1 got an A or better, with buttons Add numbers and symbols, Try Hard and Not now, and a link Don't suggest this again"> | <img src="m29/keyboard-notice.png" width="200" alt="On a phone-sized screen, a card titled Made for a keyboard explains the game is for a physical keyboard, with a Play anyway button"> |
+| After a chapter of top grades (from chapter 5; staged here at chapter 1). | Once per browser on touch-only screens. |
+
+| Free Write |
+|---|
+| <img src="m29/practice.png" width="420" alt="The Free Write screen showing Practicing: All letters, 53 keys"> |
+| New players start on **All letters**. |
+
+**New:**
+- **Ready for more?** In Free Write from chapter 5, a chapter where every page gets an A or A+ offers **Add numbers and symbols** and/or the next difficulty, from the next page in the same notebook. **Not now** waits three chapters; **Don't suggest this again** turns it off for that player (save version 13).
+- **Made for a keyboard:** a one-time note on phones and tablets with no mouse or trackpad. It never stops anyone playing.
+- **Getting the words ready…:** a small note if something has to wait for the word pack (only on slow connections).
+- The snapshot tour now starts with the phone notice. The suggestion card needs a whole chapter of play, so its shot came from a headless run with the chapter threshold lowered to 1.
+
+**Changed:**
+- New players start Free Write on **All letters** (letters, capitals and space) instead of Everything.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m28
+npm run snapshots -- m29
 ```
 
-That writes a standard set of shots to `docs/progression/m28/` (splash, menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m28 holidays` takes only the holiday shots. Then:
+That writes a standard set of shots to `docs/progression/m29/` (keyboard-notice, splash, menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m29 holidays` takes only the holiday shots. Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

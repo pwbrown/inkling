@@ -78,8 +78,8 @@ describe('presets', () => {
     }
   });
 
-  it('start new players on the Everything preset', () => {
-    expect(matchingPreset(presets, DEFAULT_KEYS)?.id).toBe('everything');
+  it('start new players on the All letters preset (M29)', () => {
+    expect(matchingPreset(presets, DEFAULT_KEYS)?.id).toBe('lettersCapitals');
   });
 
   it('all include space', () => {

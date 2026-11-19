@@ -479,6 +479,17 @@ export function setContent(world: World, content: ContentSource): void {
 }
 
 /**
+ * Switch keys between two pages of a notebook ("Ready for more?", M29): the
+ * next page and everything after it use `content`. Only on the menu or a
+ * page-cleared card, never mid-page.
+ */
+export function switchKeys(world: World, content: ContentSource): void {
+  if (world.phase !== 'ready' && world.phase !== 'pageCleared') return;
+  world.content = content;
+  world.keys = content.keys;
+}
+
+/**
  * Remember how things stood as a page begins, so it can be restarted (and,
  * on a chapter's first page, so the chapter can be retried).
  */

@@ -15,6 +15,8 @@ No servers and no analytics. Everything stays on your device (see [PRIVACY.md](P
 
 ## How to play
 
+Inky Keys is made for a physical keyboard. On a phone or tablet with no mouse or trackpad, it says so once (**Made for a keyboard**), but you can still play.
+
 Type the character on each ink drip before it reaches the red margin. Each drip that gets through drains your ink well, and the game ends when it runs dry. Correct keys in a row build a score multiplier, up to ×4.
 
 | Key | Action |
@@ -32,7 +34,7 @@ A notebook is a series of **chapters**, each made of a few **pages**. Each page 
 
 ### Choosing keys
 
-The **Type Case** shows a keyboard where every key has two halves: its plain character below and its Shift character on top. Click a half, or press that key on your real keyboard, to add or remove it. You can also start from a preset (Home row, All letters, Numbers, Code symbols…), toggle whole groups (digits, top row, left hand…), or save your own presets. New players start on all letters, capitals and space (the **Letters + capitals + space** preset).
+The **Type Case** shows a keyboard where every key has two halves: its plain character below and its Shift character on top. Click a half, or press that key on your real keyboard, to add or remove it. You can also start from a preset (Home row, All letters, Numbers, Code symbols…), toggle whole groups (digits, top row, left hand…), or save your own presets. New players start on all letters, capitals and space (the **All letters** preset).
 
 The game builds everything from your keys: drips use them directly, and word pages use real words that only need those letters. Selected capitals and punctuation show up in words too. If too few words fit, made-up strings are mixed in, and the Type Case warns you when that will happen.
 
@@ -45,6 +47,7 @@ The game builds everything from your keys: drips use them directly, and word pag
   - **Introductions:** every chapter opens with a card showing its new key and which finger types it. The new key comes up three times as often as the others.
   - **Stars and progress:** each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter. Finishing the last chapter completes the notebook.
 - **Free Write** (formerly Practice) is the main mode. It uses exactly the keys you choose in the Type Case, with endless chapters. New players start with all letters, capitals and space.
+- **Ready for more?** From chapter 5 of Free Write, a chapter where every page gets an A or A+ brings a card offering **Add numbers and symbols** (if you're not on Everything) and/or the next difficulty. Either change starts on the next page, and the notebook keeps going. **Not now** waits three chapters; **Don't suggest this again** stops it for that player. The numbers are in `GAME_CONFIG.nudges`.
 - **From Apprentice to Free Write:** pause a chapter and pick **Free Write with these keys** (F) to keep practicing that chapter's keys at the same difficulty. The Free Write screen and the Type Case also offer **My Apprentice keys**, which always matches the furthest chapter you've reached.
 
 ### Players

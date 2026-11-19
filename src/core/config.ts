@@ -13,19 +13,15 @@
  */
 
 /**
- * Keys a brand-new player starts with in Free Write: every key on the
- * keyboard (the "Everything" preset in keySelection.ts). Numbers and symbols
- * get their own waves, so a mixed set still reads as real words and phrases.
- * Beginners who want the home row start the Apprentice course instead.
+ * Keys a brand-new player starts with in Free Write: all letters, capitals
+ * and space (the "All letters" preset, `lettersCapitals` in keySelection.ts),
+ * since M29. A player who does really well is offered numbers and symbols
+ * too (core/nudges.ts). Beginners who want the home row start the Apprentice
+ * course instead.
  */
-export const DEFAULT_KEYS: readonly string[] = [
-  ...'abcdefghijklmnopqrstuvwxyz',
-  ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-  ...'1234567890',
-  ...'`-=[]\\;\',./',
-  ...'~!@#$%^&*()_+{}|:"<>?',
-  ' ',
-];
+import type { Grade } from './grade';
+
+export const DEFAULT_KEYS: readonly string[] = [...'abcdefghijklmnopqrstuvwxyz', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', ' '];
 
 /**
  * Target types (REQUIREMENTS §3): drips (one character), Scrawlers (a word)
@@ -473,6 +469,18 @@ export const GAME_CONFIG = {
       /** Falling bits stay this faint, below the decor. */
       fallingAlpha: 0.35,
     },
+  },
+
+  /**
+   * "Ready for more?" (core/nudges.ts): after a Free Write chapter where every
+   * page got one of `grades`, offer the Everything keys and/or the next
+   * difficulty. Never before chapter `fromChapter` (1-based), and after an
+   * answer, not again for `waitChapters` chapters.
+   */
+  nudges: {
+    fromChapter: 5,
+    grades: ['A+', 'A'] as Grade[],
+    waitChapters: 3,
   },
 
   /** Each target's speed varies randomly by up to ±this fraction. */

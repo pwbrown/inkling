@@ -13,6 +13,7 @@ import {
   laneY,
   renderX,
   setContent,
+  switchKeys,
   spawnTarget,
   stepWorld,
   type World,
@@ -220,6 +221,16 @@ describe('world', () => {
     world.phase = 'playing';
     setContent(world, createContentSource({ keys: ['x'] }));
     expect(world.keys).toEqual(['1', '2']);
+  });
+
+  it('switches keys between pages, never mid-page', () => {
+    const world = createWorld({ keys: ['a'] });
+    world.phase = 'playing';
+    switchKeys(world, createContentSource({ keys: ['x'] }));
+    expect(world.keys).toEqual(['a']);
+    world.phase = 'pageCleared';
+    switchKeys(world, createContentSource({ keys: ['x', 'y'] }));
+    expect(world.keys).toEqual(['x', 'y']);
   });
 
   it('counts play time on both the notebook and the page', () => {

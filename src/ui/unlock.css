@@ -107,3 +107,30 @@
 :root[data-motion='reduced'] .ul-card {
   animation: none;
 }
+
+/* The choice card (ui/choiceDialog.ts): the keyboard notice and "ready for more?". */
+.choice-panel .tc-intro {
+  text-align: center;
+}
+
+.choice-actions {
+  justify-content: center;
+}
+
+.choice-footer {
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+.choice-footer .linkish {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--tc-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--tc-margin);
+  text-underline-offset: 0.15em;
+  font: inherit;
+  font-size: 0.95em;
+  cursor: pointer;
+}

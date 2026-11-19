@@ -10,11 +10,12 @@ import { BOSS_KINDS, DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type BossKi
 import { isStickerId } from '../core/stickers';
 import { isMechanic } from '../core/mechanics';
 import type { Grade } from '../core/grade';
+import { DEFAULT_NUDGES, type NudgeState } from '../core/nudges';
 import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 import { DEFAULT_LAYOUT_ID, isLayoutId } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 13;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -144,6 +145,8 @@ export interface SaveData {
   daily: DailyProgress;
   /** Added in version 10. */
   stickers: StickerBook;
+  /** "Ready for more?" suggestions (added in version 13). */
+  nudges: NudgeState;
 }
 
 export interface Tutorials {
@@ -188,6 +191,7 @@ export function defaultSave(): SaveData {
     layout: DEFAULT_LAYOUT_ID,
     daily: defaultDaily(),
     stickers: { earned: {}, unseen: [], bossesBeaten: [] },
+    nudges: { ...DEFAULT_NUDGES },
   };
 }
 
@@ -322,7 +326,13 @@ function sanitize(v: Json): SaveData {
     layout: isLayoutId(v.layout) ? v.layout : DEFAULT_LAYOUT_ID,
     daily: sanitizeDaily(v.daily),
     stickers: sanitizeStickers(v.stickers),
+    nudges: sanitizeNudges(v.nudges),
   };
+}
+
+function sanitizeNudges(v: unknown): NudgeState {
+  if (!isObject(v)) return { ...DEFAULT_NUDGES };
+  return { off: v.off === true, wait: Math.min(99, count(v.wait)) };
 }
 
 function sanitizeStickers(v: unknown): StickerBook {
@@ -457,6 +467,8 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
       ? { ...save.profile, cosmetics: { ...(isObject(save.profile.cosmetics) ? save.profile.cosmetics : {}), hat: 'none' } }
       : save.profile,
   }),
+  // v13 added "Ready for more?" suggestions; nobody has answered one yet.
+  12: (save) => ({ ...save, version: 13, nudges: { ...DEFAULT_NUDGES } }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

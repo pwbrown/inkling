@@ -37,7 +37,7 @@ import { APPRENTICE_CHAPTERS, NEW_KEY_WEIGHT, lessonsFor, apprenticeKeys, appren
 import { pageGrade, type Grade } from './core/grade';
 import { DAILY_PAGES, MARK_SQUARES, dailyId, dailyKeys, dailyPages, dailySeed, streakWeek } from './core/daily';
 import { cleanChallengeName, decodeChallenge, encodeChallenge, type Challenge } from './core/challenge';
-import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
+import { createWorld, isLastPageOfChapter, setContent, stepWorld, switchKeys, type GamePhase } from './core/world';
 import { formatNumber, getLocale, setLocale, t, type MessageKey } from './i18n';
 import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel, stickerUnlocks } from './core/rewards';
 import { SaveFormatError, defaultSave, migrate, type SaveData } from './storage/schema';
@@ -78,6 +78,10 @@ import { openUnlockDialog, type UnlockedItem } from './ui/unlockDialog';
 import { openWordLists } from './ui/wordLists';
 import { openWhatsNewDialog } from './ui/whatsNewDialog';
 import { showStickerToast } from './ui/stickerToast';
+import { hideWordsNote, showWordsNote } from './ui/wordsNote';
+import { openChoiceDialog, type Choice } from './ui/choiceDialog';
+import { afterChapter, answered, harderThan, nudgesFor, type NudgeKind } from './core/nudges';
+import { markKeyboardNoticeSeen, needsKeyboardNotice } from './ui/mobileNotice';
 import { STICKERS, type StickerFacts, type StickerGroup } from './core/stickers';
 import { RELEASES, compareVersions, releasesToAnnounce, MAX_NEW_RELEASES_SHOWN, type Release } from './core/releases';
 import { APP_VERSION, loadSeenVersion, saveSeenVersion } from './version';
@@ -144,6 +148,11 @@ async function main(): Promise<void> {
   let recentStickers: string[] = [];
   /** Ink earned on the page just finished, and any level-up, for the graded page. */
   let reward: { ink: number; levelUp: number | null; unlocked: string[]; items: UnlockedItem[] } = { ink: 0, levelUp: null, unlocked: [], items: [] };
+  /** Grades of the Free Write chapter being played, and a suggestion waiting to show (M29). */
+  let chapterGrades: { chapter: number; grades: Grade[] } = { chapter: -1, grades: [] };
+  let pendingNudge: { chapter: number; offers: NudgeKind[] } | null = null;
+  /** Every key of the Everything preset on the player's layout. */
+  const everythingKeys = (): string[] => [...(presets().find((p) => p.id === 'everything')?.chars ?? [])];
 
   /** The chapter the player has reached in Apprentice (1-based). */
   const apprenticeChapter = () => Math.max(1, Math.min(store.data.apprentice.unlocked, APPRENTICE_CHAPTERS));
@@ -186,8 +195,12 @@ async function main(): Promise<void> {
       }
       if (waitingForWords) return;
       waitingForWords = true;
+      // Only on a slow connection: a quiet note so a click doesn't seem ignored.
+      const note = window.setTimeout(() => showWordsNote(document.body), 250);
       void packReady().then(() => {
         waitingForWords = false;
+        window.clearTimeout(note);
+        hideWordsNote();
         action(...args);
         syncMenu();
       });
@@ -1139,6 +1152,71 @@ async function main(): Promise<void> {
       onEquip: ({ slot, item }) => equip(slot, item),
       onClose: () => {
         dialogOpen = false;
+        showNudge();
+      },
+    });
+  };
+
+  /**
+   * "Ready for more?" after a Free Write chapter of top grades (core/nudges.ts):
+   * the Everything keys and/or the next difficulty, from the next page on.
+   * Waits for any unlock card to close first.
+   */
+  const showNudge = () => {
+    const nudge = pendingNudge;
+    if (!nudge || dialogOpen || game.phase !== 'pageCleared') return;
+    pendingNudge = null;
+    const harder = harderThan(game.difficulty);
+    const answer = (never = false) =>
+      store.update((save) => {
+        save.nudges = answered(save.nudges, never);
+      });
+    const choices: Choice[] = [];
+    if (nudge.offers.includes('everything')) {
+      choices.push({
+        id: 'nudge-everything',
+        label: t('nudge.everything'),
+        primary: true,
+        onPick: () => {
+          const keys = everythingKeys();
+          switchKeys(game, contentFor(keys));
+          store.update((save) => {
+            save.keys = [...keys];
+            save.nudges = answered(save.nudges);
+          });
+          menu.refresh();
+        },
+      });
+    }
+    if (nudge.offers.includes('harder') && harder) {
+      choices.push({
+        id: 'nudge-harder',
+        label: t('nudge.harder', { difficulty: difficultyLabel(harder) }),
+        primary: choices.length === 0,
+        onPick: () => {
+          game.difficulty = harder;
+          game.selectedDifficulty = harder;
+          store.update((save) => {
+            save.difficulty = harder;
+            // The notebook carries on at the new difficulty, even if it's quit from this card.
+            save.notebook = snapshotNotebook(game, nextPagePosition(game.page));
+            save.nudges = answered(save.nudges);
+          });
+          menu.refresh();
+        },
+      });
+    }
+    choices.push({ id: 'nudge-later', label: t('nudge.later'), onPick: () => answer() });
+    dialogOpen = true;
+    openChoiceDialog(document.body, {
+      emoji: '🚀',
+      title: t('nudge.title'),
+      lines: [t('nudge.body', { chapter: nudge.chapter }), t(nudge.offers.length > 1 ? 'nudge.bothHelp' : nudge.offers[0] === 'everything' ? 'nudge.everythingHelp' : 'nudge.harderHelp')],
+      choices,
+      footer: { id: 'nudge-never', label: t('nudge.never'), onPick: () => answer(true) },
+      escapeId: 'nudge-later',
+      onClose: () => {
+        dialogOpen = false;
       },
     });
   };
@@ -1210,6 +1288,8 @@ async function main(): Promise<void> {
         // A page is starting (not just resuming from pause): save the notebook
         // here, so Continue and Quit to menu always come back to this page.
         if (lastPhase !== 'paused') recentStickers = [];
+        // A suggestion that never got its moment doesn't carry over to a later page.
+        if (lastPhase !== 'paused') pendingNudge = null;
         if (lastPhase !== 'paused' && game.mode !== 'daily') {
           if (lastPhase === 'ready') newBest = false;
           store.update((save) => {
@@ -1244,6 +1324,28 @@ async function main(): Promise<void> {
             stars = earned;
             recordApprenticePage(save, game.page.chapter, game.page.index, earned, isLastPageOfChapter(game.page));
           }
+          // "Ready for more?": every Free Write page's grade, for the check when its chapter ends.
+          if (game.mode === 'practice') {
+            const grade = pageGrade(game.pageStats, game.page.params.size);
+            if (game.page.index === 0 || chapterGrades.chapter !== game.page.chapter) chapterGrades = { chapter: game.page.chapter, grades: [] };
+            chapterGrades.grades.push(grade);
+            if (isLastPageOfChapter(game.page)) {
+              save.nudges = afterChapter(save.nudges);
+              const offers = nudgesFor(
+                {
+                  mode: game.mode,
+                  chapter: game.page.chapter,
+                  grades: chapterGrades.grades,
+                  pages: game.page.pageCount,
+                  difficulty: game.difficulty,
+                  keys: save.keys,
+                  everything: everythingKeys(),
+                },
+                save.nudges,
+              );
+              pendingNudge = offers.length > 0 ? { chapter: game.page.chapter + 1, offers } : null;
+            }
+          }
           // Ink (XP): level-ups and unlocks show on the graded page.
           reward = earnInk(save, inkForPage(game.pageStats.score, stars));
           recordResult(save, game.difficulty, game.stats.score, game.page.chapter + 1);
@@ -1251,6 +1353,7 @@ async function main(): Promise<void> {
         });
         awardPageStickers();
         showUnlocks();
+        showNudge();
         break;
       case 'notebookComplete':
         if (game.mode === 'daily') {
@@ -1425,12 +1528,29 @@ async function main(): Promise<void> {
 
   // After an update, say what's new, once. Only remember the version if it
   // stuck, or blocked storage would show the notes on every visit.
-  {
+  const announceRelease = () => {
     const returning = store.data.profile.ink > 0 || players.list.players.length > 1;
     const fresh = releasesToAnnounce(loadSeenVersion(), APP_VERSION, returning);
     if (saveSeenVersion(APP_VERSION) && fresh.length > 0) {
       openWhatsNew(fresh.slice(0, MAX_NEW_RELEASES_SHOWN), fresh.slice(MAX_NEW_RELEASES_SHOWN), true);
     }
+  };
+  // On a phone or tablet with no keyboard, say once that the game is made for one (it still plays).
+  if (needsKeyboardNotice() && !dialogOpen) {
+    dialogOpen = true;
+    openChoiceDialog(document.body, {
+      emoji: '⌨️',
+      title: t('keyboardNotice.title'),
+      lines: [t('keyboardNotice.body'), t('keyboardNotice.tip')],
+      choices: [{ id: 'play-anyway', label: t('keyboardNotice.ok'), primary: true, onPick: () => {} }],
+      onClose: () => {
+        dialogOpen = false;
+        markKeyboardNoticeSeen();
+        announceRelease();
+      },
+    });
+  } else {
+    announceRelease();
   }
 
   if (import.meta.env.DEV) {
