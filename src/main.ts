@@ -1374,6 +1374,7 @@ async function main(): Promise<void> {
     syncMenu();
   });
   syncMenu();
+  hideSplash();
 
   // After an update, say what's new, once. Only remember the version if it
   // stuck, or blocked storage would show the notes on every visit.
@@ -1391,6 +1392,14 @@ async function main(): Promise<void> {
     // from builds of older milestones.
     (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, menu, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
   }
+}
+
+/** Fade out the first screen from index.html once the game is ready (M28). */
+function hideSplash(): void {
+  const splash = document.getElementById('splash');
+  if (!splash) return;
+  splash.classList.add('gone');
+  setTimeout(() => splash.remove(), 300);
 }
 
 main().catch((error: unknown) => {

@@ -20,10 +20,31 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
-    // The bundled word pack is one ~500 kB chunk (~165 kB gzipped), loaded lazily.
-    chunkSizeWarningLimit: 600,
+    // Two big chunks, both expected: the bundled word pack (~500 kB, ~165 kB
+    // gzipped, loaded lazily) and the game with PixiJS's core (~610 kB, ~190 kB
+    // gzipped), which loads behind the splash screen in index.html. Splitting
+    // PixiJS out was tried in M28 and made the first download bigger, because
+    // its lazily loaded parts got pulled in with it.
+    chunkSizeWarningLimit: 650,
   },
   plugins: [
+    // The game's small stylesheet is inlined, so nothing holds up the first paint (M28).
+    {
+      name: 'inky-keys-inline-css',
+      transformIndexHtml: {
+        order: 'post',
+        handler(html, ctx) {
+          if (!ctx.bundle) return html;
+          let out = html;
+          for (const link of html.match(/<link rel="stylesheet"[^>]*>/g) ?? []) {
+            const href = /href="([^"]+)"/.exec(link)?.[1] ?? '';
+            const asset = ctx.bundle[href.slice(base.length)];
+            if (asset?.type === 'asset' && typeof asset.source === 'string') out = out.replace(link, `<style>${asset.source}</style>`);
+          }
+          return out;
+        },
+      },
+    },
     // The plain website pages (How to play, For parents and teachers, Privacy, 404) and sitemap.xml.
     sitePages(fileURLToPath(new URL('.', import.meta.url))),
     // Offline play (REQUIREMENTS §7): precache every built asset, including

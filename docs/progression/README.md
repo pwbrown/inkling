@@ -369,15 +369,30 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 - **Install card:** the manifest gains categories and a screenshot.
 - The snapshot tour now includes About and two web pages; `npm run snapshots -- public social` retakes the preview picture and install screenshot.
 
+### M28: Fast start (2.19.0)
+
+| Splash |
+|---|
+| <img src="m28/splash.png" width="420" alt="The splash screen: the Inky Keys logo, a cream ink drop and the name underlined in red, on the dark desk"> |
+| Shown straight from `index.html` while the game gets ready. |
+
+**New:**
+- A **splash screen**: the logo on the desk, painted before any script runs and faded out once the menu is ready.
+
+**Changed:**
+- The game's stylesheet is inlined into the page, so nothing holds up the first paint. Lighthouse mobile performance went from 74 to about 96: first paint 3.9 → 2.0 s, largest paint 4.5 → 2.4 s, no layout shift.
+- Tried and dropped: preloading the fonts and giving PixiJS its own chunk. Both made the first download slower on a slow connection.
+- The snapshot tour now starts with the splash.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m27
+npm run snapshots -- m28
 ```
 
-That writes a standard set of shots to `docs/progression/m27/` (menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m27 holidays` takes only the holiday shots. Then:
+That writes a standard set of shots to `docs/progression/m28/` (splash, menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m28 holidays` takes only the holiday shots. Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

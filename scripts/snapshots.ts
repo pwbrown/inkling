@@ -205,8 +205,21 @@ const HOLIDAY_TOUR: Step[] = [
   { click: 'Sticker book' }, { eval: SHOW_HOLIDAY_SHELF }, { wait: 300 }, { shot: 'stickers-holidays' }, { key: 'Escape' },
 ];
 
+/** Shows the splash screen from index.html again (M28): it's gone by the time the game is ready. */
+const SHOW_SPLASH = `(async () => {
+  const html = await (await fetch('/index.html', { cache: 'no-store' })).text();
+  const found = html.match(/<div id="splash"[\\s\\S]*?<\\/svg>\\s*<\\/div>/);
+  if (!found) return 'no splash';
+  const box = document.createElement('div');
+  box.innerHTML = found[0];
+  box.firstElementChild.style.zIndex = '10000';
+  document.body.append(box.firstElementChild);
+  return 'ok';
+})()`;
+
 const MAIN_TOUR: Step[] = [
   { open: '?season=none' },
+  { eval: SHOW_SPLASH }, { wait: 300 }, { shot: 'splash' }, { eval: `document.getElementById('splash')?.remove()` },
   { shot: 'menu' },
   // About, with links to the website's pages (M27).
   { click: 'About' }, { shot: 'about' }, { key: 'Escape' },

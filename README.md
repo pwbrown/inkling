@@ -140,6 +140,20 @@ The service worker is only registered in production builds. Use `npm run build &
 
 Once per site, outside the code: verify **inkykeys.com** in [Google Search Console](https://search.google.com/search-console) and [Bing Webmaster Tools](https://www.bing.com/webmasters) with a **Domain** property, which asks for a DNS TXT record (add it in Cloudflare's DNS, DNS only). Then submit `https://inkykeys.com/sitemap.xml` in both. No verification file or meta tag is needed in the repo, and nothing is added to the game.
 
+### Checking page speed
+
+[Lighthouse](https://developer.chrome.com/docs/lighthouse) measures the built site the way search engines do (a slow phone on a slow connection). Build and preview, then run it in another terminal:
+
+```bash
+npm run build && npm run preview
+```
+
+```bash
+npx lighthouse http://localhost:4173/ --view
+```
+
+As of 2.19.0 the game page scores about 96 for performance and 100 for accessibility, best practices and SEO, and the web pages score 100 for all four. What keeps it fast: `index.html` paints a splash screen from its own inline styles before any script runs, and the game's small stylesheet is inlined into the page (`vite.config.ts`), so nothing blocks that first paint. Font preloads were tried and made it slower, because on a slow connection they compete with the script the menu needs.
+
 ### Project layout
 
 | Path | What lives there |

@@ -55,8 +55,61 @@
         "codeRepository": "https://github.com/pwbrown/inky-keys"
       }
     </script>
+    <!-- The first screen (M28): painted from this file alone, before any script, and removed once the menu is up. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #2b2622;
+      }
+      #splash {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: #2b2622;
+        z-index: 1000;
+        transition: opacity 0.25s ease-out;
+      }
+      #splash.gone {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #splash svg {
+        width: min(440px, 80vw);
+        height: auto;
+        overflow: visible;
+      }
+      #splash .drop {
+        fill: #f7f1e3;
+        transform-origin: 44px 52px;
+        animation: splash-bob 1.4s ease-in-out infinite;
+      }
+      @keyframes splash-bob {
+        50% {
+          transform: translateY(-4px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash .drop {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true">
+      <svg viewBox="0 0 390 96">
+        <g class="drop">
+          <path d="M44 6 L26 48 A21 21 0 1 0 62 48 Z" />
+          <circle cx="38" cy="62" r="4.2" fill="#2b2622" /><circle cx="52" cy="62" r="4.2" fill="#2b2622" />
+          <path d="M39 72 q6 5 12 0" fill="none" stroke="#2b2622" stroke-width="2.4" stroke-linecap="round" />
+        </g>
+        <text x="80" y="70" fill="#f7f1e3" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="66">Inky Keys</text>
+        <path d="M84 82 C160 74 270 90 366 78" fill="none" stroke="#d64545" stroke-width="3" stroke-linecap="round" />
+      </svg>
+    </div>
     <main id="app" aria-label="Inky Keys game">
       <noscript>
         <h1>Inky Keys</h1>

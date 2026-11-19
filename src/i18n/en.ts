@@ -463,6 +463,7 @@ export const en = {
   'whatsNew.fixes': 'Bug fixes and small improvements.',
   'whatsNew.earlier': 'Earlier versions',
   'whatsNew.ok': 'Got it',
+  'release.2.19.0.faster': 'The game shows up faster when you open it, with the Inky Keys logo while it gets ready.',
   'release.2.18.0.pages': 'New guides on the website: How to play, and a page for parents and teachers. Find them in About.',
   'release.2.17.0.holidays': 'The page dresses up for Thanksgiving and Christmas, with leaves, snow and hats. Turn it off in Settings.',
   'release.2.17.0.words': 'Holiday words like pie and sleigh turn up on word pages in season.',
