@@ -162,6 +162,7 @@ const TOUR: Step[] = [
   { click: 'Desk' }, { eval: SCROLL_TOP }, { shot: 'desk' }, { key: 'Escape' },
   { click: 'Switch player' }, { shot: 'players' }, { key: 'Escape' },
   { click: 'Settings' }, { shot: 'settings' }, { key: 'Escape' },
+  { click: 'Word lists' }, { shot: 'word-lists' }, { key: 'Escape' },
   // Another keyboard layout (M16): the Type Case and the first chapter card follow it.
   { click: 'Settings' }, { click: 'Dvorak' }, { eval: SHOW_LAYOUT }, { shot: 'settings-layout' }, { key: 'Escape' },
   { click: FREE_WRITE }, { click: 'Change keys' }, { shot: 'type-case-dvorak' }, { key: 'Escape' }, { key: 'Escape' },

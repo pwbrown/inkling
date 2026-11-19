@@ -1,6 +1,6 @@
 # Datamuse alternatives and targets page atmosphere
 
-Claude Code session started 2026-11-18. 11 prompts.
+Claude Code session started 2026-11-18. 14 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1572,12 +1572,204 @@ That test also gave the browser pane's save a "Boss Beater" sticker and a level-
 
 > Commit and merge
 
-<details><summary>1 tool call</summary>
+<details><summary>2 tool calls</summary>
 
 - **Shell:** Export transcript and scan for private details
 
   ```bash
   npm run transcript 2>&1 | grep -c Wrote; f=docs/transcripts/2026-11-18-datamuse-*.md; grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9-]{10,}" $f | sort -u | head; grep -oE "/Users/[^/ ]+" $f | sort -u; n="$(git config user.name)"; first="${n%% *}"; grep -ci -- "$first" $f; git status --short docs/transcripts
+  ```
+- **Shell:** Scan the session transcript for private details
+
+  ```bash
+  f=docs/transcripts/2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2.md; echo "emails/tokens:"; grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9-]{10,}" "$f" | sort -u | head; echo "user paths:"; grep -oE "/Users/[^/ ]+" "$f" | sort -u; n="$(git config user.name)"; first="${n%% *}"; echo "name hits: $(grep -ci -- "$first" "$f")"; git status --short docs/transcripts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Transcript is clean. Committing and merging.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit, fast-forward merge, delete branch, tag 2.16.0
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  The manuscript and its scribe (2.16.0)
+
+  - A faint, illegible cursive manuscript fills the page's lines as creatures are cleared; the last stroke lands with the last one, and on boss pages the final share waits for the boss
+  - A small ink-drop scribe below the last lane writes the page heading at the start, scribbles as the writing grows, looks up when a creature nears the margin, winces when one gets through, and cheers when the page is done
+  - Creatures that reach the margin leave an ink blot on the writing on their line
+  - New Page writing setting (on/of
+  … (544 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The manuscript and scribe are now on `main` as 2.16.0 (commit `8808eaf`), tagged `v2.16.0` locally.
+
+- **Transcript:** I exported it and scanned it for emails, tokens, personal paths and your name; nothing turned up. It's included in the commit.
+- **Merge:** `main` was fast-forwarded and `feat/manuscript` deleted.
+- **Not pushed:** `main` is one commit ahead of `origin`, and the tag is local only.
+
+## 🧑 Prompt
+
+> Push both
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main and the v2.16.0 tag
+
+  ```bash
+  git push origin main 2>&1 | tail -1 && git push origin v2.16.0 2>&1 | tail -1 && git status -sb | head -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` (now level with `origin`) and the `v2.16.0` tag. The tag should start the Release workflow, which publishes 2.16.0 on GitHub; I didn't check that it ran.
+
+Both items from this session are now released: Wikipedia word lists in 2.15.0, and the manuscript and scribe in 2.16.0.
+
+## 🧑 Prompt
+
+> take the snapshots for 2.16.0
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Look at progression doc and snapshot script
+
+  ```bash
+  grep -n "^## \|^### " docs/progression/README.md | tail -12; ls docs/progression | tail -5; grep -n "process.argv\|const name\|outDir\|m\[0-9\]" scripts/snapshots.ts | head -10; grep -n "^| \*\*\|Side by side" docs/progression/README.md | head -10
+  ```
+- **Shell:** Read side-by-side table, M24 section and tour shots
+
+  ```bash
+  sed -n 11,40p docs/progression/README.md; sed -n 297,313p docs/progression/README.md; grep -n "shot: '" scripts/snapshots.ts | head -40
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The tour's `play` and `page-done` shots will show the manuscript. The Word lists dialog has new text but isn't in the tour, so I'm adding a `word-lists` step (README step 3).
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Branch and add a Word lists step to the tour
+
+  ```bash
+  git switch -q -c chore/m25-snapshots && python3 - <<'EOF'
+  p='scripts/snapshots.ts'; s=open(p).read()
+  old="  { click: 'Settings' }, { shot: 'settings' }, { key: 'Escape' },\n"
+  assert s.count(old)==1
+  s=s.replace(old, old+"  { click: 'Word lists' }, { shot: 'word-lists' }, { key: 'Escape' },\n")
+  open(p,'w').write(s)
+  EOF
+  grep -n "word-lists" scripts/snapshots.ts
+  ```
+- **Shell:** Take the M25 snapshots
+
+  ```bash
+  npm run snapshots -- m25 2>&1 | tail -8
+  ```
+- **Shell:** List M25 shots and take the latest set
+
+  ```bash
+  ls docs/progression/m25 | tr '\n' ' '; echo; npm run snapshots -- latest 2>&1 | tail -2
+  ```
+- **Read** `docs/progression/m25/play.png`
+- **Read** `docs/progression/m25/page-done.png`
+- **Read** `docs/progression/m25/word-lists.png`
+
+</details>
+
+### 🤖 Claude
+
+The page-complete shot shows the full manuscript behind the card. The play shot shows the scribe and heading (nothing has been cleared yet at that point). Now the progression section.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Find side-by-side tables using Latest
+
+  ```bash
+  grep -n "latest/" docs/progression/README.md | head; grep -n "^### " docs/progression/README.md | head -12
+  ```
+- **Shell:** Read the End of a page table
+
+  ```bash
+  sed -n 51,57p docs/progression/README.md
+  ```
+- **Shell:** Add the M25 section and page-end column
+
+  ```bash
+  python3 - <<'EOF'
+  p='docs/progression/README.md'; s=open(p).read()
+  def rep(old,new):
+      global s
+      assert s.count(old)==1, old[:60]; s=s.replace(old,new)
+  rep("| M2 | M7 | M12 | M13 | M15 | M17 | M20 | M24 |\n|---|---|---|---|---|---|---|\n", "| M2 | M7 | M12 | M13 | M15 | M17 | M20 | M24 | M25 |\n|---|---|---|---|---|---|---|---|---|\n")
+  rep('alt="M24 page card with score, WPM, accuracy, combo and best run in boxes"> |\n', 'alt="M24 page card with score, WPM, accuracy, combo and best run in boxes"> | <img src="m25/page-done.png" width="140" alt="M25 page card over a page filled with faint c
+  … (2451 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+README step 4 says to commit only the shots the page uses, so I'm removing the unused M25 shots and checking `latest/`.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Drop unused M25 shots and check latest folder
+
+  ```bash
+  cd docs/progression/m25 && ls | grep -vE "^(play|page-done|word-lists)\.png$" | xargs rm && ls && cd .. && git status --short latest | head -30; git ls-files latest | tr '\n' ' '
+  ```
+- **Shell:** Remove the unused new shots from latest
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git clean -n docs/progression/latest | wc -l && git clean -fq docs/progression/latest && git status --short
+  ```
+- **Shell:** Run checks after the tour change
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests|FAIL" | head -3
+  ```
+- **SendUserFile** `{"files":["docs/progression/m25/play.png","docs/progression/m25/page-done.png"],"caption":"M25 snapshots: the scribe and heading at the start of a page, and the filled manuscript behind Page complete","status":"normal","display":"render"}`
+
+</details>
+
+### 🤖 Claude
+
+The snapshots for 2.16.0 are taken and added to the progression page as **M25**, the next milestone folder. That section covers both releases from this session (2.15.0 and 2.16.0). Nothing is committed yet; the work is on the branch `chore/m25-snapshots`.
+
+- **New section in [docs/progression/README.md](docs/progression/README.md):** "M25: The manuscript and Wikipedia words". It has three shots and lists what's new or changed.
+  - **Playing:** the scribe with "Chapter 1 of 27 · Page 1" and the shorter footer. The tour takes this shot before anything has been cleared, so no writing shows yet.
+  - **Page complete:** every line filled with faint cursive behind the card.
+  - **Word lists:** the dialog's new Wikipedia wording.
+- **Side by side:** I added an M25 column to "End of a page". That table's header row was already a column short, so I fixed it while I was there.
+- **Tour change:** [scripts/snapshots.ts](scripts/snapshots.ts) now also captures the Word lists dialog, so later milestones will include it.
+- **Shots kept:** following the README, only the shots the page uses are kept. That's three in `m25/`. In `latest/`, the five shots the page already used are updated, and the 18 extra new ones were deleted.
+- **"How to update" commands:** the example commands now say `m25`.
+
+`npm run check` passes.
+
+## 🧑 Prompt
+
+> Commit, merge, push
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan for private details
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; f=docs/transcripts/2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2.md; echo "emails/tokens: $(grep -cE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9-]{10,}' "$f")"; grep -oE "/Users/[^/ ]+" "$f" | sort -u; n="$(git config user.name)"; first="${n%% *}"; echo "name hits: $(grep -ci -- "$first" "$f")"; git status --short docs/transcripts
   ```
 
 </details>

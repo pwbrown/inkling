@@ -50,10 +50,10 @@ A note on the pictures: an auto-typer plays the pages, so the grades are all A+.
 
 ### End of a page
 
-| M2 | M7 | M12 | M13 | M15 | M17 | M20 | M24 |
-|---|---|---|---|---|---|---|
-| <img src="m02/page-done.png" width="140" alt="M2 page complete card"> | <img src="m07/page-done.png" width="140" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="140" alt="M12 page with stars"> | <img src="m13/page-done.png" width="140" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="140" alt="M15 page with handwritten title, drawn stars and best run"> | <img src="m17/page-done.png" width="140" alt="M17 page card with a Main menu (M) link"> | <img src="m20/page-done.png" width="140" alt="M20 page card with a points line: 490 for keys + 175 combo"> | <img src="m24/page-done.png" width="140" alt="M24 page card with score, WPM, accuracy, combo and best run in boxes"> |
-| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. | A **Main menu (M)** link, so you can stop without starting the next page. | A **points** line: what came from the keys, the combo and the Highlighter. | The numbers in **boxes**, news as yellow pills. |
+| M2 | M7 | M12 | M13 | M15 | M17 | M20 | M24 | M25 |
+|---|---|---|---|---|---|---|---|---|
+| <img src="m02/page-done.png" width="140" alt="M2 page complete card"> | <img src="m07/page-done.png" width="140" alt="M7 graded page with A+"> | <img src="m12/page-done.png" width="140" alt="M12 page with stars"> | <img src="m13/page-done.png" width="140" alt="M13 page with ink and level up"> | <img src="m15/page-done.png" width="140" alt="M15 page with handwritten title, drawn stars and best run"> | <img src="m17/page-done.png" width="140" alt="M17 page card with a Main menu (M) link"> | <img src="m20/page-done.png" width="140" alt="M20 page card with a points line: 490 for keys + 175 combo"> | <img src="m24/page-done.png" width="140" alt="M24 page card with score, WPM, accuracy, combo and best run in boxes"> | <img src="m25/page-done.png" width="140" alt="M25 page card over a page filled with faint cursive"> |
+| Score, WPM and accuracy. | A **red-pen grade** and a teacher's note. | **Stars** (1 to 3). | **Ink** earned, level-ups and unlocks. | **Handwritten** title and grade, stars that fill in one by one, wrong keys and the best run. | A **Main menu (M)** link, so you can stop without starting the next page. | A **points** line: what came from the keys, the combo and the Highlighter. | The numbers in **boxes**, news as yellow pills. | The page behind is **filled with writing** by the scribe. |
 
 ### Starting a chapter
 
@@ -311,15 +311,37 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 - **Removed:** the Daily share picture (copying the text and challenge link stays).
 - **Fixed:** Enter on the main menu opens Continue or Free Write, not the player list; menu letters ignore typing carried over from play; shortcuts work after ticking the name box.
 
+### M25: The manuscript and Wikipedia words (2.15.0–2.16.0)
+
+| Playing | Page complete |
+|---|---|
+| <img src="m25/play.png" width="420" alt="A page with two Drips; below the last lane a small ink-drop scribe holds a quill beside the handwritten heading 'Chapter 1 of 27 · Page 1', and the footer reads 'Learning f j · Page 1 of 3 · 0/14'"> | <img src="m25/page-done.png" width="420" alt="The page complete card over a page whose lines are filled with faint, illegible cursive"> |
+| The **scribe** writes the chapter heading on the page; the footer drops the chapter. | By the end of the page, the scribe has **filled every line** with faint cursive. |
+
+| Word lists |
+|---|
+| <img src="m25/word-lists.png" width="420" alt="The Word lists dialog saying Inky Keys reads the Wikipedia article for a topic, and that only the topic is sent, to en.wikipedia.org"> |
+| Words now come from the topic's **Wikipedia** article. |
+
+**New:**
+- **The manuscript:** a little ink-drop scribe sits below the last lane and fills the page with faint, illegible cursive as you clear it. The writing grows with each creature, not with time, so it finishes with the last one; on boss pages the last bit waits for the boss.
+- **Blots and reactions:** a creature that reaches the margin blots the writing on its line. The scribe looks up when one gets close, winces when one gets through, and cheers when the page is done.
+- **Page writing** setting (on/off). Off keeps the heading.
+- The snapshot tour now includes the **Word lists** dialog.
+
+**Changed:**
+- **Word lists:** downloaded from the topic's Wikipedia article and ranked on the device, instead of Datamuse (which needs an API key from February 2027). The CSP allows only `en.wikipedia.org`.
+- **Footer:** shows the page and progress; the chapter moved to the scribe's heading. It no longer goes below zero while a split Spill's Inkmites are on screen.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m24
+npm run snapshots -- m25
 ```
 
-That writes a standard set of shots to `docs/progression/m24/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m25/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.
