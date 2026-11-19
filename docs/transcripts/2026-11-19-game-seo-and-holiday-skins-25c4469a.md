@@ -1,6 +1,6 @@
 # Game SEO and holiday skins
 
-Claude Code session started 2026-11-19. 23 prompts.
+Claude Code session started 2026-11-19. 25 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -3497,12 +3497,176 @@ The snapshot rerun only changed three pictures by animation timing, and the comm
 
 > Yes, ship it
 
-<details><summary>1 tool call</summary>
+<details><summary>3 tool calls</summary>
 
 - **Shell:** Export transcript and scan it
 
   ```bash
   npm run transcript >/dev/null 2>&1; for f in $(git status --short docs/transcripts | awk '{print $2}'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[a-z][A-Za-z0-9._-]+" "$f" | head -3; done; git status --short docs/transcripts
+  ```
+- **Shell:** Commit, merge, tag, delete branch, push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Settings switch for Ready for more? suggestions (2.21.0)
+
+  - Per-player "Ready for more?" checkbox in Settings, beside Tips; turning it back on clears any Not now wait
+  - README note and release notes
+  - Transcript export
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git checkout -q main && git merge -q --ff-only feat/nudge-setting && npm run release:tag 2>&1 | grep Tagged && git branch -d feat/nudge-setting && git push -q origin main && git push -q origin v2.21.0 && git log --oneline --decorate -1
+  ```
+- **Shell:** Wait for deploy and confirm the live build
+
+  ```bash
+  sleep 10; id=$(gh run list --workflow deploy.yml --limit 1 --json databaseId -q '.[0].databaseId'); timeout 400 gh run watch "$id" --exit-status >/dev/null 2>&1; echo "deploy exit $?"; sleep 15; gh run list --limit 3 --json name,conclusion,headBranch | cat; curl -s https://inkykeys.com/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'; ls dist/assets | grep '^index-.*\.js$'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+2.21.0 is live on inkykeys.com, so players can now turn "Ready for more?" suggestions on or off in Settings. The Deploy, CI and Release workflows all passed, and the live page is serving the same build I tested.
+
+- **Commit:** `0170d1c`, fast-forward merged into `main` and tagged `v2.21.0`. The transcript scan was clean.
+- **Branch:** `feat/nudge-setting` is deleted.
+
+## 🧑 Prompt
+
+> run the milestone snapshots for m29 and then fix the scribe's eyes in night mode. they are completely black and kind of creepy
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Branch and run the m29 snapshots
+
+  ```bash
+  git checkout -q -b fix/scribe-night-eyes && npm run snapshots -- m29 2>&1 | grep -cE "m29/"; git status --short docs/progression | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+All 35 m29 shots are taken. Keeping only the three the progression page uses, as before, then on to the scribe.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Prune shots; read scribe face and night palette
+
+  ```bash
+  git checkout -- docs/progression/m29/practice.png 2>/dev/null; find docs/progression/m29 -name '*.png' ! -name keyboard-notice.png ! -name practice.png ! -name ready-for-more.png -delete; git status --short docs/progression; grep -n "drawFace" src/render/scribe.ts; grep -n "export function drawFace" -A 45 src/render/creatures/common.ts | head -60; grep -n "night" -A 16 src/render/theme.ts | head -40
+  ```
+- **Shell:** Read eye drawing and scribe face call
+
+  ```bash
+  sed -n 231,262p src/render/creatures/common.ts; sed -n 136,150p src/render/scribe.ts
+  ```
+- **Shell:** List every drawFace call and its pupil colour
+
+  ```bash
+  grep -rn "drawFace(" src/render | grep -v "export function\|private drawFace\|this.drawFace" 
+  ```
+
+</details>
+
+## 🧑 Sent while Claude was working
+
+> once you fix the scribe just go ahead and ship it. I have to step away for a while
+
+### 🤖 Claude
+
+You're good to step away: I'll fix the scribe, check it, and ship it. The fix is to give the scribe's pupils its own body colour, the way the creatures do it.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Give the scribe's pupils its body colour
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/scribe.ts'; s=open(p).read()
+  a="    drawFace(this.face, 0, -R * 0.95, R * 0.42, mood, blink, look.x, look.y, 0.5);"
+  assert a in s
+  s=s.replace(a,"""    // Pupils in the body's own ink, like the creatures, so they read in every theme
+      // (night's eye whites are dark, and black pupils on them looked like empty eyes).
+      drawFace(this.face, 0, -R * 0.95, R * 0.42, mood, blink, look.x, look.y, COLORS.inkLight);""")
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit && echo ok
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checking the scribe in all three themes with headless Chrome:
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Screenshot the scribe in each theme
+
+  ```bash
+  pkill -f "remote-debugging-port=9333" 2>/dev/null; S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys
+  d=sys.argv[1]; s=open(d+'/nudge.mjs').read()
+  head=s[:s.index("\nawait send('Emulation.setDeviceMetricsOverride'")]
+  body=r"""
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 2, mobile: false });
+  const fs = await import('node:fs');
+  for (const theme of ['classic', 'contrast', 'night']) {
+    await send('Page.navigate', { url });
+    for (l
+  … (1174 more characters)
+  ```
+- **Read** `<temp file>`
+- **Read** `<temp file>`
+
+</details>
+
+### 🤖 Claude
+
+Classic looks as before. In night the scribe now has visible pupils, in the same style as the night creatures. Before deciding that's good enough, I'm comparing it with the creatures in night mode:
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Screenshot a night page with creatures
+
+  ```bash
+  pkill -f "remote-debugging-port=9333" 2>/dev/null; S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys
+  d=sys.argv[1]; s=open(d+'/themes.mjs').read()
+  s=s.replace("for (const theme of ['classic', 'contrast', 'night']) {","for (const theme of ['night']) {")
+  s=s.replace("""  await evaluate(`document.querySelectorAll('.menu, .dialog').forEach((e) => (e.style.visibility = 'hidden'))`);""","""  const click = (label) => evaluate(`(() => { const b = [...document.querySelectorAll('button')]
+  … (926 more characters)
+  ```
+- **Read** `<temp file>`
+- **Shell:** Add 2.21.1 release; check and build
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/releases.ts'; s=open(p).read()
+  s=s.replace("""export const RELEASES: readonly Release[] = [
+  ""","""export const RELEASES: readonly Release[] = [
+    {
+      version: '2.21.1',
+      date: '2026-11-19',
+      notes: [],
+      fixes: true,
+    },
+  """,1)
+  open(p,'w').write(s)
+  EOF
+  npm version 2.21.1 --no-git-tag-version >/dev/null; npm run check 2>&1 | grep -E "error|×|Tests"; npm run build 2>&1 | grep -E "error|larger"; git status --short
+  ```
+- **Shell:** Scan transcript, commit, merge, tag, push
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; for f in $(git status --short docs/transcripts | awk '{print $2}'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[a-z][A-Za-z0-9._-]+" "$f" | head -3; done; echo "scan done"; git add -A && git commit -q -F - <<'EOF'
+  Fix the scribe's eyes in night mode (2.21.1)
+
+  - The scribe passed 0.5 as its pupil color (black), so on night's dark eye whites its eyes were solid black; pupils now use
+  … (356 more characters)
   ```
 
 </details>

@@ -140,6 +140,8 @@ export class Scribe {
     this.face.clear();
     // Eyes on the writing, a little to the right; up toward the page when worried.
     const look = lookUp ? { x: -10, y: -60 } : { x: 30, y: 10 };
-    drawFace(this.face, 0, -R * 0.95, R * 0.42, mood, blink, look.x, look.y, 0.5);
+    // Pupils in the body's own ink, like the creatures, so they read in every theme
+    // (night's eye whites are dark, and black pupils on them looked like empty eyes).
+    drawFace(this.face, 0, -R * 0.95, R * 0.42, mood, blink, look.x, look.y, COLORS.inkLight);
   }
 }
