@@ -5,6 +5,8 @@
 
 A browser-based, offline-first typing game inspired by *Typer Shark*. Ink-blot creatures crawl across a notebook page carrying words, characters, digits or symbols, and you type them before they reach the margin. What makes it different is that **you choose exactly which keys to practice**, and the game builds all of its content from only those keys, so it grows with you as you learn.
 
+**▶ Play it free at [inkykeys.com](https://inkykeys.com/)**, in any modern browser on a computer with a keyboard. Parents and teachers: see [what it teaches and why it's safe](https://inkykeys.com/parents-and-teachers/).
+
 No servers and no analytics. Everything stays on your device (see [PRIVACY.md](PRIVACY.md)), and the game works offline after the first visit.
 
 - Requirements: [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)

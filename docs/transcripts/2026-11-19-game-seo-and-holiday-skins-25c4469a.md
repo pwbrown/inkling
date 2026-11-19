@@ -1,6 +1,6 @@
 # Game SEO and holiday skins
 
-Claude Code session started 2026-11-19. 9 prompts.
+Claude Code session started 2026-11-19. 16 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1955,6 +1955,248 @@ Accessibility, best practices and SEO stay at 100.
 
   ```bash
   npm run transcript >/dev/null 2>&1; for f in $(git status --short docs/transcripts | awk '{print $2}'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[a-z][A-Za-z0-9._-]+" "$f" | grep -v "\[removed\]" | head -3; done; git status --short docs/transcripts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Scan is clean. Committing and shipping.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Commit, merge, tag, delete branch, push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Fast start: splash screen and inlined styles (2.19.0)
+
+  - Splash screen painted from index.html alone, faded out once the menu is ready
+  - Game stylesheet inlined into the page so nothing blocks the first paint
+  - Lighthouse mobile performance 74 -> ~96 (first paint 3.9 -> 2.0 s, largest paint 4.5 -> 2.4 s)
+  - Tried and dropped font preloads and a separate PixiJS chunk (both slower); size-warning limit set to 650 kB with the reason
+  - README page-speed section, REQUIREMENTS row 28, M28 progression section, splash in the snapshot tour, release notes
+  - Transcr
+  … (309 more characters)
+  ```
+- **Shell:** Wait for deploy and confirm the live splash
+
+  ```bash
+  sleep 10; id=$(gh run list --workflow deploy.yml --limit 1 --json databaseId -q '.[0].databaseId'); timeout 400 gh run watch "$id" --exit-status >/dev/null 2>&1; echo "deploy exit $?"; sleep 20; curl -s https://inkykeys.com/ | grep -c 'id="splash"'; gh run list --limit 3 --json name,conclusion,headBranch | cat
+  ```
+
+</details>
+
+### 🤖 Claude
+
+2.19.0 (Fast start) is live on inkykeys.com, and the live page now has the splash screen. The Deploy, CI and Release workflows all passed.
+
+- **Commit:** `62455d0`, fast-forward merged into `main` and tagged `v2.19.0`. I scanned the transcript before committing and found no private details.
+- **Branch:** `feat/m28-fast-start` is deleted.
+
+Players who already have the game get the update on their next visit or two.
+
+The one thing still on your list is verifying the domain in Google Search Console and Bing, then submitting the sitemap. The steps are in my earlier message and in the README's "Search engines" section.
+
+## 🧑 Prompt
+
+> walk me through the domain verification now
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Look up current DNS TXT and nameservers
+
+  ```bash
+  dig +short TXT inkykeys.com; dig +short NS inkykeys.com
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Let's do it step by step. I just checked: inkykeys.com uses Cloudflare's nameservers and has no TXT records yet, so this will be the first one. Once you've added it, I can check it's live before you click Verify.
+
+## Part 1: Google Search Console
+
+**1. Start the property**
+- Open https://search.google.com/search-console and sign in with the Google account that should own the site. You can add other people later.
+- If this is your first property, a "Select property type" screen appears. Otherwise, open the property dropdown at the top left and choose **+ Add property**.
+- Choose the **Domain** box on the left, not "URL prefix". Domain covers `inkykeys.com`, `www`, `http` and `https` in one go.
+- Type `inkykeys.com`, with no `https://` and no slash, and click **Continue**.
+
+**2. Copy the record**
+- Google shows "Verify domain ownership via DNS record" with a value like `google-site-verification=AbC123…`.
+- Click **Copy**.
+- Keep this tab open, and don't click Verify yet.
+
+**3. Add it in Cloudflare**
+- In a new tab, go to https://dash.cloudflare.com, open **inkykeys.com**, then **DNS → Records**.
+- Click **Add record** and fill in:
+  - **Type:** `TXT`
+  - **Name:** `@` (Cloudflare will show it as `inkykeys.com`)
+  - **TTL:** Auto
+  - **Content:** paste the whole value, including the `google-site-verification=` part. Cloudflare may add quote marks around it; that's fine.
+- Click **Save**. Leave your existing GitHub Pages records alone. TXT records have no proxy switch, so your "DNS only" setup stays as it is.
+
+**Tell me when you've saved it.** I'll check that the record is visible to the world, which usually takes under a minute with Cloudflare. Then you'll click **Verify** in the Google tab, and we'll move on to:
+- submitting the sitemap,
+- asking Google to index the main pages,
+- Bing, which can import the site straight from Google, so no second DNS record is needed.
+
+## 🧑 Prompt
+
+> ok I added the TXT record, check it
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check the TXT record across resolvers
+
+  ```bash
+  dig +short TXT inkykeys.com; echo "--- via 8.8.8.8"; dig +short TXT inkykeys.com @8.8.8.8; echo "--- via 1.1.1.1"; dig +short TXT inkykeys.com @1.1.1.1; echo "--- authoritative"; dig +short TXT inkykeys.com @scott.ns.cloudflare.com
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The record is live. It shows up correctly on Cloudflare's own nameservers, Google's DNS (8.8.8.8) and Cloudflare's public DNS (1.1.1.1), as a single `google-site-verification=…` value.
+
+**4. Verify.** Go back to the Search Console tab and click **Verify**. You should see "Ownership verified". If it says it couldn't find the record, wait a minute and click again. Google's own DNS already sees it, so it shouldn't take long. Keep the TXT record in Cloudflare for good: Google checks it from time to time.
+
+**5. Submit the sitemap**
+- Click **Go to property** (or pick `inkykeys.com` in the property dropdown).
+- In the left menu, open **Indexing → Sitemaps**.
+- Under "Add a new sitemap", the box already starts with `https://inkykeys.com/`. Type `sitemap.xml` and click **Submit**.
+- It may show "Couldn't fetch" for a while at first. That's normal, and it changes to **Success** with 4 pages found once Google reads it, usually within a day.
+
+**6. Ask Google to look now (optional, but faster)**
+- Paste `https://inkykeys.com/` into the **Inspect any URL** bar at the top.
+- When it says "URL is not on Google", click **Request indexing**. It runs a quick test for a minute or so.
+- Do the same for `https://inkykeys.com/parents-and-teachers/` and `https://inkykeys.com/how-to-play/`. There's a small daily limit, so those three are enough. Google finds the Privacy page from the sitemap.
+
+Tell me once it says verified and the sitemap is submitted, and we'll do Bing.
+
+## 🧑 Prompt
+
+> verified and sitemap submitted, now bing
+
+### 🤖 Claude
+
+Google is done. Bing is quicker, because it can import everything from Search Console.
+
+**1. Sign in**
+- Open https://www.bing.com/webmasters and click **Sign in**.
+- It accepts a Microsoft, Google or Facebook account. Signing in with the **same Google account** as Search Console makes the import smoothest.
+
+**2. Import from Google**
+- On the welcome screen, choose **Import your sites from GSC**, the left-hand option.
+  - If you've used Bing Webmaster Tools before and land on a dashboard instead, open the site dropdown at the top and choose **Add site**. Then pick the **Import from GSC** option there.
+- Click **Continue** and pick the Google account you used for Search Console.
+- Google shows a consent screen asking to let Bing **view** your Search Console data. That's read-only: Bing can see your verified sites and sitemaps but can't change anything. Approve it if that's fine with you.
+- Back in Bing, tick **inkykeys.com**, check that its sitemap is selected too, and click **Import**.
+
+That's all. Bing treats the site as verified because Google already confirmed it, so you don't need another DNS record, file or meta tag. The sitemap comes along with the import.
+
+**3. Check (a minute later)**
+- Open **Sitemaps** in the left menu. `https://inkykeys.com/sitemap.xml` should be listed, maybe as "Processing" at first.
+- Optional: in **URL Inspection**, enter `https://inkykeys.com/` and click **Request indexing** to speed things up.
+
+Bing's results also feed DuckDuckGo, Yahoo and Ecosia, so this covers most search engines besides Google. Results usually appear within a few days to two weeks. Google's **Pages** report will show progress as it reads the site.
+
+Tell me if the import screen looks different from this, or if inkykeys.com isn't in the list to import.
+
+## 🧑 Prompt
+
+> bing import done, sitemap shows up
+
+<details><summary>2 tool calls</summary>
+
+- **Read** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/memory/custom-domain-pending.md`
+- **Edited** `/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys/memory/custom-domain-pending.md`
+
+</details>
+
+### 🤖 Claude
+
+That's the domain verification finished. inkykeys.com is verified in Google Search Console and Bing Webmaster Tools, and both have the sitemap. Neither needed any change to the code.
+
+**What to expect:**
+- **In the next day or two:** both sitemaps should show **Success** with 4 pages. Google's **Indexing → Pages** report will start counting indexed pages.
+- **In a few days to two weeks:** the site starts showing up in searches, starting with searches for "Inky Keys". Searches like "typing game for kids" take longer and depend on other sites linking to it.
+- **Link previews:** sharing inkykeys.com in Messages, Slack and similar apps should already show the new card with the logo.
+
+**Keep in Cloudflare:** the `google-site-verification` TXT record, as well as the GitHub records. I've added that to my notes about the domain so it doesn't get tidied away later.
+
+**Worth a look in a week or so:**
+- In Search Console, **Performance** shows which searches find the site.
+- **Pages** lists anything Google couldn't index. I'd expect the 404 page there, and that's deliberate.
+
+If you want more people to find it, links from other sites help more than anything left in the code. Good places are school or homeschool resource lists, a "free typing games" roundup, or the GitHub repo's homepage field. I can set the repo's homepage, description and topics whenever you like.
+
+## 🧑 Prompt
+
+> set the GitHub repo homepage, description and topics
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Show current repo description, homepage and topics
+
+  ```bash
+  gh repo view --json description,homepageUrl,repositoryTopics,visibility | cat
+  ```
+- **Shell:** Set repo homepage, description and topics
+
+  ```bash
+  gh repo edit --homepage "https://inkykeys.com" --description "A free, offline typing game for kids and beginners: type to stop ink creatures crossing a notebook page, learning one key at a time or practicing just the keys you choose. No ads, no accounts. Mostly AI-generated." --add-topic typing-game,typing-tutor,touch-typing,learn-to-type,educational-game,kids,browser-game,pwa,offline-first,typescript,pixijs,vite && gh repo view --json description,homepageUrl,repositoryTopics -q '{description, homepageUrl, topics: [.repositoryTopics[].name]}' | cat
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The GitHub repo page is updated.
+
+- **Homepage:** `https://inkykeys.com`. It used to point at the old `pwbrown.github.io/inky-keys/` address, which only redirected.
+- **Description:** "A free, offline typing game for kids and beginners: type to stop ink creatures crossing a notebook page, learning one key at a time or practicing just the keys you choose. No ads, no accounts. Mostly AI-generated." I kept your "Mostly AI-generated" note from the old description.
+- **Topics:** typing-game, typing-tutor, touch-typing, learn-to-type, educational-game, kids, browser-game, pwa, offline-first, typescript, pixijs, vite.
+
+The topics put the repo on GitHub's topic pages, such as github.com/topics/typing-game, which is another way people can find it. The homepage link also gives search engines a link to inkykeys.com from a well-known site. You can tweak any of it under the ⚙️ next to **About** on the repo page.
+
+## 🧑 Prompt
+
+> add the inkykeys.com link to the README
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Branch and read the top of the README
+
+  ```bash
+  git checkout -q -b chore/readme-site-link && sed -n 1,12p README.md | cut -c1-160; grep -n "inkykeys.com" README.md | head
+  ```
+- **Edited** `README.md`
+
+</details>
+
+### 🤖 Claude
+
+I added the link to the top of [README.md](README.md), just after the intro paragraph, so it's one of the first things visitors see:
+
+> **▶ Play it free at [inkykeys.com](https://inkykeys.com/)**, in any modern browser on a computer with a keyboard. Parents and teachers: see [what it teaches and why it's safe](https://inkykeys.com/parents-and-teachers/).
+
+The second link points parents and teachers coming from GitHub to the page written for them.
+
+The change is on a new branch, `chore/readme-site-link`, and isn't committed or pushed yet. It's a README-only change, so there's no release or version bump. Pushing it will still re-run the deploy, but the game doesn't change.
+
+## 🧑 Prompt
+
+> Yes, push it
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan it
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; for f in $(git status --short docs/transcripts | awk '{print $2}'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[a-z][A-Za-z0-9._-]+" "$f" | head -3; done; git status --short
   ```
 
 </details>
