@@ -1199,6 +1199,18 @@ export class Menu {
         link('suggest', ISSUES_URL, t('about.suggest'), iconSvg('words')),
       ]),
       h('p', { className: 'menu-best' }, [t('about.why')]),
+      // The website's plain pages (scripts/site-pages.ts), in a new tab so the game stays open.
+      h(
+        'p',
+        { className: 'menu-best about-pages' },
+        (['how-to-play', 'parents-and-teachers', 'privacy'] as const).flatMap((slug, i) => [
+          i > 0 ? ' · ' : '',
+          h('a', { href: `${import.meta.env.BASE_URL}${slug}/`, target: '_blank', rel: 'noopener', 'data-id': `page-${slug}` }, [
+            t(`about.page.${slug}` as MessageKey),
+            h('span', { className: 'visually-hidden' }, [' ', t('about.newTab')]),
+          ]),
+        ]),
+      ),
       h('div', { className: 'tc-actions' }, [
         h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', 'data-autofocus': true, onClick: () => this.show('title') }, [
           t('menu.back'),

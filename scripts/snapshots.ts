@@ -5,6 +5,7 @@
  *   npm run snapshots -- m15        # writes docs/progression/m15/*.png
  *   npm run snapshots -- latest     # refreshes the "latest" column
  *   npm run snapshots -- m26 holidays   # only the holiday shots (M26)
+ *   npm run snapshots -- public social  # the link-preview card and install screenshot, into public/
  *
  * It starts the Vite dev server (which exposes `window.inkling`, see
  * src/main.ts), opens headless Chrome, and drives the game over the Chrome
@@ -33,7 +34,8 @@ if (!folder || !/^[\w-]+$/.test(folder)) {
   console.error('Usage: npm run snapshots -- <folder>   (for example m15 or latest)');
   process.exit(1);
 }
-const outDir = join(root, 'docs/progression', folder);
+const mode = process.argv[3];
+const outDir = mode === 'social' ? join(root, 'public') : join(root, 'docs/progression', folder);
 const WIDTH = 1280;
 const HEIGHT = 800;
 
@@ -45,7 +47,9 @@ type Step =
   | { eval: string }
   | { play: number; maxX?: number }
   /** Reload the game with this query string (e.g. `?season=christmas`; dev server only). */
-  | { open: string };
+  | { open: string }
+  /** Change the window size. */
+  | { viewport: [number, number] };
 
 /** Scroll every scrolled box back to the top, so long dialogs show their start. */
 const SCROLL_TOP = `document.querySelectorAll('*').forEach((e) => { if (e.scrollTop) e.scrollTop = 0; })`;
@@ -204,6 +208,8 @@ const HOLIDAY_TOUR: Step[] = [
 const MAIN_TOUR: Step[] = [
   { open: '?season=none' },
   { shot: 'menu' },
+  // About, with links to the website's pages (M27).
+  { click: 'About' }, { shot: 'about' }, { key: 'Escape' },
   { click: 'Desk' }, { eval: SCROLL_TOP }, { shot: 'desk' }, { key: 'Escape' },
   { click: 'Switch player' }, { shot: 'players' }, { key: 'Escape' },
   { click: 'Settings' }, { shot: 'settings' }, { key: 'Escape' },
@@ -238,7 +244,44 @@ const MAIN_TOUR: Step[] = [
   { play: 60000, maxX: 1000 }, { wait: 1500 }, { shot: 'page-done' },
 ];
 
-const TOUR: Step[] = process.argv[3] === 'holidays' ? HOLIDAY_TOUR : [...MAIN_TOUR, ...HOLIDAY_TOUR];
+/**
+ * The link-preview card (1200×630, for og:image) and the install screenshot
+ * (manifest `screenshots`), written to public/ (M27). The card lays the logo
+ * and a line about the game over the creature lineup.
+ */
+const SOCIAL_CARD = `(() => {
+  const card = document.createElement('div');
+  card.style.cssText = 'position:fixed;left:190px;top:366px;width:470px;padding:16px 30px 18px;background:#f7f1e3;border:3px solid #1f2a44;border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,0.35);z-index:99;font-family:"Atkinson Hyperlegible Next",sans-serif;color:#1f2a44';
+  // The menu's logo (src/ui/menu.ts), drawn here because the menu is hidden during play.
+  card.insertAdjacentHTML('beforeend', '<svg viewBox="0 -4 390 100" width="330" style="display:block;overflow:visible">' +
+    '<path d="M44 6 L26 48 A21 21 0 1 0 62 48 Z" fill="#1f2a44"/>' +
+    '<circle cx="38" cy="62" r="4.2" fill="#f7f1e3"/><circle cx="52" cy="62" r="4.2" fill="#f7f1e3"/>' +
+    '<circle cx="34" cy="50" r="3" fill="#f7f1e3"/><path d="M39 72 q6 5 12 0" fill="none" stroke="#f7f1e3" stroke-width="2.4" stroke-linecap="round"/>' +
+    '<text x="80" y="70" fill="#1f2a44" font-family="Georgia, serif" font-style="italic" font-size="66">Inky Keys</text>' +
+    '<path d="M84 82 C160 74 270 90 366 78" fill="none" stroke="#d64545" stroke-width="3" stroke-linecap="round"/></svg>');
+  const line = document.createElement('p');
+  line.textContent = 'A free typing game where you choose the keys.';
+  line.style.cssText = 'margin:10px 0 0;font-size:28px;font-weight:700;line-height:1.25';
+  const more = document.createElement('p');
+  more.textContent = 'No ads, no accounts. Works offline.';
+  more.style.cssText = 'margin:12px 0 0;font-size:22px;color:#46506b';
+  card.append(line, more);
+  document.body.append(card);
+  return 'ok';
+})()`;
+
+const SOCIAL_TOUR: Step[] = [
+  { open: '?season=none' },
+  { click: FREE_WRITE }, { click: 'Start writing' }, { wait: 800 }, { key: 'Enter' },
+  { wait: 4000 }, { eval: LINEUP }, { wait: 700 }, { shot: 'screenshots/play-wide' },
+  { viewport: [1200, 630] }, { wait: 600 }, { eval: SOCIAL_CARD }, { wait: 400 }, { shot: 'social-card' },
+];
+
+/** The website's plain pages (M27): a path, not a query, so `open` doesn't wait for the game. */
+const SITE_TOUR: Step[] = [{ open: 'parents-and-teachers/' }, { shot: 'site-parents' }, { open: 'how-to-play/' }, { shot: 'site-how-to-play' }];
+
+const TOUR: Step[] =
+  mode === 'holidays' ? HOLIDAY_TOUR : mode === 'social' ? SOCIAL_TOUR : [...MAIN_TOUR, ...HOLIDAY_TOUR, ...SITE_TOUR];
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -336,7 +379,10 @@ try {
   const open = async (query: string) => {
     await send('Page.navigate', { url: url + query });
     await sleep(500);
-    for (let i = 0; i < 100 && !(await evaluate('Boolean(window.inkling)')); i++) await sleep(200);
+    // A website page has no game to wait for.
+    if (query === '' || query.startsWith('?')) {
+      for (let i = 0; i < 100 && !(await evaluate('Boolean(window.inkling)')); i++) await sleep(200);
+    }
     await sleep(1000);
   };
   if (!('open' in TOUR[0]!)) await open('');
@@ -344,8 +390,11 @@ try {
   for (const step of TOUR) {
     if ('open' in step) {
       await open(step.open);
+    } else if ('viewport' in step) {
+      await send('Emulation.setDeviceMetricsOverride', { width: step.viewport[0], height: step.viewport[1], deviceScaleFactor: 1, mobile: false });
     } else if ('shot' in step) {
       const { data } = (await send('Page.captureScreenshot', { format: 'png' })) as { data: string };
+      mkdirSync(dirname(join(outDir, `${step.shot}.png`)), { recursive: true });
       writeFileSync(join(outDir, `${step.shot}.png`), Buffer.from(data, 'base64'));
       console.log(`  ${folder}/${step.shot}.png`);
     } else if ('wait' in step) {

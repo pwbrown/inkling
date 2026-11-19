@@ -1,6 +1,6 @@
 # Game SEO and holiday skins
 
-Claude Code session started 2026-11-19. 3 prompts.
+Claude Code session started 2026-11-19. 6 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -978,6 +978,496 @@ Milestone 26 is finished on `feat/m26-holidays`, and `npm run check` (428 tests)
 
   ```bash
   npm run transcript 2>&1 | tail -5; git status --short docs/transcripts | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Scanning the changed transcripts with generic patterns (emails, tokens, home paths).
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Scan transcripts for emails, tokens and paths
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys/docs/transcripts && for f in 2026-11-19-game-seo-and-holiday-skins-25c4469a.md 2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2.md README.md; do echo "== $f"; grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com" | head; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f" | head; grep -noE "/Users/[A-Za-z0-9._-]+|/private/tmp/[^ )\`]*" "$f" | sort -u | head; done
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Clean. Committing.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Commit the holidays milestone
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git add -A && git status --short | grep -v "^[AM] " ; git commit -q -F - <<'EOF'
+  Holidays: Thanksgiving and Christmas looks (2.17.0)
+
+  - Seasons by local date (core/seasons.ts): Thanksgiving from two weeks before through the Sunday after, Christmas through December; tuning in GAME_CONFIG.seasons
+  - Page decor (leaves, holly, falling leaves and snow), hats and trimmings on creatures, the scribe and the menu logo
+  - Holiday words on some Scrawler pages in season, never on the Daily Page
+  - Holidays sticker shelf: Harvest Helper and Snow Scribe unlock Desk 
+  … (319 more characters)
+  ```
+- **Shell:** Merge to main, tag the release, delete branch
+
+  ```bash
+  git checkout -q main && git merge --ff-only feat/m26-holidays 2>&1 | tail -1 && npm run release:tag 2>&1 | tail -3 && git branch -d feat/m26-holidays && git log --oneline --decorate -2 && git status --short | head -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Holidays (2.17.0) is committed, fast-forward merged into `main` and tagged `v2.17.0`.
+
+- **Commit:** `f687000` "Holidays: Thanksgiving and Christmas looks (2.17.0)". It includes the updated transcripts, which I scanned for emails, tokens and home-folder paths, with no hits.
+- **Branch:** `feat/m26-holidays` is deleted.
+- **Not pushed:** inkykeys.com still runs 2.16.1. Pushing `main` deploys the site, and pushing the tag publishes the GitHub Release. Here are the commands if you'd rather push yourself:
+
+```bash
+git push origin main
+```
+
+```bash
+git push origin v2.17.0
+```
+
+The SEO milestone (27) is next. I'll start it on `feat/m27-seo` whenever you're ready.
+
+## 🧑 Prompt
+
+> Push both
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Push main and the release tag
+
+  ```bash
+  git push origin main 2>&1 | tail -2 && git push origin v2.17.0 2>&1 | tail -2
+  ```
+- **Shell:** Check that deploy and release workflows started
+
+  ```bash
+  sleep 5; gh run list --limit 3 --json name,status,conclusion,headBranch,event | cat
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed `main` and the `v2.17.0` tag. That started three workflows on GitHub: **Deploy** (to inkykeys.com), **CI**, and **Release** (makes the GitHub Release from the tag). All three were still running when I last checked, so I haven't confirmed the site is on 2.17.0 yet.
+
+Once Deploy finishes, the Thanksgiving look should show up on the live site straight away, since today falls in its window. Players who already have the game will get it on their next visit.
+
+## 🧑 Prompt
+
+> Start SEO
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Check deploy; branch; read About and privacy links
+
+  ```bash
+  gh run list --limit 3 --json name,conclusion | cat; git checkout -q -b feat/m27-seo; grep -n "about\b\|'about\.\|github\|issues" src/ui/menu.ts | head -20; grep -n "'about\." src/i18n/en.ts; grep -n "^#\|\](" PRIVACY.md | head -30
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Starting with the game page's head tags.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Add SEO meta, OG tags, JSON-LD and noscript
+
+  ```bash
+  python3 - <<'EOF'
+  p='index.html'; s=open(p).read()
+  s=s.replace('''    <meta name="description" content="Inky Keys: an offline-first typing game where you choose which keys to practice." />
+      <meta name="theme-color" content="#1f2a44" />
+      <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+      <title>Inky Keys</title>''','''    <title>Inky Keys: a free typing game for kids where you choose the keys</title>
+      <meta
+        name="description"
+        content="A free, cozy typing game for kids and beginners. Ink cre
+  … (3479 more characters)
+  ```
+- **Shell:** Find font files and base styles
+
+  ```bash
+  ls node_modules/@fontsource/atkinson-hyperlegible-next/files | grep "latin-[47]00-normal.woff2"; ls node_modules/@fontsource/caveat/files | grep "latin-700-normal.woff2"; cat src/fonts.ts | head -30; cat src/style.css | head -30; grep -n "favicon\|tc-paper\|--tc-ink:" src/ui/dialog.css | head
+  ```
+- **Shell:** Check tsconfig and eslint scope
+
+  ```bash
+  cat tsconfig.json; cat eslint.config.js | head -40; sed -n 1,12p CREDITS.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the static-pages plugin.
+
+<details><summary>5 tool calls</summary>
+
+- **Wrote** `scripts/site-pages.ts`
+- **Wrote** `site/site.css`
+- **Shell:** Read README powers and creatures sections
+
+  ```bash
+  sed -n 60,90p README.md
+  ```
+- **Shell:** Write the static page contents
+
+  ```bash
+  mkdir -p /Users/[removed]/projects/inky-keys/site/en && cd /Users/[removed]/projects/inky-keys/site/en && cat > how-to-play.html <<'EOF'
+  <!-- title: How to play -->
+  <!-- description: How to play Inky Keys, a free typing game: type the letters and words on ink creatures before they reach the margin. Modes, keys, powers, bosses and tips. -->
+  <h1>How to play Inky Keys</h1>
+  <p class="lead">
+    Ink creatures crawl across a notebook page carrying letters and words. Type what each one carries before it reaches the
+    red margin on the left. Every creature that gets through drains your ink well, and
+  … (7221 more characters)
+  ```
+- **Shell:** Wire plugin and manifest into Vite; add robots
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && python3 - <<'EOF'
+  p='vite.config.ts'; s=open(p).read()
+  s=s.replace("import { defineConfig } from 'vitest/config';","import { defineConfig } from 'vitest/config';\nimport { sitePages } from './scripts/site-pages.ts';")
+  s=s.replace("""  plugins: [
+  ""","""  plugins: [
+      // The plain website pages (How to play, For parents and teachers, Privacy, 404) and sitemap.xml.
+      sitePages(fileURLToPath(new URL('.', import.meta.url))),
+  """,1)
+  s=s.replace("import { readFileSync } from 'node:fs';","import { readFileSync } from 'node:fs';\nimport { fileURLToPath }
+  … (1629 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Pages are written and wired into Vite. Checking them in the browser.
+
+<details><summary>6 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/parents-and-teachers/"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+- **browser_batch** `{"actions":[{"name":"resize_window","input":{"colorScheme":"light","width":1280,"height":800}},{"name":"navigate","input":{"url":"http://localhost:5173/privacy/"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"co
+… (268 more characters)`
+- **Shell:** Read the About screen code
+
+  ```bash
+  sed -n 1178,1215p src/ui/menu.ts
+  ```
+- **Shell:** Add website links to the About screen
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'; s=open(p).read()
+  s=s.replace("""      h('p', { className: 'menu-best' }, [t('about.why')]),
+        h('div', { className: 'tc-actions' }, [""","""      h('p', { className: 'menu-best' }, [t('about.why')]),
+        // The website's plain pages (scripts/site-pages.ts), in a new tab so the game stays open.
+        h(
+          'p',
+          { className: 'menu-best about-pages' },
+          (['how-to-play', 'parents-and-teachers', 'privacy'] as const).flatMap((slug, i) => [
+            i > 0 ? ' · ' : '',
+            h('a', { href: `${import.meta.env.BASE_URL}${slug}/`, targ
+  … (711 more characters)
+  ```
+- **Shell:** Add social card tour and capture it
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/snapshots.ts'; s=open(p).read()
+  s=s.replace(""" *   npm run snapshots -- m26 holidays   # only the holiday shots (M26)
+  """,""" *   npm run snapshots -- m26 holidays   # only the holiday shots (M26)
+   *   npm run snapshots -- public social  # the link-preview card and install screenshot, into public/
+  """)
+  s=s.replace("""const outDir = join(root, 'docs/progression', folder);""","""const mode = process.argv[3];
+  const outDir = mode === 'social' ? join(root, 'public') : join(root, 'docs/progression', folder);""")
+  s=s.replace("""  /** Reload the game with this query strin
+  … (2753 more characters)
+  ```
+- **Read** `public/social-card.png`
+
+</details>
+
+### 🤖 Claude
+
+The preview card is missing the logo (the menu isn't on screen during play), so I'm drawing the logo directly and moving the card off the creatures.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Draw logo in the card and reposition it
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/snapshots.ts'; s=open(p).read()
+  s=s.replace("""  const logo = document.querySelector('.menu-logo');
+    const card = document.createElement('div');
+    card.style.cssText = 'position:fixed;left:150px;top:150px;""","""  const card = document.createElement('div');
+    card.style.cssText = 'position:fixed;left:190px;top:372px;""")
+  s=s.replace("""  if (logo) {
+      const copy = logo.cloneNode(true);
+      copy.style.width = '400px';
+      card.append(copy);
+    }
+  ""","""  // The menu's logo (src/ui/menu.ts), drawn here because the menu is hidden during play.
+    card.insertAdjacentHT
+  … (957 more characters)
+  ```
+- **Read** `public/social-card.png`
+- **Shell:** Nudge the card up and recapture
+
+  ```bash
+  sed -i '' "s/left:190px;top:372px;/left:190px;top:366px;/; s/padding:20px 30px 24px;/padding:16px 30px 18px;/" scripts/snapshots.ts && timeout 200 npm run snapshots -- public social 2>&1 | tail -1 && python3 -c "
+  import struct
+  for f in ['public/social-card.png','public/screenshots/play-wide.png']:
+    d=open(f,'rb').read(24); print(f, struct.unpack('>II', d[16:24]))"; du -h public/social-card.png public/screenshots/play-wide.png
+  ```
+- **Read** `public/social-card.png`
+- **Shell:** Build and inspect output and service worker
+
+  ```bash
+  npm run build 2>&1 | grep -iE "error|warn|precache" ; ls dist dist/how-to-play dist/site; grep -o '"url":"[^"]*html"' dist/sw.js | head; grep -o 'url:"[^"]*\.html"' dist/sw.js | head; grep -o "navigateFallback[^)]*" dist/sw.js | head -2
+  ```
+- **Shell:** Check whether chunk warning predates this branch
+
+  ```bash
+  npm run build 2>&1 | grep -B3 -A3 "chunk" | head -20; git stash -q && npm run build 2>&1 | grep -c "chunkSizeWarningLimit"; git stash pop -q && git status --short | wc -l
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The build works: the pages, fonts and sitemap are in `dist/`, and the service worker precaches the three pages. Next I'm checking the production preview, offline loading and Lighthouse.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Rebuild and add a preview server config
+
+  ```bash
+  npm run build >/dev/null 2>&1; python3 - <<'EOF'
+  import json
+  p='.claude/launch.json'; d=json.load(open(p))
+  d['configurations'].append({"name":"inky-keys-preview","runtimeExecutable":"npm","runtimeArgs":["run","preview","--","--port","4173","--strictPort"],"port":4173})
+  json.dump(d,open(p,'w'),indent=2); open(p,'a').write('\n')
+  EOF
+  git check-ignore -q .claude/launch.json && echo ignored || git ls-files .claude
+  ```
+- **preview_start** `{"name":"inky-keys-preview"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":4},"tabId":"tab-1"},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"await navigator.serviceWorker.ready; const keys = await caches.keys(); const hits = []; for (const k of keys) { const c = await
+… (347 more characters)`
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"tabId":"tab-1","url":"http://localhost:4173/how-to-play/"}},{"name":"javascript_tool","input":{"action":"javascript_exec","tabId":"tab-1","text":"[document.title, !!navigator.serviceWorker.controller, document.querySelector('h1')?.textContent, getComputedStyl
+… (241 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Pages load through the service worker, and unknown paths fall back to the game as before. Running Lighthouse (fetched with `npx`, nothing added to the project) against the preview.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Run Lighthouse on the game and site pages
+
+  ```bash
+  cd "<temp file>" && export CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"; for u in "" how-to-play/ parents-and-teachers/ privacy/; do npx --yes lighthouse@12.8.2 "http://localhost:4173/$u" --quiet --chrome-flags="--headless=new" --only-categories=seo,accessibility,best-practices,performance --output=json --output-path="lh-$(echo ${u:-home} | tr -d /).json" >/dev/null 2>&1; node -e "const r=require('./lh-$(echo ${u:-home} | tr -d /).json');console.log('${u:-/}'
+  … (88 more characters)
+  ```
+- **Shell:** Show Lighthouse performance details
+
+  ```bash
+  cd "<temp file>" && for f in lh-home.json lh-parents-and-teachers.json; do echo "== $f"; node -e "const r=require('./$f');for (const id of ['first-contentful-paint','largest-contentful-paint','total-blocking-time','cumulative-layout-shift','speed-index']) console.log(id, r.audits[id].displayValue); const o=Object.values(r.audits).filter(a=>a.score!==null&&a.score<0.9&&a.details&&(a.details.type==='opportunity'||a.details.overallSavingsMs>0)).map(a=>a.id+' '+(a.displayValue||''));console.l
+  … (23 more characters)
+  ```
+- **Shell:** Inline CSS, preload fonts, rerun Lighthouse
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/site-pages.ts'; s=open(p).read()
+  s=s.replace("""export function renderPage(page: SitePage): string {""","""/** `css`: the shared stylesheet, inlined so nothing blocks the first paint. */
+  export function renderPage(page: SitePage, css = ''): string {""")
+  s=s.replace("""<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'" />""","""<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; font-
+  … (2249 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Every site page now scores 100 in all four categories. Adding tests for the page builder, then docs.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Add site page tests and run check
+
+  ```bash
+  cat > src/site.test.ts <<'EOF'
+  import { fileURLToPath } from 'node:url';
+  import { describe, expect, it } from 'vitest';
+  import { SITE_URL, loadPages, markdownToHtml, renderPage, sitemap } from '../scripts/site-pages.ts';
+
+  const root = fileURLToPath(new URL('..', import.meta.url));
+
+  describe('website pages (scripts/site-pages.ts)', () => {
+    const pages = loadPages(root);
+
+    it('has the guide, parents, privacy and 404 pages, each with a title and a search-sized description', () => {
+      expect(pages.map((p) => p.slug).sort()).toEqual(['404', 'how-to-play', 'parents-and-teachers', 'privacy']);
+   
+  … (1418 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now a quick look at the new About links in the game.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"tabId":"seed","url":"http://localhost:5173/?season=none"}},{"name":"computer","input":{"action":"wait","duration":2},"tabId":"seed"},{"name":"computer","input":{"tabId":"seed","action":"key","text":"i","action_summary":"Opens the About screen"}},{"name":"comp
+… (141 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The About links work. Adding the About screen and a site page to the snapshot tour, then the docs and release.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Extend snapshot tour; take m27 and latest
+
+  ```bash
+  python3 - <<'EOF'
+  p='scripts/snapshots.ts'; s=open(p).read()
+  s=s.replace("""const MAIN_TOUR: Step[] = [
+    { open: '?season=none' },
+    { shot: 'menu' },""","""const MAIN_TOUR: Step[] = [
+    { open: '?season=none' },
+    { shot: 'menu' },
+    // About, with links to the website's pages (M27).
+    { click: 'About' }, { shot: 'about' }, { key: 'Escape' },""")
+  s=s.replace("""const TOUR: Step[] = mode === 'holidays' ? HOLIDAY_TOUR : mode === 'social' ? SOCIAL_TOUR : [...MAIN_TOUR, ...HOLIDAY_TOUR];""","""/** The website's plain pages (M27): a path, not a query, so `open` doesn't wait for the game. */
+  const
+  … (997 more characters)
+  ```
+- **Read** `docs/progression/m27/site-parents.png`
+- **Read** `docs/progression/m27/about.png`
+
+</details>
+
+### 🤖 Claude
+
+The About links show in default browser blue, so I'm giving them the ink color. Then docs and release.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Style links; docs, CLAUDE note, release 2.18.0
+
+  ```bash
+  cat >> src/ui/menu.css <<'EOF'
+
+  /* About: links to the website's pages (M27). */
+  .about-pages a {
+    color: var(--tc-ink);
+    text-decoration-color: var(--tc-margin);
+    text-underline-offset: 0.15em;
+  }
+  EOF
+  python3 - <<'EOF'
+  import re
+  p='README.md'; s=open(p).read()
+  s=s.replace("""The build is a static site, so any static host works too:""","""Besides the game, the build has a few plain pages for people and search engines: **How to play** (`/how-to-play/`), **For parents and teachers** (`/parents-and-teachers/`), **Privacy** (`/privacy/`, made from `PRIVACY.md`), a 404 page and `sitemap.xml`. The
+  … (3082 more characters)
+  ```
+- **Shell:** Add search console notes; retake snapshots; prune
+
+  ```bash
+  python3 - <<'EOF'
+  p='README.md'; s=open(p).read()
+  i=s.index("### Project layout")
+  add="""### Search engines
+
+  Once per site, outside the code: verify **inkykeys.com** in [Google Search Console](https://search.google.com/search-console) and [Bing Webmaster Tools](https://www.bing.com/webmasters) with a **Domain** property, which asks for a DNS TXT record (add it in Cloudflare's DNS, DNS only). Then submit `https://inkykeys.com/sitemap.xml` in both. No verification file or meta tag is needed in the repo, and nothing is added to the game.
+
+  """
+  s=s[:i]+add+s[i:]
+  open(p,'w').write(s)
+  EOF
+  npm run sna
+  … (320 more characters)
+  ```
+- **Shell:** Write M27 progression section; final check and build
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && python3 - <<'EOF'
+  p='docs/progression/README.md'; s=open(p).read()
+  sec='''### M27: SEO (2.18.0)
+
+  | Link preview | For parents and teachers |
+  |---|---|
+  | <img src="m27/social-card.png" width="420" alt="The link-preview card: the Inky Keys logo and 'A free typing game where you choose the keys. No ads, no accounts. Works offline.' on a card over a page of creatures"> | <img src="m27/site-parents.png" width="420" alt="The For parents and teachers web page: a ruled notebook page on a dark desk with a red margin, handwritten headings and a list of what th
+  … (1670 more characters)
+  ```
+- **resize_window** `{"preset":"desktop","tabId":"seed"}`
+
+</details>
+
+### 🤖 Claude
+
+The SEO milestone (27) is ready on `feat/m27-seo` as release 2.18.0. Checks (432 tests) and the build pass. Lighthouse on the production preview scores 100 for SEO, accessibility and best practices on every page.
+
+**Game page** ([index.html](index.html)):
+- A search-friendly title and description, plus a canonical link to `https://inkykeys.com/`.
+- Link-preview tags with a new 1200×630 [social card](public/social-card.png) (the logo and a one-line pitch over a page of creatures).
+- Structured data saying it's a free educational typing game for ages 5 and up. It's a data block that never runs, so the CSP is unchanged.
+- A short `<noscript>` summary with links to the new pages.
+
+**New web pages:**
+- **Pages:** How to play, For parents and teachers, Privacy (built from `PRIVACY.md` at build time, so there's one source) and a 404 page.
+- **Look:** a notebook-page style using the game's fonts, in light and dark. They have no scripts and request nothing from other sites.
+- **Where things live:** the text is in `site/en/`, and [site-pages.ts](scripts/site-pages.ts) serves the pages in dev, adds them to the build and writes `sitemap.xml`.
+- **Offline:** the service worker precaches them.
+- **Fix along the way:** the first Lighthouse run showed the page layout jumping as fonts loaded. I now preload the fonts and inline the small stylesheet, and that's gone.
+
+**Other changes:**
+- `robots.txt` points at the sitemap.
+- The install manifest gains categories, a language and a screenshot.
+- About in the game links to the three pages, opening in a new tab.
+- Docs are updated: README, REQUIREMENTS, an M27 progression section, and a CLAUDE.md note that the site pages are static HTML outside `t()`.
+- I added a preview-server entry to `.claude/launch.json`.
+
+**Two things to know:**
+- The game page itself scores 74 for performance under Lighthouse's simulated slow phone, because the main game bundle is about 600 kB. The build also warns that this chunk is just over Vite's 600 kB limit. That warning shows up without this branch's changes too. Splitting the bundle would be a separate job.
+- Getting into search results needs one step from you: verify inkykeys.com in Google Search Console and Bing Webmaster Tools using a DNS TXT record in Cloudflare, then submit the sitemap. The steps are in the README's new "Search engines" section.
+
+I can also set the GitHub repo's homepage, description and topics with `gh repo edit` if you'd like. That changes the public repo page, so I'll only do it if you say so.
+
+## 🧑 Prompt
+
+> commit, merge, and push. And then after can you help me walkthrough the process to verify the domain and then can we plan out the process to fix the lighthouse performance
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan changed files
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; cd docs/transcripts && for f in $(git status --short . | awk '{print $2}' | sed 's#docs/transcripts/##'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[A-Za-z0-9._-]+|/private/tmp/[^ )\`]*" "$f" | sort -u | head -3; done; git status --short . 
   ```
 
 </details>

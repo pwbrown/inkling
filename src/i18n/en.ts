@@ -451,6 +451,9 @@ export const en = {
   'about.source': 'Source code',
   'about.suggest': 'Ideas and bugs',
   'about.newTab': '(opens in a new tab)',
+  'about.page.how-to-play': 'How to play guide',
+  'about.page.parents-and-teachers': 'For parents and teachers',
+  'about.page.privacy': 'Privacy',
 
   'about.version': 'Version {version}',
   'about.whatsNew': 'What’s new',
@@ -460,6 +463,7 @@ export const en = {
   'whatsNew.fixes': 'Bug fixes and small improvements.',
   'whatsNew.earlier': 'Earlier versions',
   'whatsNew.ok': 'Got it',
+  'release.2.18.0.pages': 'New guides on the website: How to play, and a page for parents and teachers. Find them in About.',
   'release.2.17.0.holidays': 'The page dresses up for Thanksgiving and Christmas, with leaves, snow and hats. Turn it off in Settings.',
   'release.2.17.0.words': 'Holiday words like pie and sleigh turn up on word pages in season.',
   'release.2.17.0.keepsakes': 'Finish a page in season for a holiday sticker, a hat for your pen and a new paper to keep.',

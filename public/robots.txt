@@ -1,0 +1,5 @@
+# Inky Keys: everything here may be crawled.
+User-agent: *
+Allow: /
+
+Sitemap: https://inkykeys.com/sitemap.xml

@@ -1023,3 +1023,10 @@
     width: 80px;
   }
 }
+
+/* About: links to the website's pages (M27). */
+.about-pages a {
+  color: var(--tc-ink);
+  text-decoration-color: var(--tc-margin);
+  text-underline-offset: 0.15em;
+}

@@ -128,13 +128,17 @@ To serve the game from a sub-path, set the base path when building, e.g. `INKY_K
 
 ### Deploying
 
-The game is published to **https://inkykeys.com/** by `.github/workflows/deploy.yml`, which builds and deploys to GitHub Pages on every push to `main`. You can also run it by hand from **Actions → Deploy → Run workflow**. One-time setup: **Settings → Pages → Source: GitHub Actions**, and **Custom domain: inkykeys.com** with **Enforce HTTPS**. The domain is registered with Cloudflare, whose DNS (set to DNS only, not proxied) points it at GitHub Pages. The build is a static site, so any static host works too: serve the `dist/` folder from `npm run build` over HTTPS, with `INKY_KEYS_BASE` set to the path it's served from.
+The game is published to **https://inkykeys.com/** by `.github/workflows/deploy.yml`, which builds and deploys to GitHub Pages on every push to `main`. You can also run it by hand from **Actions → Deploy → Run workflow**. One-time setup: **Settings → Pages → Source: GitHub Actions**, and **Custom domain: inkykeys.com** with **Enforce HTTPS**. The domain is registered with Cloudflare, whose DNS (set to DNS only, not proxied) points it at GitHub Pages. Besides the game, the build has a few plain pages for people and search engines: **How to play** (`/how-to-play/`), **For parents and teachers** (`/parents-and-teachers/`), **Privacy** (`/privacy/`, made from `PRIVACY.md`), a 404 page and `sitemap.xml`. Their text lives in `site/en/`, and `scripts/site-pages.ts` wraps it in one layout for the dev server and the build. `index.html` carries the title, description, link-preview tags and structured data; the preview picture `public/social-card.png` and the install screenshot come from `npm run snapshots -- public social`. The build is a static site, so any static host works too: serve the `dist/` folder from `npm run build` over HTTPS, with `INKY_KEYS_BASE` set to the path it's served from.
 
 The service worker is only registered in production builds. Use `npm run build && npm run preview` to try offline mode locally.
 
 `npm run icons` (or `python3 scripts/make-icons.py`) redraws the app icons.
 
 `npm run transcript` exports this project's Claude Code sessions to [docs/transcripts](docs/transcripts/README.md) as Markdown. It removes email addresses, one-time codes and the home folder path, but read the result before committing it.
+
+### Search engines
+
+Once per site, outside the code: verify **inkykeys.com** in [Google Search Console](https://search.google.com/search-console) and [Bing Webmaster Tools](https://www.bing.com/webmasters) with a **Domain** property, which asks for a DNS TXT record (add it in Cloudflare's DNS, DNS only). Then submit `https://inkykeys.com/sitemap.xml` in both. No verification file or meta tag is needed in the repo, and nothing is added to the game.
 
 ### Project layout
 
@@ -145,6 +149,7 @@ The service worker is only registered in production builds. Use `npm run build &
 | `scripts/` | Build-time tools: the word pack, the app icons and the transcript export. |
 | `docs/transcripts/` | The Claude Code conversations that built the game. |
 | `src/storage/` | Save format and migrations, IndexedDB storage, and progress tracking. |
+| `site/` | The website's plain pages (text in `site/en/`, styles in `site/site.css`), built by `scripts/site-pages.ts`. |
 | `src/ui/` | DOM screens: the main and pause menus, How to play, and the Type Case, Word lists, Manage saves and Settings dialogs. |
 | `src/audio/` | Synthesized sound effects (Web Audio API). |
 | `src/input/` | DOM keyboard listener that turns key presses into game actions. |

@@ -7,14 +7,69 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://en.wikipedia.org; worker-src 'self' blob:"
     />
-    <meta name="description" content="Inky Keys: an offline-first typing game where you choose which keys to practice." />
+    <title>Inky Keys: a free typing game for kids where you choose the keys</title>
+    <meta
+      name="description"
+      content="A free, cozy typing game for kids and beginners. Ink creatures crawl across a notebook page and you type to stop them. Learn one key at a time or practice just the keys you pick. No ads, no accounts, works offline."
+    />
     <meta name="theme-color" content="#1f2a44" />
+    <link rel="canonical" href="https://inkykeys.com/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <title>Inky Keys</title>
+
+    <!-- Link previews (Open Graph and X/Twitter cards). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Inky Keys" />
+    <meta property="og:title" content="Inky Keys: a free typing game where you choose the keys" />
+    <meta property="og:description" content="Type to blot up ink creatures on a notebook page. Learn one key at a time, or practice just the keys you pick. Free, no ads, works offline." />
+    <meta property="og:url" content="https://inkykeys.com/" />
+    <meta property="og:image" content="https://inkykeys.com/social-card.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Inky Keys: ink-blot creatures carrying words crawl across a ruled notebook page toward a fountain-pen nib." />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Structured data for search engines (a data block: never run, so the CSP allows it). -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": ["VideoGame", "WebApplication"],
+        "name": "Inky Keys",
+        "url": "https://inkykeys.com/",
+        "description": "A free, offline-first typing game for kids and beginners. Ink creatures carry letters and words across a notebook page; type them before they reach the margin. Learn one key at a time in the Apprentice course, or practice just the keys you choose.",
+        "image": "https://inkykeys.com/social-card.png",
+        "genre": ["Educational", "Typing"],
+        "gamePlatform": "Web browser",
+        "applicationCategory": "GameApplication",
+        "applicationSubCategory": "Educational game",
+        "operatingSystem": "Any (runs in a web browser)",
+        "playMode": "SinglePlayer",
+        "inLanguage": "en",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "audience": { "@type": "PeopleAudience", "suggestedMinAge": 5 },
+        "educationalUse": "Typing practice",
+        "teaches": "Touch typing",
+        "license": "https://opensource.org/licenses/MIT",
+        "codeRepository": "https://github.com/pwbrown/inky-keys"
+      }
+    </script>
   </head>
   <body>
-    <main id="app" aria-label="Inky Keys game"></main>
+    <main id="app" aria-label="Inky Keys game">
+      <noscript>
+        <h1>Inky Keys</h1>
+        <p>
+          Inky Keys is a free typing game for kids and beginners. Ink creatures crawl across a notebook page carrying letters
+          and words, and you type them before they reach the margin. It needs JavaScript to play.
+        </p>
+        <p>
+          <a href="/how-to-play/">How to play</a> · <a href="/parents-and-teachers/">For parents and teachers</a> ·
+          <a href="/privacy/">Privacy</a>
+        </p>
+      </noscript>
+    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

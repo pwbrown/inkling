@@ -1,0 +1,255 @@
+/* The website's plain pages (scripts/site-pages.ts): a notebook page on the desk, like the game. */
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-weight: 400;
+  font-display: swap;
+  src: url('/site/fonts/atkinson-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/site/fonts/atkinson-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Caveat';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/site/fonts/caveat-700.woff2') format('woff2');
+}
+
+:root {
+  --paper: #f7f1e3;
+  --ink: #1f2a44;
+  --ink-light: #46506b;
+  --rule: #c9d6e3;
+  --margin: #d64545;
+  --desk: #2b2622;
+  --highlighter: #ffe066;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1d2130;
+    --ink: #e9e4d4;
+    --ink-light: #b9b4a6;
+    --rule: #333a50;
+    --margin: #e46a6a;
+    --desk: #121419;
+    --highlighter: #6b5a12;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+.site-header,
+.page,
+.site-footer {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.site-header nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+}
+
+.site-header nav a,
+.site-footer a {
+  color: #f7f1e3;
+}
+
+.site-header nav a[aria-current='page'] {
+  text-decoration-thickness: 3px;
+  text-decoration-color: var(--margin);
+}
+
+.home {
+  display: block;
+  width: 11rem;
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.logo-drop,
+.logo-word {
+  fill: #f7f1e3;
+}
+
+.logo-eye {
+  fill: var(--desk);
+}
+
+.logo-smile {
+  fill: none;
+  stroke: var(--desk);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.logo-word {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 66px;
+}
+
+.logo-underline {
+  fill: none;
+  stroke: var(--margin);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* The page: ruled paper with a red margin line down the left. */
+.page {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(90deg, transparent 2.4rem, var(--margin) 2.4rem, var(--margin) calc(2.4rem + 2px), transparent calc(2.4rem + 2px)),
+    repeating-linear-gradient(transparent 0 calc(1.8rem - 1px), var(--rule) calc(1.8rem - 1px) 1.8rem);
+  border-radius: 6px;
+  padding: 1.8rem 1.5rem 2rem 3.4rem;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 35%);
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Caveat', 'Comic Sans MS', cursive;
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 1.4em 0 0.4em;
+}
+
+h1 {
+  font-size: 2.8rem;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 2.1rem;
+}
+
+h3 {
+  font-size: 1.6rem;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.15em;
+}
+
+.page a {
+  color: var(--ink);
+  text-decoration-color: var(--margin);
+}
+
+code {
+  font-size: 0.95em;
+  background: color-mix(in srgb, var(--rule) 45%, transparent);
+  padding: 0 0.25em;
+  border-radius: 3px;
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 0.9em;
+  border: 1.5px solid var(--ink-light);
+  border-bottom-width: 3px;
+  border-radius: 5px;
+  padding: 0 0.35em;
+}
+
+mark {
+  background: var(--highlighter);
+  color: inherit;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.35rem 0.6rem 0.35rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.lead {
+  font-size: 1.25rem;
+}
+
+.play {
+  margin: 2.5rem 0 0;
+}
+
+.play-button {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--paper) !important;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.25rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 10px;
+}
+
+.play-button:hover,
+.play-button:focus-visible {
+  outline: 3px solid var(--margin);
+  outline-offset: 2px;
+}
+
+.site-footer {
+  color: #cfc8b6;
+  font-size: 0.95rem;
+  padding-top: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+@media (max-width: 34rem) {
+  .page {
+    padding: 1.4rem 1rem 1.6rem 2.6rem;
+    background-image:
+      linear-gradient(90deg, transparent 1.7rem, var(--margin) 1.7rem, var(--margin) calc(1.7rem + 2px), transparent calc(1.7rem + 2px)),
+      repeating-linear-gradient(transparent 0 calc(1.8rem - 1px), var(--rule) calc(1.8rem - 1px) 1.8rem);
+  }
+
+  h1 {
+    font-size: 2.3rem;
+  }
+}

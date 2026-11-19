@@ -351,15 +351,33 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 - A **Holidays** shelf in the sticker book: **Harvest Helper** and **Snow Scribe**, each bringing keepsakes for the Desk: a pilgrim or Santa hat for the pen and Harvest or Winter paper (save version 12).
 - The snapshot tour shoots both seasons whatever the date (`?season=` on the dev server); the rest of the tour runs with no season, so it still compares with earlier milestones.
 
+### M27: SEO (2.18.0)
+
+| Link preview | For parents and teachers |
+|---|---|
+| <img src="m27/social-card.png" width="420" alt="The link-preview card: the Inky Keys logo and 'A free typing game where you choose the keys. No ads, no accounts. Works offline.' on a card over a page of creatures"> | <img src="m27/site-parents.png" width="420" alt="The For parents and teachers web page: a ruled notebook page on a dark desk with a red margin, handwritten headings and a list of what the game teaches"> |
+| The **preview picture** shown when someone shares a link. | One of the new **web pages**, here in dark mode. |
+
+| About |
+|---|
+| <img src="m27/about.png" width="420" alt="The About screen with links to the How to play guide, For parents and teachers, and Privacy"> |
+| About links to the pages. |
+
+**New:**
+- **Web pages:** How to play, For parents and teachers, Privacy (made from `PRIVACY.md`) and a 404 page, styled as a notebook page with the game's fonts, light and dark. They work offline too.
+- **Search and sharing:** a descriptive title and description, canonical URL, link-preview tags with a social card picture, `VideoGame` structured data, a `<noscript>` summary, `robots.txt` and `sitemap.xml`. Lighthouse scores 100 for SEO, accessibility and best practices on every page.
+- **Install card:** the manifest gains categories and a screenshot.
+- The snapshot tour now includes About and two web pages; `npm run snapshots -- public social` retakes the preview picture and install screenshot.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m26
+npm run snapshots -- m27
 ```
 
-That writes a standard set of shots to `docs/progression/m26/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays). `npm run snapshots -- m26 holidays` takes only the holiday shots. Then:
+That writes a standard set of shots to `docs/progression/m27/` (menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m27 holidays` takes only the holiday shots. Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.
