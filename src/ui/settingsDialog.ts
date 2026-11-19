@@ -14,6 +14,8 @@ export interface SettingsDialogOptions {
   onTestSound(): void;
   /** Tutorial tips for the current player (they live in the save, not in Settings). */
   tips?: { enabled: boolean; onToggle(enabled: boolean): void; onReset(): void };
+  /** "Ready for more?" suggestions for this player (core/nudges.ts). */
+  nudges?: { enabled: boolean; onToggle(enabled: boolean): void };
   /** The current player's keyboard layout (also in their save); left out while a page is in play. */
   layout?: { current: LayoutId; onPick(id: LayoutId): void };
   onClose(): void;
@@ -71,6 +73,17 @@ function tipsGroup(tips: SettingsDialogOptions['tips']): HTMLElement | null {
       ),
     ]),
     status,
+  ]);
+}
+
+function nudgesGroup(nudges: SettingsDialogOptions['nudges']): HTMLElement | null {
+  if (!nudges) return null;
+  const on = h('input', { type: 'checkbox', onChange: () => nudges.onToggle(on.checked) });
+  on.checked = nudges.enabled;
+  return h('fieldset', { className: 'st-group' }, [
+    h('legend', {}, [t('settings.nudges')]),
+    h('div', { className: 'st-options' }, [h('label', { className: 'st-option' }, [on, h('span', {}, [t('settings.nudges.show')])])]),
+    h('p', { className: 'st-help' }, [t('settings.nudges.help')]),
   ]);
 }
 
@@ -156,6 +169,7 @@ export function openSettings(host: HTMLElement, options: SettingsDialogOptions):
         )
       : null,
     tipsGroup(options.tips),
+    nudgesGroup(options.nudges),
     h('fieldset', { className: 'st-group' }, [
       h('legend', {}, [t('settings.sound')]),
       h('div', { className: 'st-options' }, [

@@ -1,6 +1,6 @@
 # Game SEO and holiday skins
 
-Claude Code session started 2026-11-19. 21 prompts.
+Claude Code session started 2026-11-19. 23 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -3352,6 +3352,146 @@ Milestone 29 (Keyboards and nudges) is ready on `feat/m29-keyboards-and-nudges` 
 - **Docs:** README, REQUIREMENTS row 29, an M29 progression section with three shots, and three release notes.
 
 Still open: once a player picks **Don't suggest this again**, there's no way to turn suggestions back on. The easy fix is a per-player switch in Settings next to the tips switch. I can add that before or after shipping.
+
+## 🧑 Prompt
+
+> Yes, ship it
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Export transcript and scan it
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; for f in $(git status --short docs/transcripts | awk '{print $2}'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[a-z][A-Za-z0-9._-]+" "$f" | head -3; done; git status --short docs/transcripts
+  ```
+- **Shell:** Commit, merge, tag, delete branch, push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Keyboards and nudges: All letters default, Ready for more?, phone notice (2.20.0)
+
+  - New players start Free Write on All letters (letters, capitals, space)
+  - Ready for more?: from Free Write chapter 5, a chapter of A/A+ pages offers the Everything keys and/or the next difficulty, from the next page in the same notebook; Not now waits 3 chapters, Don't suggest this again turns it off (core/nudges.ts, save version 13)
+  - switchKeys lets keys change between pages of a notebook
+  - One-time "Made for a keyboard" card on touch-only devices
+  - "Getting the words 
+  … (518 more characters)
+  ```
+- **Shell:** Wait for deploy and confirm the live build
+
+  ```bash
+  sleep 10; id=$(gh run list --workflow deploy.yml --limit 1 --json databaseId -q '.[0].databaseId'); timeout 400 gh run watch "$id" --exit-status >/dev/null 2>&1; echo "deploy exit $?"; sleep 15; gh run list --limit 3 --json name,conclusion,headBranch | cat; curl -s https://inkykeys.com/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'; ls dist/assets | grep '^index-.*\.js$'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+2.20.0 (Keyboards and nudges) is live on inkykeys.com. The Deploy, CI and Release workflows all passed, and the live page is serving the same build I tested.
+
+- **Commit:** `519ce92`, fast-forward merged into `main` and tagged `v2.20.0`. The transcript scan was clean.
+- **Branch:** `feat/m29-keyboards-and-nudges` is deleted.
+
+Players get it on their next visit or two. New players will start on All letters. Existing players keep their keys, and once they're past chapter 4 a chapter of A grades will start offering more.
+
+The one loose end is still there: once a player picks **Don't suggest this again**, there's no way to turn suggestions back on.
+
+## 🧑 Prompt
+
+> Yes, add it
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Branch; read the tips switch and its wiring
+
+  ```bash
+  git checkout -q -b feat/nudge-setting && grep -n "tipsGroup\|tips?:\|tips:" src/ui/settingsDialog.ts | head; sed -n "$(grep -n 'function tipsGroup' src/ui/settingsDialog.ts | cut -d: -f1),+30p" src/ui/settingsDialog.ts; grep -n "tips: {" -A 12 src/main.ts | head -16; grep -n "'settings.tips" src/i18n/en.ts
+  ```
+- **Shell:** Add the per-player suggestions switch
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  P='src/ui/settingsDialog.ts'
+  edit(P, "  tips?: { enabled: boolean; onToggle(enabled: boolean): void; onReset(): void };", """  tips?: { enabled: boolean; onToggle(enabled: boolean): void; onReset(): void };
+    /** "Ready for more?" suggestions for this player (core/nudges.ts). */
+    nudges?: { enabled: boolean; onToggle(enabled: boolean): void };""")
+  edit(P, "export function openSettings(", """function nudgesGroup(nudges: SettingsDialogOptions['nudges']): HTMLElement | null {
+    
+  … (1430 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks pass. Testing the switch in the dev build:
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"tabId":"seed","url":"http://localhost:5173/?season=none"}},{"name":"computer","input":{"tabId":"seed","action":"wait","duration":3}},{"name":"javascript_tool","input":{"tabId":"seed","action":"javascript_exec","text":"const s = window.inkling.store; s.update(
+… (573 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The switch works both ways: off → on clears the 3-chapter wait, and it saves per player. A quick look at how it sits in Settings:
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"tabId":"seed","action":"javascript_exec","text":"[...document.querySelectorAll('.settings legend')].find(l => l.textContent.includes('Ready for more'))?.scrollIntoView({ block: 'center' }); 'ok'"}},{"name":"computer","input":{"tabId":"seed","action":"s
+… (26 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+It sits beside the Tips switch. Now the release entry (2.21.0, since it's a new setting players can see), a README line and a fresh `latest` snapshot of Settings.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Release 2.21.0, check, build, latest snapshots
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p,a,b):
+      s=open(p).read(); assert a in s,(p,a[:60]); open(p,'w').write(s.replace(a,b,1))
+  edit('README.md', "**Don't suggest this again** stops it for that player.", "**Don't suggest this again** stops it for that player, and **Ready for more?** in Settings turns it back on.")
+  edit('src/core/releases.ts', """export const RELEASES: readonly Release[] = [
+  """, """export const RELEASES: readonly Release[] = [
+    {
+      version: '2.21.0',
+      date: '2026-11-19',
+      notes: ['release.2.21.0.nudgeSetting'],
+    },
+  """)
+  edit('src/i18n/en.ts', "  'release.2.20.0.letters':", " 
+  … (383 more characters)
+  ```
+- **Shell:** Drop timing-only snapshot diffs
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git checkout -- docs/progression/latest && git status --short
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Settings now has a **Ready for more?** section, just below Tips, with one checkbox: "Suggest more keys or a harder level when I'm doing great". It's per player, like Tips. Checks (441 tests) and the build pass. It's ready on `feat/nudge-setting` as release 2.21.0, and nothing is committed yet.
+
+- **Turning it off** stops the suggestions, the same as **Don't suggest this again**.
+- **Turning it back on** also clears any "Not now" wait, so the next chapter of A grades can ask straight away.
+
+I tested it in the dev build: off, on, off and back on each saved correctly. The screenshot above shows where it sits.
+
+The release note reads "Turn 'Ready for more?' suggestions on or off in Settings." The README says where to turn suggestions back on.
+
+I minor-bumped to 2.21.0 rather than a patch, since `docs/RELEASING.md` says anything new a player can see gets a minor.
+
+The snapshot rerun only changed three pictures by animation timing, and the committed Settings shot shows the top of the dialog, which didn't change. So I kept the existing ones.
 
 ## 🧑 Prompt
 

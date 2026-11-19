@@ -664,6 +664,15 @@ async function main(): Promise<void> {
         sfx.unlock();
         sfx.play('page');
       },
+      nudges: {
+        enabled: !store.data.nudges.off,
+        onToggle: (enabled) => {
+          store.update((save) => {
+            // Turning them back on lets the next great chapter ask straight away.
+            save.nudges = { off: !enabled, wait: 0 };
+          });
+        },
+      },
       tips: {
         enabled: store.data.tutorials.enabled,
         onToggle: (enabled) => {
