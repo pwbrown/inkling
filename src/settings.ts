@@ -15,6 +15,10 @@ export const SCREEN_EFFECTS: readonly ScreenEffects[] = ['full', 'gentle'];
 export type PageWriting = 'on' | 'off';
 export const PAGE_WRITING: readonly PageWriting[] = ['on', 'off'];
 
+/** Holiday looks (core/seasons.ts): decor, creature hats and holiday words in season. Desk items you own work either way. */
+export type HolidayLooks = 'on' | 'off';
+export const HOLIDAY_LOOKS: readonly HolidayLooks[] = ['on', 'off'];
+
 export const TEXT_SIZES: readonly TextSize[] = ['normal', 'large', 'larger'];
 export const MOTION_SETTINGS: readonly MotionSetting[] = ['system', 'reduced', 'full'];
 
@@ -27,6 +31,7 @@ export interface Settings {
   motion: MotionSetting;
   screenEffects: ScreenEffects;
   pageWriting: PageWriting;
+  holidayLooks: HolidayLooks;
   /** Sound effects volume, 0..1. */
   volume: number;
   muted: boolean;
@@ -38,6 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
   motion: 'system',
   screenEffects: 'full',
   pageWriting: 'on',
+  holidayLooks: 'on',
   volume: 0.6,
   muted: false,
 };
@@ -57,6 +63,7 @@ export function parseSettings(raw: unknown): Settings {
     motion: pick(s.motion, MOTION_SETTINGS, DEFAULT_SETTINGS.motion),
     screenEffects: pick(s.screenEffects, SCREEN_EFFECTS, DEFAULT_SETTINGS.screenEffects),
     pageWriting: pick(s.pageWriting, PAGE_WRITING, DEFAULT_SETTINGS.pageWriting),
+    holidayLooks: pick(s.holidayLooks, HOLIDAY_LOOKS, DEFAULT_SETTINGS.holidayLooks),
     volume,
     muted: typeof s.muted === 'boolean' ? s.muted : DEFAULT_SETTINGS.muted,
   };

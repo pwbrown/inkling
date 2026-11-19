@@ -14,7 +14,7 @@ import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 import { DEFAULT_LAYOUT_ID, isLayoutId } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -278,7 +278,7 @@ function sanitizeProfile(v: unknown): Progression {
   const c = isObject(p.cosmetics) ? p.cosmetics : {};
   const pick = <S extends keyof Cosmetics>(slot: S): Cosmetics[S] =>
     typeof c[slot] === 'string' && c[slot] in UNLOCKS[slot] ? (c[slot] as Cosmetics[S]) : DEFAULT_COSMETICS[slot];
-  return { ink: count(p.ink), cosmetics: { nib: pick('nib'), splatter: pick('splatter'), paper: pick('paper') } };
+  return { ink: count(p.ink), cosmetics: { nib: pick('nib'), splatter: pick('splatter'), paper: pick('paper'), hat: pick('hat') } };
 }
 
 /** Check every field of a current-version save. */
@@ -449,6 +449,14 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
     delete next.contentLevel;
     return next;
   },
+  // v12 added a hat for the Nib (holiday keepsakes); everyone starts without one.
+  11: (save) => ({
+    ...save,
+    version: 12,
+    profile: isObject(save.profile)
+      ? { ...save.profile, cosmetics: { ...(isObject(save.profile.cosmetics) ? save.profile.cosmetics : {}), hat: 'none' } }
+      : save.profile,
+  }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

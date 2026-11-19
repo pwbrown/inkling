@@ -18,3 +18,4 @@ Each file is exported from the session log with `npm run transcript` (see `scrip
 - [2026-11-17-game-competitiveness-and-sharing-c10c68be](2026-11-17-game-competitiveness-and-sharing-c10c68be.md)
 - [2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2](2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2.md)
 - [2026-11-18-menu-redesign-and-content-streamlining-9713fb8f](2026-11-18-menu-redesign-and-content-streamlining-9713fb8f.md)
+- [2026-11-19-game-seo-and-holiday-skins-25c4469a](2026-11-19-game-seo-and-holiday-skins-25c4469a.md)

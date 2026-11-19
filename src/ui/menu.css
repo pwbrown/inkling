@@ -54,6 +54,38 @@
   stroke-linecap: round;
 }
 
+/* Holiday hats on the logo's drop (core/seasons.ts), shown by <html data-season>. */
+.logo-hat {
+  display: none;
+}
+
+:root[data-season='christmas'] .logo-hat-christmas,
+:root[data-season='thanksgiving'] .logo-hat-thanksgiving {
+  display: inline;
+}
+
+.hat-red {
+  fill: #c62f2f;
+}
+
+.hat-trim {
+  fill: #fbf8f1;
+}
+
+.hat-pilgrim {
+  fill: #2f2a28;
+}
+
+.hat-band {
+  fill: #5b4636;
+}
+
+.hat-buckle {
+  fill: none;
+  stroke: #d9b23a;
+  stroke-width: 2;
+}
+
 .logo-word {
   fill: var(--tc-ink);
   font-family: Georgia, 'Times New Roman', serif;

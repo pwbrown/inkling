@@ -333,15 +333,33 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 - **Word lists:** downloaded from the topic's Wikipedia article and ranked on the device, instead of Datamuse (which needs an API key from February 2027). The CSP allows only `en.wikipedia.org`.
 - **Footer:** shows the page and progress; the chapter moved to the scribe's heading. It no longer goes below zero while a split Spill's Inkmites are on screen.
 
+### M26: Holidays (2.17.0)
+
+| Thanksgiving | Christmas |
+|---|---|
+| <img src="m26/lineup-thanksgiving.png" width="420" alt="The creature lineup in Thanksgiving dress: a drip with a leaf, Scrawlers with turkey tails, a violet Scrawler with a leaf on its crown, a Run-on in a pilgrim hat, a pilgrim-hatted scribe, and autumn leaves piled in the bottom-right corner"> | <img src="m26/lineup-christmas.png" width="420" alt="The creature lineup in Christmas dress: Santa hats on the drip, Scrawlers and Run-on, holly on the violet's crown, faint snowflakes drifting down and holly in the bottom-right corner"> |
+| Leaves in the corner, **turkey tails** and **pilgrim hats**. | Holly, light snow and **Santa hats**. |
+
+| Menu | Desk keepsakes |
+|---|---|
+| <img src="m26/menu-christmas.png" width="420" alt="The main menu with a Santa hat on the logo's ink drop"> | <img src="m26/desk-holidays.png" width="420" alt="The Desk's paper choices with Harvest and Winter papers, and a new Hat row: No hat, Pilgrim hat and Santa hat on the fountain nib"> |
+| The logo wears the season's hat too. | **Harvest** and **Winter** paper, and a **Hat** row for the pen. |
+
+**New:**
+- **Holiday looks** around Thanksgiving (two weeks before through the Sunday after) and through December, by the local date: leaves or holly and snow at the page's edges, hats, turkey tails, antlers and sprigs on the creatures, the scribe and the logo. A **Holiday looks** setting turns it off.
+- **Holiday words** on some Scrawler pages in season, when your keys can type them (never on the Daily Page).
+- A **Holidays** shelf in the sticker book: **Harvest Helper** and **Snow Scribe**, each bringing keepsakes for the Desk: a pilgrim or Santa hat for the pen and Harvest or Winter paper (save version 12).
+- The snapshot tour shoots both seasons whatever the date (`?season=` on the dev server); the rest of the tour runs with no season, so it still compares with earlier milestones.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m25
+npm run snapshots -- m26
 ```
 
-That writes a standard set of shots to `docs/progression/m25/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done). Then:
+That writes a standard set of shots to `docs/progression/m26/` (menu, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays). `npm run snapshots -- m26 holidays` takes only the holiday shots. Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

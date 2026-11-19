@@ -451,6 +451,30 @@ export const GAME_CONFIG = {
     keepResults: 60,
   },
 
+  /**
+   * Holiday looks (core/seasons.ts), by the player's local date. Thanksgiving
+   * runs from `thanksgiving.daysBefore` days before the fourth Thursday of
+   * November through the Sunday after; Christmas through December.
+   */
+  seasons: {
+    thanksgiving: { daysBefore: 14, daysAfter: 3 },
+    christmas: { from: { month: 12, day: 1 }, to: { month: 12, day: 31 } },
+    /** Share of Scrawler words taken from the season's words, when enough fit the player's keys. */
+    wordShare: 0.2,
+    /** Page decor (render/seasonDecor.ts): kept to the edges and faint, so it never competes with text. */
+    decor: {
+      alpha: 0.55,
+      /** Falling leaves or snowflakes on screen at once (none with reduced motion). */
+      fallingLeaves: 5,
+      snowflakes: 26,
+      /** Falling speed, px/s, and sideways sway, px. */
+      fallSpeed: [18, 42],
+      sway: 14,
+      /** Falling bits stay this faint, below the decor. */
+      fallingAlpha: 0.35,
+    },
+  },
+
   /** Each target's speed varies randomly by up to ±this fraction. */
   speedJitter: 0.15,
   /** Empty space to keep behind the last target in a lane before spawning another. */

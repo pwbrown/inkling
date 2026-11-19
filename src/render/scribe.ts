@@ -6,7 +6,9 @@
  */
 import { Container, Graphics, Text } from 'pixi.js';
 import { GAME_CONFIG } from '../core/config';
+import type { SeasonId } from '../core/seasons';
 import { drawFace, type Mood } from './creatures/common';
+import { drawPilgrimHat, drawSantaHat } from './holidayArt';
 import { COLORS, DISPLAY_FONT, DISPLAY_PADDING } from './theme';
 import { outCubic } from './tween';
 
@@ -18,6 +20,8 @@ export class Scribe {
   private readonly body = new Graphics();
   private readonly face = new Graphics();
   private readonly quill = new Graphics();
+  /** A holiday hat on the drop's tip. */
+  private readonly hat = new Graphics();
   private readonly heading: Text;
   private readonly headingMask = new Graphics();
   private headingMs = 0;
@@ -53,9 +57,16 @@ export class Scribe {
     this.heading.position.set(R * 0.9 + 26, 4);
     this.heading.alpha = GAME_CONFIG.manuscript.headingAlpha;
     this.heading.mask = this.headingMask;
-    this.figure.addChild(this.quill, this.body, this.face);
+    this.figure.addChild(this.quill, this.body, this.face, this.hat);
     this.root.addChild(this.heading, this.headingMask, this.figure);
     this.drawFace('calm', false, false);
+  }
+
+  /** Dress up for a holiday season (or take the hat off). */
+  setSeason(season: SeasonId | null): void {
+    this.hat.clear();
+    if (season === 'christmas') drawSantaHat(this.hat, 0, -R * 1.85, R * 1.6);
+    else if (season === 'thanksgiving') drawPilgrimHat(this.hat, 0, -R * 1.9, R * 2.1);
   }
 
   /** Show or hide the scribe itself; its heading always shows. */

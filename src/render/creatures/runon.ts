@@ -5,11 +5,13 @@
  * erased with Backspace; a caret marks where the next character goes.
  */
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import type { SeasonId } from '../../core/seasons';
 import type { Target } from '../../core/world';
+import { accessoryFor, drawHeadAccessory } from '../holidayArt';
 import { COLORS } from '../theme';
 import { MoodTracker, drawFace, labelStyle, letterCenter, measure, wave, type CreatureView, type FrameContext } from './common';
 
-export function createRunon(target: Target, scale: number): CreatureView {
+export function createRunon(target: Target, scale: number, season: SeasonId | null = null): CreatureView {
   const height = 46 * scale;
   const padX = 18 * scale;
   const fontSize = 24 * scale;
@@ -26,11 +28,13 @@ export function createRunon(target: Target, scale: number): CreatureView {
   const body = new Graphics();
   const head = new Graphics();
   const marks = new Graphics();
+  const trim = new Graphics();
+  const accessory = accessoryFor(season, target, 'plain');
   const ok = new Text({ text: '', style: styles.ok });
   const bad = new Text({ text: '', style: styles.bad });
   const rest = new Text({ text: '', style: styles.rest });
   for (const t of [ok, bad, rest]) t.anchor.set(0, 0.5);
-  root.addChild(highlight, legs, body, head, ok, bad, rest, marks);
+  root.addChild(highlight, legs, body, head, trim, ok, bad, rest, marks);
   highlight.visible = false;
 
   const mood = new MoodTracker();
@@ -115,6 +119,8 @@ export function createRunon(target: Target, scale: number): CreatureView {
         x: hx - headR * 0.1,
         y: headR * 0.38,
       });
+      trim.clear();
+      if (accessory) drawHeadAccessory(trim, accessory, hx - headR * 0.1, -headR * 0.72, headR * 0.75);
       highlight.visible = ctx.locked;
     },
   };

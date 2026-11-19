@@ -3,6 +3,7 @@ import { DEFAULT_KEYS } from '../../core/config';
 import { MIN_WORD_POOL, createContentSource } from '../contentSource';
 import { loadEnglishPack } from './index';
 import wordsJson from './words.json';
+import { HOLIDAY_WORDS } from './holidays';
 
 describe('bundled English pack', async () => {
   const pack = await loadEnglishPack();
@@ -46,5 +47,16 @@ describe('bundled English pack', async () => {
   it('has enough home-row words to skip the random-string fallback', () => {
     const content = createContentSource({ keys: DEFAULT_KEYS, words: family, blocklist: pack.blocklist });
     expect(content.wordCount).toBeGreaterThanOrEqual(MIN_WORD_POOL);
+  });
+});
+
+describe('holiday words', async () => {
+  const pack = await loadEnglishPack();
+  const words = new Set(pack.words.map((e) => e.word));
+  it('are all in the family-friendly pack, with no repeats', () => {
+    for (const list of Object.values(HOLIDAY_WORDS)) {
+      expect(list.filter((w) => !words.has(w))).toEqual([]);
+      expect(new Set(list).size).toBe(list.length);
+    }
   });
 });

@@ -7,26 +7,34 @@ import { GAME_CONFIG } from './config';
 
 export type NibStyle = 'classic' | 'quill' | 'brush' | 'gold';
 export type SplatterColor = 'ink' | 'crimson' | 'violet' | 'teal' | 'gold';
-export type PaperStyle = 'ruled' | 'graph' | 'parchment';
+export type PaperStyle = 'ruled' | 'graph' | 'parchment' | 'harvest' | 'winter';
+/** A hat for the Nib (M26): holiday keepsakes. */
+export type HatStyle = 'none' | 'pilgrim' | 'santa';
 
 export interface Cosmetics {
   nib: NibStyle;
   splatter: SplatterColor;
   paper: PaperStyle;
+  hat: HatStyle;
 }
 
-export const DEFAULT_COSMETICS: Cosmetics = { nib: 'classic', splatter: 'ink', paper: 'ruled' };
+export const DEFAULT_COSMETICS: Cosmetics = { nib: 'classic', splatter: 'ink', paper: 'ruled', hat: 'none' };
 
 export type CosmeticSlot = keyof Cosmetics;
+
+/** How a cosmetic unlocks: at a level, or with a sticker (the holiday ones). */
+export type Unlock = number | { sticker: string };
 
 /**
  * Level each cosmetic unlocks at. Spread out, with gaps growing, so each
  * new thing is something to work toward (most levels unlock nothing).
+ * Holiday keepsakes come with the holiday stickers instead, and stay forever.
  */
-export const UNLOCKS: { [S in CosmeticSlot]: Record<Cosmetics[S], number> } = {
+export const UNLOCKS: { [S in CosmeticSlot]: Record<Cosmetics[S], Unlock> } = {
   nib: { classic: 1, quill: 4, brush: 8, gold: 14 },
   splatter: { ink: 1, crimson: 2, violet: 5, teal: 10, gold: 16 },
-  paper: { ruled: 1, graph: 6, parchment: 12 },
+  paper: { ruled: 1, graph: 6, parchment: 12, harvest: { sticker: 'harvestHelper' }, winter: { sticker: 'snowScribe' } },
+  hat: { none: 1, pilgrim: { sticker: 'harvestHelper' }, santa: { sticker: 'snowScribe' } },
 };
 
 export type Rank = 'scribbler' | 'doodler' | 'scribe' | 'penman' | 'calligrapher' | 'illuminator' | 'master';
@@ -76,17 +84,28 @@ export function inkForPage(pageScore: number, stars = 0): number {
 /** Bonus ink for completing the Apprentice notebook. */
 export const NOTEBOOK_BONUS = GAME_CONFIG.rewards.notebookBonus;
 
-export function isUnlocked<S extends CosmeticSlot>(slot: S, item: Cosmetics[S], level: number): boolean {
-  return level >= (UNLOCKS[slot] as Record<string, number>)[item]!;
+/** `stickers`: the ids of stickers the player has. */
+export function isUnlocked<S extends CosmeticSlot>(slot: S, item: Cosmetics[S], level: number, stickers: Iterable<string> = []): boolean {
+  const rule = (UNLOCKS[slot] as Record<string, Unlock>)[item];
+  if (rule === undefined) return false;
+  return typeof rule === 'number' ? level >= rule : [...stickers].includes(rule.sticker);
 }
+
+const allUnlocks = (): { slot: CosmeticSlot; item: string; rule: Unlock }[] =>
+  (Object.keys(UNLOCKS) as CosmeticSlot[]).flatMap((slot) =>
+    Object.entries(UNLOCKS[slot] as Record<string, Unlock>).map(([item, rule]) => ({ slot, item, rule })),
+  );
 
 /** Everything unlocked by reaching `to` that wasn't unlocked at `from`. */
 export function newUnlocks(from: number, to: number): { slot: CosmeticSlot; item: string }[] {
-  const out: { slot: CosmeticSlot; item: string }[] = [];
-  for (const slot of Object.keys(UNLOCKS) as CosmeticSlot[]) {
-    for (const [item, level] of Object.entries(UNLOCKS[slot])) {
-      if (level > from && level <= to) out.push({ slot, item });
-    }
-  }
-  return out;
+  return allUnlocks()
+    .filter(({ rule }) => typeof rule === 'number' && rule > from && rule <= to)
+    .map(({ slot, item }) => ({ slot, item }));
+}
+
+/** Everything these newly earned stickers unlock. */
+export function stickerUnlocks(stickers: readonly string[]): { slot: CosmeticSlot; item: string }[] {
+  return allUnlocks()
+    .filter(({ rule }) => typeof rule !== 'number' && stickers.includes(rule.sticker))
+    .map(({ slot, item }) => ({ slot, item }));
 }

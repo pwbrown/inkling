@@ -1999,3 +1999,50 @@ It's on the branch `fix/unlock-equip-redraw`. Nothing is committed yet; say the 
   ```
 
 </details>
+
+### 🤖 Claude
+
+One hit for the email/token pattern. Checking what it is before committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Show the matched string in the transcript
+
+  ```bash
+  f=docs/transcripts/2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2.md; grep -noE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|ghp_[A-Za-z0-9]+|sk-[A-Za-z0-9-]{10,}' "$f"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+It's the `noreply@anthropic.com` co-author line from a commit message, which is public and fine to include. Committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit, merge, tag 2.16.1 and push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Keep the page card when equipping an unlock (2.16.1)
+
+  - Equipping from the unlock card no longer recreates the Page complete card behind it (no replayed fade-in or stars)
+  - The manuscript, its blots and the scribe carry on through a cosmetic change
+  - Renderer rebuild takes a keepCard option for pen, ink and paper changes
+  - Release 2.16.1 (bug fixes) and version bump
+  - Update build transcripts
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git switch -q main && git merge --ff-only fix/unlock-equip-redraw | tail -1 && git branch -d fix/unloc
+  … (165 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+2.16.1 is committed, merged into `main` and pushed with its `v2.16.1` tag (commit `6bc5bf8`). The tag should start the Release workflow, which publishes it on GitHub; I didn't check that it ran.
+
+- **Transcript:** I exported it and scanned it before committing, and it's included in the commit. The only hit was the public `noreply@anthropic.com` co-author line.
+- **Branch:** `fix/unlock-equip-redraw` is deleted, and `main` matches `origin`.

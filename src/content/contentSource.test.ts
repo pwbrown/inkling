@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Blocklist } from './blocklist';
 import { MIN_WORD_POOL, countTypeableWords, createContentSource, styleWord, wordLetters } from './contentSource';
 import { entriesFromTiers } from './wordPool';
+import { mulberry32 } from '../core/rng';
 
 const counter = () => {
   let i = 0;
@@ -141,3 +142,22 @@ describe('topic words', () => {
     expect(content.topicWordCount).toBe(6);
   });
 });
+
+describe('holiday words', () => {
+  const words = ['flask', 'glass', 'flags', 'shall', 'halls'].map((word) => ({ word, tier: 1 }));
+  const keys = [...'flagsh'];
+  it('mix in at their share when enough fit the keys', () => {
+    const content = createContentSource({ keys, words, seasonWords: ['gash', 'lass', 'gals', 'flag', 'hags', 'snowman'], seasonShare: 1 });
+    const random = mulberry32(3);
+    for (let i = 0; i < 30; i++) expect(['gash', 'lass', 'gals', 'flag', 'hags']).toContain(content.nextWord(0.5, random).toLowerCase());
+  });
+
+  it('spend no random draws when too few fit, so seeded words are unchanged', () => {
+    const plain = createContentSource({ keys, words });
+    const seasonal = createContentSource({ keys, words, seasonWords: ['gash', 'snowman'], seasonShare: 1 });
+    const a = mulberry32(9);
+    const b = mulberry32(9);
+    for (let i = 0; i < 20; i++) expect(seasonal.nextWord(0.5, b)).toBe(plain.nextWord(0.5, a));
+  });
+});
+

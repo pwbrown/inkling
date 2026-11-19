@@ -11,6 +11,8 @@ describe('settings', () => {
     });
     expect(parseSettings({ pageWriting: 'off' }).pageWriting).toBe('off');
     expect(parseSettings({ pageWriting: 'sometimes' }).pageWriting).toBe('on');
+    expect(parseSettings({ holidayLooks: 'off' }).holidayLooks).toBe('off');
+    expect(parseSettings({ holidayLooks: 'maybe' }).holidayLooks).toBe('on');
   });
 
   it('round-trips through storage', () => {

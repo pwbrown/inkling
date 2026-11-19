@@ -4,7 +4,9 @@
  */
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { GAME_CONFIG } from '../../core/config';
+import type { SeasonId } from '../../core/seasons';
 import type { Target } from '../../core/world';
+import { HOLIDAY, accessoryFor, drawHeadAccessory, drawTurkeyTail } from '../holidayArt';
 import { COLORS } from '../theme';
 import {
   MoodTracker,
@@ -26,7 +28,7 @@ import {
   type FrameContext,
 } from './common';
 
-export function createBlotling(target: Target, scale: number): CreatureView {
+export function createBlotling(target: Target, scale: number, season: SeasonId | null = null): CreatureView {
   const height = 46 * scale;
   const padX = 20 * scale;
   const fontSize = 26 * scale;
@@ -41,10 +43,14 @@ export function createBlotling(target: Target, scale: number): CreatureView {
   const pips = new Graphics();
   /** Boss trimmings: the Shuffler's arrows, the Bookworm's neck and glasses, Squid tentacles, the Quill's race line. */
   const extras = new Graphics();
+  /** Holiday trimmings: a tail behind the body, a hat or sprig on top. */
+  const behind = new Graphics();
+  const trim = new Graphics();
+  const leafColor = HOLIDAY.leaves[Math.abs(target.id) % HOLIDAY.leaves.length]!;
   const typedLabel = new Text({ text: '', style: typedStyle });
   const restLabel = new Text({ text: target.text, style: restStyle });
   for (const label of [typedLabel, restLabel]) label.anchor.set(0, 0.5);
-  root.addChild(highlight, legs, body, extras, typedLabel, restLabel, face, pips);
+  root.addChild(highlight, behind, legs, body, extras, typedLabel, restLabel, face, trim, pips);
   highlight.visible = false;
 
   const mood = new MoodTracker();
@@ -229,6 +235,18 @@ export function createBlotling(target: Target, scale: number): CreatureView {
         if (variant === 'crimson') drawHorns(body, eyeX, eyeY + eyeR * 0.4, eyeR * 2.3, eyeR * 2.4, color);
         if (variant === 'violet') drawCrown(body, eyeX, eyeY - eyeR * 0.4, eyeR * 4.2, color);
         drawFace(face, eyeX, eyeY, eyeR, m, blink, ctx.lookX, ctx.lookY, color, null, variant === 'violet' ? 3 : 2);
+      }
+      behind.clear();
+      trim.clear();
+      const accessory = faceless || (t.bossKind === 'bookworm' && !t.head) ? null : accessoryFor(season, t, variant);
+      if (accessory) {
+        // Bosses wear theirs bigger. Hats sit on the eyes; a crown gets its sprig on top.
+        const size = eyeR * 2 * (t.boss ? 1.5 : 1);
+        if (accessory === 'turkeyTail') drawTurkeyTail(behind, shake + width - 6 * scale, -height * 0.1, height * (t.boss ? 1.15 : 0.95));
+        else {
+          const top = variant === 'violet' ? eyeY - eyeR * 2.8 : variant === 'crimson' ? eyeY - eyeR * 0.9 : eyeY - eyeR * 0.75;
+          drawHeadAccessory(trim, accessory, eyeX, top, size, leafColor);
+        }
       }
       drawBossExtras(t, ctx, shake, color, eyeX, eyeY, eyeR);
       highlight.visible = ctx.locked;

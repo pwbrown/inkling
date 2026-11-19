@@ -4,6 +4,7 @@
  *
  *   npm run snapshots -- m15        # writes docs/progression/m15/*.png
  *   npm run snapshots -- latest     # refreshes the "latest" column
+ *   npm run snapshots -- m26 holidays   # only the holiday shots (M26)
  *
  * It starts the Vite dev server (which exposes `window.inkling`, see
  * src/main.ts), opens headless Chrome, and drives the game over the Chrome
@@ -42,7 +43,9 @@ type Step =
   | { key: string }
   | { click: string }
   | { eval: string }
-  | { play: number; maxX?: number };
+  | { play: number; maxX?: number }
+  /** Reload the game with this query string (e.g. `?season=christmas`; dev server only). */
+  | { open: string };
 
 /** Scroll every scrolled box back to the top, so long dialogs show their start. */
 const SCROLL_TOP = `document.querySelectorAll('*').forEach((e) => { if (e.scrollTop) e.scrollTop = 0; })`;
@@ -154,10 +157,52 @@ const NEXT_KEY = (maxX: number) => `(() => {
   return t.text[t.typed];
 })()`;
 
+/** Both holiday stickers earned (M26), so their keepsakes are open on the Desk. In memory only. */
+const HOLIDAY_STICKERS = `(() => {
+  const store = window.inkling && window.inkling.store;
+  if (!store || !store.data.stickers) return 'no stickers';
+  const now = new Date().toISOString();
+  Object.assign(store.data.stickers.earned, { harvestHelper: now, snowScribe: now });
+  return 'ok';
+})()`;
+
+/** Scrolls the Desk to its paper and hat choices. */
+const SHOW_HATS = `(() => {
+  const legend = [...document.querySelectorAll('legend')].find((l) => /^Paper$/.test(l.textContent.trim()));
+  if (legend) legend.scrollIntoView({ block: 'start' });
+  return 'ok';
+})()`;
+
+/** Scrolls the sticker book to the Holidays shelf. */
+const SHOW_HOLIDAY_SHELF = `(() => {
+  const heading = [...document.querySelectorAll('h3, legend, h2')].find((h) => /Holidays/.test(h.textContent));
+  if (heading) heading.scrollIntoView({ block: 'center' });
+  return 'ok';
+})()`;
+
 /** The free-play mode's button: "Free Write" since M17, "Practice" before. */
 const FREE_WRITE = 'Free Write|Practice';
 
-const TOUR: Step[] = [
+/**
+ * Holiday looks (M26) on any day: the same menu and creature lineup dressed
+ * for each season. The rest of the tour runs with `?season=none`, so its
+ * shots compare with earlier milestones whatever the date.
+ */
+const HOLIDAY_TOUR: Step[] = [
+  ...(['thanksgiving', 'christmas'] as const).flatMap((season): Step[] => [
+    { open: `?season=${season}` },
+    { shot: `menu-${season}` },
+    { click: FREE_WRITE }, { click: 'Start writing' }, { wait: 800 }, { key: 'Enter' },
+    { wait: 4000 }, { eval: LINEUP }, { wait: 700 }, { shot: `lineup-${season}` },
+    { key: 'Escape' }, { click: 'Quit to menu' },
+  ]),
+  // The holiday keepsakes on the Desk and the Holidays shelf, with both stickers earned.
+  { eval: HOLIDAY_STICKERS }, { click: 'Desk' }, { eval: SHOW_HATS }, { wait: 300 }, { shot: 'desk-holidays' }, { key: 'Escape' },
+  { click: 'Sticker book' }, { eval: SHOW_HOLIDAY_SHELF }, { wait: 300 }, { shot: 'stickers-holidays' }, { key: 'Escape' },
+];
+
+const MAIN_TOUR: Step[] = [
+  { open: '?season=none' },
   { shot: 'menu' },
   { click: 'Desk' }, { eval: SCROLL_TOP }, { shot: 'desk' }, { key: 'Escape' },
   { click: 'Switch player' }, { shot: 'players' }, { key: 'Escape' },
@@ -192,6 +237,8 @@ const TOUR: Step[] = [
   // Let the grade stamp and the stars fill in before the shot.
   { play: 60000, maxX: 1000 }, { wait: 1500 }, { shot: 'page-done' },
 ];
+
+const TOUR: Step[] = process.argv[3] === 'holidays' ? HOLIDAY_TOUR : [...MAIN_TOUR, ...HOLIDAY_TOUR];
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -286,12 +333,18 @@ async function click(label: string): Promise<void> {
 try {
   mkdirSync(outDir, { recursive: true });
   await send('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
-  await send('Page.navigate', { url });
-  for (let i = 0; i < 100 && !(await evaluate('Boolean(window.inkling)')); i++) await sleep(200);
-  await sleep(1000);
+  const open = async (query: string) => {
+    await send('Page.navigate', { url: url + query });
+    await sleep(500);
+    for (let i = 0; i < 100 && !(await evaluate('Boolean(window.inkling)')); i++) await sleep(200);
+    await sleep(1000);
+  };
+  if (!('open' in TOUR[0]!)) await open('');
 
   for (const step of TOUR) {
-    if ('shot' in step) {
+    if ('open' in step) {
+      await open(step.open);
+    } else if ('shot' in step) {
       const { data } = (await send('Page.captureScreenshot', { format: 'png' })) as { data: string };
       writeFileSync(join(outDir, `${step.shot}.png`), Buffer.from(data, 'base64'));
       console.log(`  ${folder}/${step.shot}.png`);

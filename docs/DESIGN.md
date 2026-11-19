@@ -93,6 +93,7 @@ This is where the Spellbook mechanic comes in. The key-selection screen is a **l
   - **Target text:** a highly legible font such as *Atkinson Hyperlegible* or a clear monospace. It is never a handwriting font.
   - **Headings and UI flavor:** a handwriting or brush display font.
   - **Calligraphy re-ink effect:** an animated stroke drawn *over* the legible text, never in place of it.
+- **Holidays (milestone 26):** around Thanksgiving and through December (`GAME_CONFIG.seasons`), the page tucks leaves or holly into its bottom-right corner and lets a few leaves or snowflakes drift behind the creatures, faint and kept to the edges. Creatures wear pilgrim or Santa hats, turkey tails, antlers or a sprig (crimson ones keep their horns, violet ones their crown), and so do the scribe and the menu logo. Hat colors are fixed, not themed, so a Santa hat stays red on Night. The holiday stickers bring keepsakes for the Desk: a hat for the Nib and a Harvest or Winter paper. **Holiday looks** in Settings turns the seasonal dressing off; keepsakes stay.
 - **Art pipeline:** the hand-drawn look is forgiving. You can start with simple SVG blobs and noise displacement in PixiJS filters, then swap in drawn art later.
 
 ---

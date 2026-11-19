@@ -69,6 +69,12 @@ export interface ContentOptions {
    * favoured over the general word list. Always checked against the blocklist.
    */
   topicWords?: readonly string[];
+  /**
+   * Holiday words in season (content/en/holidays.ts), drawn `seasonShare` of
+   * the time when enough fit the keys. Checked against the blocklist too.
+   */
+  seasonWords?: readonly string[];
+  seasonShare?: number;
 }
 
 /** Share of words drawn from topic lists, when enough topic words fit the keys. */
@@ -121,6 +127,8 @@ export function createContentSource({
   trustedWords = false,
   keyWeights = {},
   topicWords = [],
+  seasonWords = [],
+  seasonShare = 0,
 }: ContentOptions): ContentSource {
   if (keys.length === 0) throw new Error('A content source needs at least one key');
   const unique = [...new Set(keys)];
@@ -135,12 +143,22 @@ export function createContentSource({
     [...new Set(topicWords)].map((word) => ({ word, tier: 0 })),
     wordLetters(unique),
   ).filter((w) => !blocklist.blocksWord(w.word));
+  const seasonPool = buildWordPool(
+    [...new Set(seasonWords)].map((word) => ({ word, tier: 0 })),
+    wordLetters(unique),
+  ).filter((w) => !blocklist.blocksWord(w.word));
+  // Without enough season words, no random draw is spent on them, so seeded content stays the same.
+  const useSeasonPool = seasonShare > 0 && seasonPool.length >= MIN_TOPIC_POOL;
 
   /**
    * A word fitted to the keys, without trailing punctuation. With
    * `capitalize` false, a capital only appears where the keys require one.
    */
   const baseWord = (difficulty: number, random: () => number, capitalize = true): string => {
+    if (useSeasonPool && random() < seasonShare) {
+      const word = pickWord(seasonPool, difficulty, random);
+      if (word) return styleWord(word, keySet, capitalize ? random : () => 1);
+    }
     const useTopic = topicPool.length >= MIN_TOPIC_POOL && random() < TOPIC_SHARE;
     const useWords = pool.length >= MIN_WORD_POOL || (pool.length > 0 && random() < 0.5);
     const word = useTopic ? pickWord(topicPool, difficulty, random) : useWords ? pickWord(pool, difficulty, random) : null;

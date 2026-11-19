@@ -21,7 +21,7 @@ function page(stats: Partial<Stats> = {}, extra: Partial<PageFacts> = {}): PageF
     notebookScore: 100,
     boss: null,
     layoutId: 'us-qwerty',
-    at: new Date(2026, 10, 17, 15, 0),
+    at: new Date(2026, 9, 14, 15, 0),
     ...extra,
   };
 }
@@ -91,6 +91,15 @@ describe('stickers', () => {
     expect(earned(facts({ page: page({}, { at: new Date(2026, 10, 17, 1, 30) }) }))).toContain('midnightOil');
     expect(earned(facts({ page: page({}, { layoutId: 'dvorak' }) }))).toContain('globetrotter');
     expect(STICKERS.filter((s) => s.secret).map((s) => s.id)).toEqual(['midnightOil', 'globetrotter']);
+  });
+
+  it('gives the holiday stickers for a page finished in season', () => {
+    expect(earned(facts({ page: page({}, { at: new Date(2026, 10, 26, 15) }) }))).toContain('harvestHelper');
+    expect(earned(facts({ page: page({}, { at: new Date(2026, 11, 24, 15) }) }))).toContain('snowScribe');
+    const summer = earned(facts({ page: page({}, { at: new Date(2027, 6, 4, 15) }) }));
+    expect(summer).not.toContain('harvestHelper');
+    expect(summer).not.toContain('snowScribe');
+    expect(earned(facts())).not.toContain('snowScribe');
   });
 
   it('never gives a sticker twice', () => {

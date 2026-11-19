@@ -10,7 +10,7 @@ import { DIFFICULTIES, GAME_CONFIG, type Difficulty } from '../core/config';
 import { DAILY_PAGES, type PageMark, type StreakDay } from '../core/daily';
 import type { Grade } from '../core/grade';
 import type { MechanicId } from '../core/mechanics';
-import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics } from '../core/rewards';
+import { UNLOCKS, isUnlocked, type CosmeticSlot, type Cosmetics, type Unlock } from '../core/rewards';
 import { getLocale, t, type MessageKey } from '../i18n';
 import { BADGES, MAX_NAME_LENGTH, type Badge } from '../storage/profiles';
 import { iconSvg, type IconId } from './icons';
@@ -145,6 +145,8 @@ export interface MenuHooks {
   /** Ink progress through the current level, 0..1. */
   levelFraction(): number;
   level(): number;
+  /** Ids of the stickers the player has (the holiday keepsakes come with them). */
+  stickers(): readonly string[];
   cosmetics(): Cosmetics;
   onEquip(slot: CosmeticSlot, item: string): void;
   /** e.g. "Best on Normal: 1,200 · reached chapter 3", or null. */
@@ -219,6 +221,17 @@ const LOGO_SVG = `
   <circle class="logo-eye" cx="38" cy="62" r="4.2"/><circle class="logo-eye" cx="52" cy="62" r="4.2"/>
   <circle class="logo-shine" cx="34" cy="50" r="3"/>
   <path class="logo-smile" d="M39 72 q6 5 12 0"/>
+  <g class="logo-hat logo-hat-christmas">
+    <path class="hat-red" d="M32 24 Q36 0 50 -2 Q62 -3 66 10 Q57 7 56 24 Z"/>
+    <rect class="hat-trim" x="29" y="20" width="30" height="8" rx="4"/>
+    <circle class="hat-trim" cx="66" cy="11" r="5"/>
+  </g>
+  <g class="logo-hat logo-hat-thanksgiving">
+    <ellipse class="hat-pilgrim" cx="44" cy="23" rx="19" ry="3.6"/>
+    <path class="hat-pilgrim" d="M33 23 L35 -2 L53 -2 L55 23 Z"/>
+    <rect class="hat-band" x="33.6" y="13" width="20.8" height="6"/>
+    <rect class="hat-buckle" x="40.5" y="12" width="7" height="8"/>
+  </g>
   <text class="logo-word" x="80" y="70">Inky Keys</text>
   <path class="logo-underline" d="M84 82 C160 74 270 90 366 78"/>
 </svg>`;
@@ -453,6 +466,7 @@ export class Menu {
   private desk(): HTMLElement[] {
     const level = this.hooks.level();
     const equipped = this.hooks.cosmetics();
+    const stickers = this.hooks.stickers();
     const bar = h('div', { className: 'desk-bar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100 });
     const pct = Math.round(this.hooks.levelFraction() * 100);
     bar.setAttribute('aria-valuenow', String(pct));
@@ -464,9 +478,10 @@ export class Menu {
         h(
           'div',
           { className: 'desk-options', role: 'radiogroup', 'aria-label': t(`desk.${slot}` as MessageKey) },
-          Object.entries(UNLOCKS[slot]).map(([item, at]) => {
+          Object.entries(UNLOCKS[slot] as Record<string, Unlock>).map(([item, at]) => {
             // Something already in use stays usable, even if levels were rebalanced since.
-            const open = isUnlocked(slot, item as never, level) || equipped[slot] === item;
+            const open = isUnlocked(slot, item as never, level, stickers) || equipped[slot] === item;
+            const locked = typeof at === 'number' ? t('desk.locked', { level: at }) : t(`desk.locked.${at.sticker}` as MessageKey);
             return h(
               'button',
               {
@@ -486,7 +501,7 @@ export class Menu {
               [
                 artElement(cosmeticSvg(slot, item), 'desk-art'),
                 h('span', { className: 'menu-label' }, [t(`${slot}.${item}` as MessageKey)]),
-                open ? null : h('span', { className: 'menu-detail' }, [t('desk.locked', { level: at })]),
+                open ? null : h('span', { className: 'menu-detail' }, [locked]),
               ],
             );
           }),
@@ -501,6 +516,7 @@ export class Menu {
       group('nib'),
       group('splatter'),
       group('paper'),
+      group('hat'),
       h('div', { className: 'tc-actions' }, [
         h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', 'data-autofocus': true, onClick: () => this.show('title') }, [
           t('menu.back'),

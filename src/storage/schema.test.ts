@@ -42,12 +42,12 @@ describe('save schema', () => {
 
   it('upgrades version 3 saves with no ink and default cosmetics', () => {
     const save = migrate({ version: 3, keys: ['q'] });
-    expect(save.profile).toEqual({ ink: 0, cosmetics: { nib: 'classic', splatter: 'ink', paper: 'ruled' } });
+    expect(save.profile).toEqual({ ink: 0, cosmetics: { nib: 'classic', splatter: 'ink', paper: 'ruled', hat: 'none' } });
   });
 
   it('keeps known cosmetics and replaces unknown ones', () => {
     const save = migrate({ version: 4, profile: { ink: 420, cosmetics: { nib: 'quill', splatter: 'rainbow', paper: 'graph' } } });
-    expect(save.profile).toEqual({ ink: 420, cosmetics: { nib: 'quill', splatter: 'ink', paper: 'graph' } });
+    expect(save.profile).toEqual({ ink: 420, cosmetics: { nib: 'quill', splatter: 'ink', paper: 'graph', hat: 'none' } });
   });
 
   it('upgrades version 4 saves with a fresh Apprentice course, keeping Practice', () => {
@@ -68,6 +68,14 @@ describe('save schema', () => {
   it('drops the old per-player word filter level from version 6–10 saves', () => {
     expect('contentLevel' in migrate({ version: 5, keys: ['a'] })).toBe(false);
     expect('contentLevel' in migrate({ version: 10, contentLevel: 'grownUps', keys: ['a'] })).toBe(false);
+  });
+
+  it('gives version 11 saves no hat, keeping their other cosmetics', () => {
+    const save = migrate({ version: 11, profile: { ink: 50, cosmetics: { nib: 'quill', splatter: 'teal', paper: 'graph' } } });
+    expect(save.profile.cosmetics).toEqual({ nib: 'quill', splatter: 'teal', paper: 'graph', hat: 'none' });
+    const kept = migrate({ version: 12, profile: { ink: 50, cosmetics: { nib: 'quill', splatter: 'teal', paper: 'winter', hat: 'santa' } } });
+    expect(kept.profile.cosmetics).toEqual({ nib: 'quill', splatter: 'teal', paper: 'winter', hat: 'santa' });
+    expect(migrate({ version: 12, profile: { cosmetics: { hat: 'crown' } } }).profile.cosmetics.hat).toBe('none');
   });
 
   it('upgrades version 6 saves with tips on, crediting mechanics the player has already met', () => {

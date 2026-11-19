@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { RANKS, UNLOCKS, inkForLevel, inkForPage, isUnlocked, levelForInk, levelProgress, newUnlocks, rankForLevel } from './rewards';
+import { RANKS, UNLOCKS, inkForLevel, inkForPage, isUnlocked, levelForInk, levelProgress, newUnlocks, rankForLevel, stickerUnlocks, type Unlock } from './rewards';
+import { isStickerId } from './stickers';
 
 describe('levels', () => {
   it('start at level 1 and need more ink each level', () => {
@@ -41,7 +42,9 @@ describe('ranks and unlocks', () => {
   });
 
   it('spread unlocks out: never more than one per level, and none for most levels', () => {
-    const levels = Object.values(UNLOCKS).flatMap((items) => Object.values(items)).filter((l) => l > 1);
+    const levels = Object.values(UNLOCKS)
+      .flatMap((items) => Object.values(items as Record<string, Unlock>))
+      .filter((l): l is number => typeof l === 'number' && l > 1);
     expect(new Set(levels).size).toBe(levels.length);
     expect(Math.max(...levels)).toBeGreaterThanOrEqual(14);
   });
@@ -53,5 +56,28 @@ describe('ranks and unlocks', () => {
     ]);
     expect(newUnlocks(5, 5)).toEqual([]);
     expect(newUnlocks(2, 3)).toEqual([]);
+  });
+
+  it('give holiday keepsakes with their stickers, never by level', () => {
+    expect(newUnlocks(1, 100).some(({ item }) => ['pilgrim', 'santa', 'harvest', 'winter'].includes(item))).toBe(false);
+    expect(stickerUnlocks(['harvestHelper'])).toEqual([
+      { slot: 'paper', item: 'harvest' },
+      { slot: 'hat', item: 'pilgrim' },
+    ]);
+    expect(stickerUnlocks(['snowScribe', 'firstPage'])).toEqual([
+      { slot: 'paper', item: 'winter' },
+      { slot: 'hat', item: 'santa' },
+    ]);
+    expect(isUnlocked('hat', 'santa', 99)).toBe(false);
+    expect(isUnlocked('hat', 'santa', 1, ['snowScribe'])).toBe(true);
+    expect(isUnlocked('hat', 'none', 1)).toBe(true);
+  });
+
+  it('only use stickers that exist for keepsakes', () => {
+    for (const items of Object.values(UNLOCKS)) {
+      for (const rule of Object.values(items as Record<string, Unlock>)) {
+        if (typeof rule !== 'number') expect(isStickerId(rule.sticker), rule.sticker).toBe(true);
+      }
+    }
   });
 });

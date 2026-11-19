@@ -109,8 +109,20 @@ function splatterSvg(color: Cosmetics['splatter']): string {
   );
 }
 
+/** A tiny leaf or snowflake for the holiday papers' printed border. */
+const LEAF = (x: number, y: number, fill: string) =>
+  `<path d="M${x} ${y + 5} C${x - 6} ${y + 2} ${x - 6} ${y - 4} ${x} ${y - 6} C${x + 6} ${y - 4} ${x + 6} ${y + 2} ${x} ${y + 5} Z" fill="${fill}" opacity="0.7"/>`;
+const FLAKE = (x: number, y: number) =>
+  `<path d="M${x - 4} ${y} h8 M${x - 2} ${y - 3.5} l4 7 M${x + 2} ${y - 3.5} l-4 7" stroke="#7fa8d1" stroke-width="1.3" stroke-linecap="round"/>`;
+
 function paperSvg(style: Cosmetics['paper']): string {
-  const paper = style === 'parchment' ? '#ead7a6' : 'var(--tc-paper)';
+  const paper = { parchment: '#ead7a6', harvest: '#f1dcb6', winter: '#e9f0f7' }[style as string] ?? 'var(--tc-paper)';
+  const border =
+    style === 'harvest'
+      ? [34, 54, 74, 94].map((x, i) => LEAF(x, 50, ['#d9762b', '#b4472d', '#e0a72e', '#9a6234'][i]!)).join('')
+      : style === 'winter'
+        ? [34, 54, 74, 94].map((x) => FLAKE(x, 50)).join('')
+        : '';
   const grid =
     style === 'graph'
       ? Array.from({ length: 13 }, (_, i) => `<line x1="${i * 10}" y1="0" x2="${i * 10}" y2="60" stroke="var(--tc-rule)" stroke-width="0.8" opacity="0.6"/>`).join('') +
@@ -120,8 +132,25 @@ function paperSvg(style: Cosmetics['paper']): string {
   return svg(
     '0 0 120 60',
     `<rect x="0" y="0" width="120" height="60" rx="6" fill="${paper}" stroke="var(--tc-ink)" stroke-width="1.5"/>
-     ${grid}${lines}<line x1="22" y1="0" x2="22" y2="60" stroke="var(--tc-margin)" stroke-width="2"/>`,
+     ${grid}${lines}${border}<line x1="22" y1="0" x2="22" y2="60" stroke="var(--tc-margin)" stroke-width="2"/>`,
     'art art-paper',
+  );
+}
+
+/** The fountain nib wearing a holiday hat (or none). */
+function hatSvg(hat: Cosmetics['hat']): string {
+  const santa = `<g transform="translate(46 15) rotate(21)">
+      <path d="M-11 0 Q-4 -19 8 -18 Q15 -17 17 -9 Q9 -10 11 0 Z" fill="#c62f2f"/>
+      <rect x="-13" y="-3" width="26" height="6" rx="3" fill="#fbf8f1"/><circle cx="17" cy="-8" r="3.5" fill="#fbf8f1"/></g>`;
+  const pilgrim = `<g transform="translate(46 16) rotate(21)">
+      <ellipse cx="0" cy="0" rx="14" ry="2.8" fill="#2f2a28"/><path d="M-8 0 L-7 -19 L7 -19 L8 0 Z" fill="#2f2a28"/>
+      <rect x="-7.6" y="-8" width="15.2" height="4" fill="#5b4636"/><rect x="-2.2" y="-8.8" width="4.4" height="5.6" fill="none" stroke="#d9b23a" stroke-width="1.3"/></g>`;
+  return svg(
+    '0 0 120 60',
+    `<polygon points="32,8 88,30 32,52 42,30" fill="var(--tc-ink)"/>
+     <line x1="46" y1="30" x2="82" y2="30" stroke="var(--tc-paper)" stroke-width="2"/>
+     <circle cx="52" cy="30" r="4" fill="var(--tc-paper)"/>${hat === 'santa' ? santa : hat === 'pilgrim' ? pilgrim : ''}`,
+    'art art-nib',
   );
 }
 
@@ -134,6 +163,8 @@ export function cosmeticSvg(slot: CosmeticSlot, item: string): string {
       return splatterSvg(item as Cosmetics['splatter']);
     case 'paper':
       return paperSvg(item as Cosmetics['paper']);
+    case 'hat':
+      return hatSvg(item as Cosmetics['hat']);
   }
 }
 

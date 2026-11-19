@@ -56,6 +56,11 @@ Every player gets the same family-friendly word filter: swear words, slurs and w
 - **Ink:** every page you finish earns ink (XP): a tenth of its score, plus 15 per star. Completing the Apprentice notebook adds 500. Each level needs more ink than the last, and new things unlock only every few levels (the gold nib at level 14), so they're worth working toward.
 - **Ranks:** ink raises your level, and you rise from Scribbler through Doodler, Scribe, Penman, Calligrapher and Illuminator to Master of Keys.
 - **Unlocks:** levels unlock things for your **Desk** (D on the main menu): pens (fountain nib, quill, brush, gold nib), splatter ink colors and paper (ruled, graph, parchment). When you unlock something, a card shows a picture of it with a **Use it now** button, and the Desk shows a picture of every item.
+- **Holiday keepsakes:** finishing a page around Thanksgiving earns the **Harvest Helper** sticker, and one in December earns **Snow Scribe**. Each brings a hat for your pen (pilgrim or Santa) and a paper (Harvest or Winter) to keep all year.
+
+### Holidays
+
+Around Thanksgiving (from two weeks before through the Sunday after) and through December, the game dresses up: autumn leaves or holly and snow in the page's corners, hats, turkey tails and antlers on the creatures and the scribe, and holiday words (*pie*, *harvest*, *sleigh*, *cocoa*…) on some word pages when your keys can type them. The Daily Page keeps its usual words so it stays the same for everyone. Turn it off with **Holiday looks** in Settings.
 
 ### Powers and bosses
 
@@ -97,6 +102,7 @@ In the Type Case, a bar under each key fills as you practice it, and mastered ke
 - **Text size:** Normal, Large or Larger. The larger sizes use every other line on the page.
 - **Colors:** Classic paper, High contrast or Night.
 - **Motion:** match your system, reduced, or full.
+- **Holiday looks:** on or off (see **Holidays**).
 - **Sound effects:** volume and mute. The sounds are synthesized in the browser, so there are no audio files.
 
 Settings are stored in your browser's localStorage.

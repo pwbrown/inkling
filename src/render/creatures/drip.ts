@@ -3,7 +3,9 @@
  * It bobs and squashes as it travels, its tail trailing behind.
  */
 import { Container, Graphics, Text } from 'pixi.js';
+import type { SeasonId } from '../../core/seasons';
 import type { Target } from '../../core/world';
+import { HOLIDAY, accessoryFor, drawHeadAccessory } from '../holidayArt';
 import { COLORS, glyph } from '../theme';
 import {
   MoodTracker,
@@ -21,7 +23,7 @@ import {
   type FrameContext,
 } from './common';
 
-export function createDrip(target: Target, scale: number): CreatureView {
+export function createDrip(target: Target, scale: number, season: SeasonId | null = null): CreatureView {
   const r = 27 * scale;
   const width = r * 2 + 16 * scale;
   const height = r * 2;
@@ -31,10 +33,12 @@ export function createDrip(target: Target, scale: number): CreatureView {
   const body = new Graphics();
   const face = new Graphics();
   const pips = new Graphics();
+  const trim = new Graphics();
+  const leafColor = HOLIDAY.leaves[Math.abs(target.id) % HOLIDAY.leaves.length]!;
   const label = new Text({ text: glyph(target.text), style: labelStyle(COLORS.label, 24 * scale) });
   label.anchor.set(0.5);
   label.position.set(r, r * 0.08);
-  bob.addChild(body, face, label);
+  bob.addChild(body, face, trim, label);
   root.addChild(highlight, bob, pips);
   highlight.visible = false;
 
@@ -96,6 +100,13 @@ export function createDrip(target: Target, scale: number): CreatureView {
       if (variant === 'crimson') drawHorns(face, eyeX, eyeY + eyeR * 0.6, eyeR * 2.4, eyeR * 2.2, color);
       if (variant === 'violet') drawCrown(face, eyeX, eyeY - eyeR * 0.2, eyeR * 4, color);
       drawFace(face, eyeX, eyeY, eyeR, m, blink, ctx.lookX, ctx.lookY, color, null, variant === 'violet' ? 3 : 2);
+      trim.clear();
+      const accessory = accessoryFor(season, t, variant);
+      if (accessory) {
+        // On the tail, out of the way of the eyes and life pips.
+        if (accessory === 'santaHat') drawHeadAccessory(trim, accessory, eyeX, eyeY - eyeR * 0.7, eyeR * 2.2);
+        else drawHeadAccessory(trim, accessory, r + r * 0.55, -r * 0.55, eyeR * 2.4, leafColor);
+      }
       highlight.visible = ctx.locked;
       label.alpha = ctx.defeated ? 0.55 : 1;
       applyGhost(t, root, [label], ctx.timeMs, ctx.reducedMotion);

@@ -3,6 +3,7 @@ import 'pixi.js/unsafe-eval';
 import './style.css';
 import { countTypeableWords, createContentSource, MIN_WORD_POOL } from './content/contentSource';
 import { loadEnglishPack } from './content/en';
+import { HOLIDAY_WORDS } from './content/en/holidays';
 import type { Dictionary } from './content/vocabApi';
 import { isLayoutId, layoutById } from './content/layouts';
 import type { LayoutId } from './content/layouts/types';
@@ -37,7 +38,7 @@ import { DAILY_PAGES, MARK_SQUARES, dailyId, dailyKeys, dailyPages, dailySeed, s
 import { cleanChallengeName, decodeChallenge, encodeChallenge, type Challenge } from './core/challenge';
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, type GamePhase } from './core/world';
 import { formatNumber, getLocale, setLocale, t, type MessageKey } from './i18n';
-import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel } from './core/rewards';
+import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel, stickerUnlocks } from './core/rewards';
 import { SaveFormatError, defaultSave, migrate, type SaveData } from './storage/schema';
 import { MAX_TRANSFER_LENGTH, canTransfer, decodeTransfer, encodeTransfer, hasTransfer, type Transfer } from './storage/transfer';
 import { PlayerStore, cleanName, saveKeyFor, uniqueName, type Player } from './storage/profiles';
@@ -79,6 +80,7 @@ import { showStickerToast } from './ui/stickerToast';
 import { STICKERS, type StickerFacts, type StickerGroup } from './core/stickers';
 import { RELEASES, compareVersions, releasesToAnnounce, MAX_NEW_RELEASES_SHOWN, type Release } from './core/releases';
 import { APP_VERSION, loadSeenVersion, saveSeenVersion } from './version';
+import { activeSeason, isSeasonId, type SeasonId } from './core/seasons';
 
 async function main(): Promise<void> {
   const host = document.getElementById('app');
@@ -98,9 +100,26 @@ async function main(): Promise<void> {
   // Comfort settings (REQUIREMENTS §10), applied before anything is drawn.
   let settings: Settings = loadSettings();
   const sfx = new Sfx();
+  /**
+   * The holiday season by today's date (core/seasons.ts). In development,
+   * `?season=thanksgiving|christmas|none` shows either look on any day.
+   */
+  const calendarSeason = ((): SeasonId | null => {
+    if (import.meta.env.DEV) {
+      const asked = new URLSearchParams(location.search).get('season');
+      if (asked === 'none') return null;
+      if (isSeasonId(asked)) return asked;
+    }
+    return activeSeason(new Date());
+  })();
+  /** The season the game dresses up for: none when Holiday looks is off. */
+  const season = (): SeasonId | null => (settings.holidayLooks === 'on' ? calendarSeason : null);
   const applyColors = () => {
     setTheme(settings.theme);
     document.documentElement.dataset.theme = settings.theme;
+    const dressed = season();
+    if (dressed) document.documentElement.dataset.season = dressed;
+    else delete document.documentElement.dataset.season;
     // Menus and dialogs follow the in-game motion setting, not only the OS one.
     document.documentElement.dataset.motion = reducedMotion(settings, prefersReducedMotion()) ? 'reduced' : 'full';
     sfx.setVolume(settings.volume, settings.muted);
@@ -154,6 +173,7 @@ async function main(): Promise<void> {
       screenEffects: settings.screenEffects,
       pageWriting: settings.pageWriting === 'on',
       cosmetics: store.data.profile.cosmetics,
+      season: season(),
     })),
   ]);
 
@@ -247,6 +267,12 @@ async function main(): Promise<void> {
         .filter((list) => list.enabled)
         .flatMap((list) => list.words)
         .filter((word) => !blocklist.blocksWord(word)),
+      // Holiday words in season (never on the Daily Page, which is the same for everyone).
+      seasonWords: (() => {
+        const dressed = season();
+        return dressed ? HOLIDAY_WORDS[dressed] : [];
+      })(),
+      seasonShare: GAME_CONFIG.seasons.wordShare,
     });
   };
 
@@ -574,7 +600,7 @@ async function main(): Promise<void> {
     openSettings(document.body, {
       settings,
       onChange: (next) => {
-        const redraw = next.theme !== settings.theme || next.textSize !== settings.textSize || next.motion !== settings.motion || next.screenEffects !== settings.screenEffects || next.pageWriting !== settings.pageWriting;
+        const redraw = next.theme !== settings.theme || next.textSize !== settings.textSize || next.motion !== settings.motion || next.screenEffects !== settings.screenEffects || next.pageWriting !== settings.pageWriting || next.holidayLooks !== settings.holidayLooks;
         settings = next;
         saveSettings(settings);
         applyColors();
@@ -815,6 +841,7 @@ async function main(): Promise<void> {
       return needed > 0 ? into / needed : 1;
     },
     level: () => levelForInk(store.data.profile.ink),
+    stickers: () => Object.keys(store.data.stickers.earned),
     cosmetics: () => store.data.profile.cosmetics,
     onEquip: (slot, item) => equip(slot, item),
     bestLine: (d) => {
@@ -960,7 +987,7 @@ async function main(): Promise<void> {
     stickerBook: () => {
       const { earned, unseen } = store.data.stickers;
       const date = new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium' });
-      const groups: StickerGroup[] = ['pages', 'speed', 'bosses', 'course', 'daily', 'secret'];
+      const groups: StickerGroup[] = ['pages', 'speed', 'bosses', 'course', 'daily', 'seasons', 'secret'];
       return {
         earned: Object.keys(earned).length,
         total: STICKERS.length,
@@ -1039,6 +1066,15 @@ async function main(): Promise<void> {
     });
     if (fresh.length === 0) return;
     recentStickers = [...recentStickers, ...fresh];
+    // Holiday stickers bring keepsakes for the Desk: they go on the unlock card with any level-up.
+    const keepsakes = stickerUnlocks(fresh);
+    if (keepsakes.length > 0) {
+      reward = {
+        ...reward,
+        unlocked: [...reward.unlocked, ...keepsakes.map(({ slot, item }) => t(`${slot}.${item}` as MessageKey))],
+        items: [...reward.items, ...keepsakes],
+      };
+    }
     if (toast) {
       showStickerToast(
         document.body,

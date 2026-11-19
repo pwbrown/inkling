@@ -8,10 +8,11 @@
 import { APPRENTICE_CHAPTERS, chapterStars, type GameMode } from './campaign';
 import { BOSS_KINDS, GAME_CONFIG, type BossKind, type Difficulty } from './config';
 import type { Grade } from './grade';
+import { activeSeason } from './seasons';
 import { wpm, type Stats } from './stats';
 
 /** Which shelf of the sticker book a sticker sits on, and its color. */
-export type StickerGroup = 'pages' | 'speed' | 'bosses' | 'course' | 'daily' | 'secret';
+export type StickerGroup = 'pages' | 'speed' | 'bosses' | 'course' | 'daily' | 'seasons' | 'secret';
 
 /** A page just cleared. */
 export interface PageFacts {
@@ -25,7 +26,7 @@ export interface PageFacts {
   /** The boss on this page, if it had one. */
   boss: BossKind | null;
   layoutId: string;
-  /** When it was cleared (for the secret late-night sticker). */
+  /** When it was cleared (for the secret late-night sticker and the holiday ones). */
   at: Date;
 }
 
@@ -115,6 +116,9 @@ export const STICKERS: readonly Sticker[] = [
   { id: 'onFire', group: 'daily', emoji: '🔥', earned: (f) => (f.daily?.streak ?? 0) >= S.streak[0]! },
   { id: 'weekOfInk', group: 'daily', emoji: '🗓️', earned: (f) => (f.daily?.streak ?? 0) >= S.streak[1]! },
   { id: 'inkHabit', group: 'daily', emoji: '💎', earned: (f) => (f.daily?.streak ?? 0) >= S.streak[2]! },
+  // Holidays (M26): a page finished in season; each unlocks keepsakes for the Desk (rewards.ts).
+  { id: 'harvestHelper', group: 'seasons', emoji: '🦃', earned: (f) => !!f.page && activeSeason(f.page.at) === 'thanksgiving' },
+  { id: 'snowScribe', group: 'seasons', emoji: '⛄', earned: (f) => !!f.page && activeSeason(f.page.at) === 'christmas' },
   // Secrets
   {
     id: 'midnightOil',

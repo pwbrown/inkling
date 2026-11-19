@@ -35,6 +35,9 @@ import { intercept, type Point } from './aim';
 import { GAME_CONFIG } from '../core/config';
 import { aboutToSquirt, canStart, squidGuards } from '../core/bosses';
 import { createCreature, type CreatureView } from './creatures';
+import { SeasonDecor } from './seasonDecor';
+import { HOLIDAY, drawLeaf, drawPilgrimHat, drawSantaHat, drawSnowflake } from './holidayArt';
+import type { SeasonId } from '../core/seasons';
 import { bodyColor, drawFace, type Mood } from './creatures/common';
 import { InkShots, SHOT_SPEED } from './shots';
 import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, glyph, prefersReducedMotion } from './theme';
@@ -75,6 +78,8 @@ export interface DisplayOptions {
   cosmetics?: Cosmetics;
   /** The faint manuscript and its scribe (default on). Off keeps only the page heading. */
   pageWriting?: boolean;
+  /** The holiday season to dress up for (core/seasons.ts), or none. */
+  season?: SeasonId | null;
 }
 
 const GOLD = 0xc9a227;
@@ -101,7 +106,9 @@ function splatterColor(choice: Cosmetics['splatter']): number {
 function drawPage(style: Cosmetics['paper']): Graphics {
   const page = new Graphics();
   // Parchment warms the paper; strongest on the classic theme, a hint elsewhere.
-  const paper = style === 'parchment' ? mix(COLORS.paper, 0xe3c98f, 0.45) : COLORS.paper;
+  // The holiday papers (M26) tint it warm or cool and print a faint border.
+  const tint = PAPER_TINTS[style];
+  const paper = tint ? mix(COLORS.paper, tint.color, tint.amount) : COLORS.paper;
   page.rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(paper);
 
   if (style === 'graph') {
@@ -113,10 +120,48 @@ function drawPage(style: Cosmetics['paper']): Graphics {
   for (let y = FIRST_LINE_Y - LINE_SPACING; y < WORLD_HEIGHT - LINE_SPACING / 2; y += LINE_SPACING) {
     page.moveTo(0, y).lineTo(WORLD_WIDTH, y);
   }
-  page.stroke({ width: 1.5, color: COLORS.rule });
+  const rule = style === 'harvest' ? mix(COLORS.rule, 0xc08a52, 0.55) : style === 'winter' ? mix(COLORS.rule, 0x7fa8d1, 0.45) : COLORS.rule;
+  page.stroke({ width: 1.5, color: rule });
+
+  if (style === 'harvest' || style === 'winter') {
+    // A faint printed border along the bottom edge, below the footer's text.
+    const border = new Graphics();
+    for (let x = MARGIN_X + 40, i = 0; x < WORLD_WIDTH - 20; x += 64, i++) {
+      if (style === 'harvest') drawLeaf(border, x, WORLD_HEIGHT - 9, 9, HOLIDAY.leaves[i % HOLIDAY.leaves.length]!, i % 2 ? 0.5 : -0.5);
+      else drawSnowflake(border, x, WORLD_HEIGHT - 10, 6);
+    }
+    border.alpha = 0.4;
+    page.addChild(border);
+  }
 
   page.moveTo(MARGIN_X, 0).lineTo(MARGIN_X, WORLD_HEIGHT).stroke({ width: 2.5, color: COLORS.margin });
   return page;
+}
+
+/** Paper tints: what each paper mixes into the theme's paper color, and how much. */
+const PAPER_TINTS: Partial<Record<Cosmetics['paper'], { color: number; amount: number }>> = {
+  parchment: { color: 0xe3c98f, amount: 0.45 },
+  harvest: { color: 0xf0c890, amount: 0.35 },
+  winter: { color: 0xdde9f5, amount: 0.6 },
+};
+
+/** Where a holiday hat sits on each pen, and how it tilts along the pen's edge. */
+const NIB_HAT: Record<Cosmetics['nib'], { x: number; y: number; rotation: number; size: number }> = {
+  classic: { x: 14, y: -16.5, rotation: 0.37, size: 1 },
+  gold: { x: 14, y: -16.5, rotation: 0.37, size: 1 },
+  quill: { x: -14, y: -17, rotation: 0.2, size: 0.9 },
+  brush: { x: 24, y: -8, rotation: 0.1, size: 0.75 },
+};
+
+/** The Nib's hat (a holiday keepsake from the Desk), or nothing. */
+function drawNibHat(style: Cosmetics['nib'], hat: Cosmetics['hat']): Graphics {
+  const g = new Graphics();
+  const at = NIB_HAT[style];
+  if (hat === 'santa') drawSantaHat(g, 0, 0, 20 * at.size);
+  else if (hat === 'pilgrim') drawPilgrimHat(g, 0, 0, 26 * at.size);
+  g.position.set(at.x, at.y);
+  g.rotation = at.rotation;
+  return g;
 }
 
 /** The Nib, the player: a pen that points at what you're typing, in the equipped style. */
@@ -257,12 +302,16 @@ export async function createRenderer(
   let calloutText!: Text;
   let calloutArrow!: Graphics;
   let calloutId: MechanicId | null = null;
+  let season: SeasonId | null = null;
+  let decor!: SeasonDecor;
 
   const build = (keepCard = false) => {
     const options = display();
     ({ reducedMotion, textScale } = options);
     gentle = options.screenEffects === 'gentle';
     const cosmetics = options.cosmetics ?? DEFAULT_COSMETICS;
+    season = options.season ?? null;
+    decor = new SeasonDecor(season, reducedMotion);
     // Pull out what should survive before the rest is destroyed.
     const kept = keepCard && overlay ? { overlay, manuscript, scribe } : null;
     if (kept) {
@@ -291,7 +340,7 @@ export async function createRenderer(
     nibStyle = cosmetics.nib;
     nib = new Container();
     nibFace = new Graphics();
-    nib.addChild(drawNib(nibStyle), nibFace);
+    nib.addChild(drawNib(nibStyle), nibFace, drawNibHat(nibStyle, cosmetics.hat ?? 'none'));
     nib.position.set(NIB_HOME.x, NIB_HOME.y);
     hud = new Hud();
     if (kept) {
@@ -304,6 +353,7 @@ export async function createRenderer(
       scribe.showFigure(options.pageWriting ?? true);
       overlay = new Overlay(actions, reducedMotion);
     }
+    scribe.setSeason(season);
     scene = new Container();
     const wash = (color: number) => {
       const g = new Graphics().rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(color);
@@ -319,7 +369,7 @@ export async function createRenderer(
     calloutId = null;
     slowWash = wash(COLORS.inkFaded);
     glowWash = wash(COLORS.highlighter);
-    scene.addChild(drawPage(cosmetics.paper), manuscript.root, scribe.root, glowWash, slowWash, effects.stainLayer, guide, targetLayer, smudgeLayer, nib, shots.layer, effects.particleLayer, callout);
+    scene.addChild(drawPage(cosmetics.paper), decor.root, manuscript.root, scribe.root, glowWash, slowWash, effects.stainLayer, guide, targetLayer, smudgeLayer, nib, shots.layer, effects.particleLayer, callout);
     vignette = new Graphics();
     const bands = 7;
     for (let i = 0; i < bands; i++) {
@@ -726,6 +776,7 @@ export async function createRenderer(
     const danger = world.targets.some((target) => !target.bottle && target.x < MARGIN_X + GAME_CONFIG.manuscript.glanceDistance);
     manuscript.update(fraction, world.phase === 'paused' ? 0 : frameMs, reducedMotion);
     scribe.update(world.phase === 'paused' ? 0 : frameMs, reducedMotion, playing && danger);
+    decor.update(world.phase === 'paused' ? 0 : frameMs);
   };
 
   /** A creature of the page is gone (not a bottle or part of a boss). */
@@ -960,7 +1011,7 @@ export async function createRenderer(
         live.add(target.id);
         let view = views.get(target.id);
         if (!view) {
-          view = createCreature(target, textScale);
+          view = createCreature(target, textScale, season);
           views.set(target.id, view);
           targetLayer.addChild(view.root);
         }
