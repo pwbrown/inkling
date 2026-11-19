@@ -22,6 +22,7 @@ function page(stats: Partial<Stats> = {}, extra: Partial<PageFacts> = {}): PageF
     boss: null,
     layoutId: 'us-qwerty',
     at: new Date(2026, 9, 14, 15, 0),
+    season: null,
     ...extra,
   };
 }
@@ -94,9 +95,9 @@ describe('stickers', () => {
   });
 
   it('gives the holiday stickers for a page finished in season', () => {
-    expect(earned(facts({ page: page({}, { at: new Date(2026, 10, 26, 15) }) }))).toContain('harvestHelper');
-    expect(earned(facts({ page: page({}, { at: new Date(2026, 11, 24, 15) }) }))).toContain('snowScribe');
-    const summer = earned(facts({ page: page({}, { at: new Date(2027, 6, 4, 15) }) }));
+    expect(earned(facts({ page: page({}, { season: 'thanksgiving' }) }))).toContain('harvestHelper');
+    expect(earned(facts({ page: page({}, { season: 'christmas' }) }))).toContain('snowScribe');
+    const summer = earned(facts({ page: page({}, { season: null }) }));
     expect(summer).not.toContain('harvestHelper');
     expect(summer).not.toContain('snowScribe');
     expect(earned(facts())).not.toContain('snowScribe');

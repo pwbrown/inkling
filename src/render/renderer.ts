@@ -5,6 +5,10 @@
  * The creatures are drawn procedurally in src/render/creatures/ in the
  * Inkwell style (DESIGN §5, §7).
  */
+// PixiJS's browser setup, bundled with the game (M29). PixiJS would
+// otherwise fetch it on its own during start-up, after the fonts, adding a
+// round trip before the menu can show.
+import 'pixi.js/browser';
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import {
   FIRST_LINE_Y,

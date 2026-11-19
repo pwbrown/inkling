@@ -1,6 +1,6 @@
 # Game SEO and holiday skins
 
-Claude Code session started 2026-11-19. 16 prompts.
+Claude Code session started 2026-11-19. 18 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -2191,12 +2191,462 @@ The change is on a new branch, `chore/readme-site-link`, and isn't committed or 
 
 > Yes, push it
 
-<details><summary>1 tool call</summary>
+<details><summary>2 tool calls</summary>
 
 - **Shell:** Export transcript and scan it
 
   ```bash
   npm run transcript >/dev/null 2>&1; for f in $(git status --short docs/transcripts | awk '{print $2}'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[a-z][A-Za-z0-9._-]+" "$f" | head -3; done; git status --short
+  ```
+- **Shell:** Commit, merge to main, delete branch, push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Link the live game from the README
+
+  - "Play it free at inkykeys.com" line near the top, with a link to the parents and teachers page
+  - Transcript export
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git checkout -q main && git merge -q --ff-only chore/readme-site-link && git branch -d chore/readme-site-link && git push -q origin main && git log --oneline --decorate -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+It's pushed: commit `e404115`, "Link the live game from the README", is on `main`, and the GitHub repo page now shows the "Play it free at inkykeys.com" line near the top. I deleted the branch.
+
+The transcript export went in with it, and the scan found no private details. It does include the Google verification code from the DNS check, but that's public in your DNS anyway.
+
+The push also re-runs the deploy; the live game itself doesn't change.
+
+## 🧑 Prompt
+
+> start the word list background loading follow-up
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Branch and read every pack use in main.ts
+
+  ```bash
+  git checkout -q -b feat/m29-background-words && sed -n 150,200p src/main.ts && sed -n 280,300p src/main.ts && sed -n 450,470p src/main.ts && sed -n 530,545p src/main.ts && sed -n 630,660p src/main.ts && grep -n "actions.start = \|const openKeys\|const openVocab\|function readLinks\|const readLinks" src/main.ts
+  ```
+- **Shell:** Find content uses and mode starts
+
+  ```bash
+  grep -n "setContent(\|dailyContent()\|contentFor(" src/main.ts; sed -n 336,360p src/main.ts; sed -n 820,860p src/main.ts
+  ```
+- **Shell:** Read the after() helper and mode starts
+
+  ```bash
+  grep -n "const after\b\|const after =\|after(() =>" src/main.ts | head -20; grep -n "const after" -A 8 src/main.ts; sed -n 360,400p src/main.ts
+  ```
+- **Shell:** Locate after() definition and its call sites
+
+  ```bash
+  grep -n "function after\|after = (" src/*.ts src/ui/*.ts | head; sed -n 786,800p src/main.ts; sed -n 862,880p src/main.ts; sed -n 940,950p src/main.ts; sed -n 1295,1305p src/main.ts
+  ```
+- **Shell:** Read after() and continue entry points
+
+  ```bash
+  sed -n 1020,1040p src/main.ts; grep -n "onContinue\|onStartFreeWrite\|continueNotebook\|resumeNotebook" src/main.ts | head
+  ```
+- **Shell:** Add a menu-ready mark and measure the baseline
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  s=s.replace("""function hideSplash(): void {
+    const splash""","""function hideSplash(): void {
+    // Lets Lighthouse (and the browser's performance tools) show when the game became usable.
+    performance.mark('inky-keys:menu-ready');
+    const splash""")
+  open(p,'w').write(s)
+  EOF
+  npm run build >/dev/null 2>&1; grep -rn "inkling.pack\|\.pack\b" scripts/*.ts | head -3; cd "<temp file>" && export CHROME_PATH="/Applications/Google Chrome.app/Con
+  … (599 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Baseline: on a throttled slow phone connection, the menu is ready about **5.35 s** after opening. Now the change.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Load the word pack in the background in main.ts
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  def rep(a,b,cnt=1):
+      global s
+      assert a in s, a[:80]
+      s=s.replace(a,b,cnt)
+
+  rep("""  // Fonts first: canvas text is rasterised once, in whatever font is ready.
+    const packLoading = loadEnglishPack();
+    await loadFonts();
+
+    const [pack, renderer] = await Promise.all([
+      packLoading,
+      createRenderer(host, {""","""  /**
+     * The word pack (~160 kB) loads in the background (M29): the menu doesn't
+     * wait for it. Anything that needs words waits through `withWords`, and on
+     * all but the slowest connections the pack is in long b
+  … (3274 more characters)
+  ```
+- **Shell:** Close the wrapped functions and typecheck
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  for marker in ["  actions.start = withWords(() => {","  const playDaily = withWords((challenge","  const openKeys = withWords(() => {","  const openVocab = withWords(() => {"]:
+      i=s.index(marker)
+      j=s.index("\n  };\n", i)
+      s=s[:j]+"\n  });\n"+s[j+len("\n  };\n"):]
+  open(p,'w').write(s)
+  EOF
+  npx tsc --noEmit 2>&1 | head -20
+  ```
+- **Shell:** Add imports; find remaining content users
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  s=s.replace("import { loadEnglishPack } from './content/en';","import { Blocklist } from './content/blocklist';\nimport { loadEnglishPack, type ContentPack } from './content/en';")
+  open(p,'w').write(s)
+  EOF
+  grep -n "const continueSaved\|const practiceChapterKeys" -A 3 src/main.ts; grep -n "pack, store, menu" src/main.ts
+  ```
+- **Shell:** Gate Continue, refresh content on arrival, check
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  i=s.index("  const continueSaved = () => {")
+  s=s.replace("  const continueSaved = () => {","  const continueSaved = withWords(() => {",1)
+  j=s.index("\n  };\n", i)
+  s=s[:j]+"\n  });\n"+s[j+len("\n  };\n"):]
+  s=s.replace("""  const game = createWorld({
+      content: contentFor(store.data.keys),
+      difficulty: store.data.difficulty,
+      makeContent: contentFor,
+      layout: layout(),
+    });
+  ""","""  const game = createWorld({
+      content: contentFor(store.data.keys),
+      difficulty: store.data.difficulty,
+      makeContent: contentFor,
+      layout: lay
+  … (526 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks pass. One edge case to close: pressing Enter twice before the words arrive would queue two starts, and the second would skip past the first card. Making it keep only the first request.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Keep only the first queued request; build
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  old="""  /** Run `action` now if the words are in, or as soon as they arrive. */
+    const withWords =
+      <A extends unknown[]>(action: (...args: A) => void) =>
+      (...args: A): void => {
+        if (pack) {
+          action(...args);
+          return;
+        }
+        void packReady.then(() => {
+          action(...args);
+          syncMenu();
+        });
+      };"""
+  new="""  /**
+     * Run `action` now if the words are in, or as soon as they arrive. Only
+     * the first request made while waiting runs, so pressing Enter twice can't
+     * start a page and then s
+  … (558 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+One more fix: a challenge link read at startup would use up that single waiting slot. It gets its own wait instead.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Give challenge links their own wait; check
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  i=s.index("  const readChallenge = withWords(() => {")
+  j=s.index("\n  });\n", i)
+  body=s[i:j]
+  nb=body.replace("  const readChallenge = withWords(() => {","  const readChallenge = () => {")
+  nb=nb.replace("""    if (challenge.name && words().blocklist.blocksString(challenge.name)) challenge.name = null;
+      pendingChallenge = challenge;
+      if (game.phase === 'ready' && !dialogOpen) menu.show('challenge');""","""    // The name check needs the word filter, which comes with the word pack.
+      void packReady.then(({ blocklist }) => {
+        if (cha
+  … (419 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks pass. Now measuring the new time to menu:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Measure time to menu after the change
+
+  ```bash
+  cd "<temp file>" && export CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"; for i in 1 2 3; do npx --yes lighthouse@12.8.2 "http://localhost:4173/" --quiet --throttling-method=devtools --chrome-flags="--headless=new" --only-categories=performance --output=json --output-path="lh-bg-after-$i.json" >/dev/null 2>&1; node -e "const r=require('./lh-bg-after-$i.json');const u=(r.audits['user-timings'].details?.items||[]).find(i=>i.name==='inky-keys:menu-ready');console
+  … (485 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+No gain: about 5.38 s, the same as before. So the word list wasn't what held the menu back. Checking what does, using the network timings from that run:
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Show request timeline and CPU breakdown
+
+  ```bash
+  cd "<temp file>" && node -e "
+  const r=require('./lh-bg-after-1.json');
+  for (const i of r.audits['network-requests'].details.items) if (i.transferSize>2000) console.log(String(Math.round(i.networkRequestTime)).padStart(5), String(Math.round(i.networkEndTime)).padStart(5), String(Math.round(i.transferSize/1024)).padStart(4)+'KB', i.priority, i.url.slice(21,80));
+  console.log('main-thread', JSON.stringify(r.audits['mainthread-work-breakdown'].details.items.slice(0,5).map(i=>[i.group,Math.roun
+  … (179 more characters)
+  ```
+- **Shell:** Check PixiJS environment imports and init
+
+  ```bash
+  node -e "const p=require('./node_modules/pixi.js/package.json');console.log(p.version, Object.keys(p.exports).filter(k=>/browser|environment|init|all/i.test(k)))"; grep -rn "browserAll\|loadEnvironmentExtensions" node_modules/pixi.js/lib/environment/autoDetectEnvironment.mjs 2>/dev/null | head; grep -n "app.init\|new Application\|manageImports" src/render/renderer.ts | head
+  ```
+- **Shell:** Read how PixiJS loads its browser extensions
+
+  ```bash
+  cat node_modules/pixi.js/lib/environment/autoDetectEnvironment.mjs; node -e "console.log(require('./node_modules/pixi.js/package.json').exports['./browser'])"; sed -n 240,252p src/render/renderer.ts; grep -rln "import('./init\|init.mjs\|browserAll" node_modules/pixi.js/lib/environment-browser/*.mjs node_modules/pixi.js/lib/rendering/renderers/autoDetectRenderer.mjs 2>/dev/null | head
+  ```
+- **Shell:** See what each lazy PixiJS chunk contains
+
+  ```bash
+  for f in dist/assets/browserAll-*.js dist/assets/init-*.js dist/assets/CanvasPool-*.js dist/assets/RenderTargetSystem-*.js; do echo "== $f"; node -e "const m=require('./$f.map');console.log(m.sources.map(s=>s.replace(/.*pixi.js\/lib\//,'')).slice(0,8).join(' | '), '...', m.sources.length)"; done; grep -rn "import(" node_modules/pixi.js/lib/rendering/renderers/autoDetectRenderer.mjs | head
+  ```
+- **Shell:** Find PixiJS's lazy import switches
+
+  ```bash
+  grep -rn "manageImports" node_modules/pixi.js/lib/app/Application.mjs node_modules/pixi.js/lib/rendering/renderers/autoDetectRenderer.mjs | head -5; grep -n "import(" node_modules/pixi.js/lib/rendering/renderers/autoDetectRenderer.mjs node_modules/pixi.js/lib/environment-browser/browserExt.mjs | head
+  ```
+- **Shell:** Read PixiJS browser extension loader
+
+  ```bash
+  sed -n 1,30p node_modules/pixi.js/lib/environment-browser/browserExt.mjs; sed -n 1,50p node_modules/pixi.js/lib/rendering/renderers/autoDetectRenderer.mjs | grep -n "preference\|skipExtensionImports\|autoDetectEnvironment\|loadEnvironment"
+  ```
+- **Shell:** Defer word download; bundle PixiJS browser setup
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'; s=open(p).read()
+  def rep(a,b):
+      global s
+      assert a in s, a[:70]
+      s=s.replace(a,b,1)
+  rep("""  /**
+     * The word pack (~160 kB) loads in the background (M29): the menu doesn't
+     * wait for it. Anything that needs words waits through `withWords`, and on
+     * all but the slowest connections the pack is in long before anyone gets
+     * that far.
+     */
+    let pack: ContentPack | null = null;
+    const packReady: Promise<ContentPack> = loadEnglishPack().then((loaded) => {
+      pack = loaded;
+      return loaded;
+    });""","""  /**
+     * The word pack (~160 kB) load
+  … (1872 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+PixiJS's browser setup is now in the main script (it grew by about 6 KB compressed), and the separate chunk is gone. Measuring:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Measure time to menu with the new load order
+
+  ```bash
+  cd "<temp file>" && export CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"; for i in 1 2 3; do npx --yes lighthouse@12.8.2 "http://localhost:4173/" --quiet --throttling-method=devtools --chrome-flags="--headless=new" --only-categories=performance --output=json --output-path="lh-bg2-$i.json" >/dev/null 2>&1; node -e "const r=require('./lh-bg2-$i.json');const u=(r.audits['user-timings'].details?.items||[]).find(i=>i.name==='inky-keys:menu-ready');console.log(Math.
+  … (538 more characters)
+  ```
+- **Shell:** Test pressing Start before the words arrive
+
+  ```bash
+  mkdir -p "<temp file>" && cat > "<temp file>" <<'EOF'
+  // Opens the dev server in headless Chrome, holds back the word pack, and presses
+  // Free Write -> Start writing (twice) before it arrives. Reports the phases seen.
+  import { spawn } from 'node:child_process';
+  import { mkdtempSync, rmSync } from 'node:fs';
+  import { tmpdir } from 'node:os';
+  import { join } 
+  … (3145 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The phase stayed `ready`, so either my queued start didn't run or the keys never reached Start. Running the same steps without holding the words back, as a control:
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Control run with words not held back
+
+  ```bash
+  S="<temp file>"; sed 's#if (/words/.test(u)) held.push#if (process.env.HOLD \&\& /words/.test(u)) held.push#' "$S/run.mjs" > "$S/run2.mjs" && node "$S/run2.mjs" "http://localhost:5173/?season=none"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The control didn't start either, so the problem is my key presses in headless Chrome, not the change. Switching to clicking the buttons, as the snapshot script does:
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Rerun both tests by clicking buttons
+
+  ```bash
+  S="<temp file>"; python3 - "$S" <<'EOF'
+  import sys
+  d=sys.argv[1]
+  for name in ['run.mjs','run2.mjs']:
+      p=f'{d}/{name}'; s=open(p).read()
+      s=s.replace("await key('f'); await sleep(700);\nawait key('Enter'); await sleep(150); await key('Enter'); await sleep(1500);",
+  """const click = (label) => evaluate(`(() => { const b = [...document.querySelectorAll('button')].find((e) => e.offsetParent && e.textContent.includes(${JSON.stringify(label)})); if (b) b.click(); return Boolean(b)
+  … (458 more characters)
+  ```
+- **Shell:** Run checks and a full regression snapshot tour
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|×|Tests"; npm run snapshots -- m29check 2>&1 | grep -iE "skipped|error|page-done|site-how"; ls docs/progression/m29check | wc -l
+  ```
+- **Read** `docs/progression/m29check/page-done.png`
+- **Shell:** Holiday stickers follow the game's season
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/core/stickers.ts'; s=open(p).read()
+  s=s.replace("import { activeSeason } from './seasons';","import type { SeasonId } from './seasons';")
+  s=s.replace("""  /** When it was cleared (for the secret late-night sticker and the holiday ones). */
+    at: Date;""","""  /** When it was cleared (for the secret late-night sticker). */
+    at: Date;
+    /** The holiday season it was cleared in (core/seasons.ts: activeSeason(at)), for the holiday stickers. */
+    season: SeasonId | null;""")
+  s=s.replace("earned: (f) => !!f.page && activeSeason(f.page.at) === 'thanksgiving' }","earned: (f) 
+  … (1489 more characters)
+  ```
+- **Shell:** Find other PageFacts makers and run checks
+
+  ```bash
+  grep -rn "page: {" src | grep -v stickers.test | head; grep -rln "PageFacts\|at: new Date(20" src | head; npm run check 2>&1 | grep -E "error|×|Tests"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks pass. Retaking the `latest` snapshots so the page-done shot no longer shows the holiday card:
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Retake latest snapshots and prune untracked
+
+  ```bash
+  rm -rf docs/progression/m29check && npm run snapshots -- latest 2>&1 | tail -1 && cd docs/progression && git clean -fq latest/ && git status --short .
+  ```
+- **Read** `docs/progression/latest/page-done.png`
+
+</details>
+
+### 🤖 Claude
+
+Fixed. Now the docs and a 2.19.1 patch release.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Docs, 2.19.1 release entry, check and build
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && python3 - <<'EOF'
+  def edit(p, a, b):
+      s=open(p).read(); assert a in s, (p, a[:60]); open(p,'w').write(s.replace(a,b,1))
+  edit('README.md', """Font preloads were tried and made it slower, because on a slow connection they compete with the script the menu needs.
+  """, """Font preloads were tried and made it slower, because on a slow connection they compete with the script the menu needs.
+
+  Since 2.19.1 the menu also doesn't wait for the word pack: its download starts once the menu is showing, and anything that needs words (starting a page, the Type Cas
+  … (1930 more characters)
+  ```
+- **Shell:** Rename the branch to match the patch
+
+  ```bash
+  git branch -m feat/background-words && git branch --show-current
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The menu now shows up about a second sooner on slow connections. On a throttled slow phone connection it's ready in **4.3 s instead of 5.35 s** (three runs each). Lighthouse performance is 97 with its simulated slow connection and 98 under the throttled runs. This is ready as patch release 2.19.1 on `feat/background-words`, with checks (432 tests) and the build passing. Nothing is committed yet.
+
+**The word-list change on its own didn't help.** Loading the words in the background still came out at 5.38 s. The timings showed why:
+- The word list was downloading alongside the fonts and slowing them down.
+- PixiJS only asked for two small pieces of itself after the fonts arrived, which added another round trip before the menu could show.
+
+**What fixed it:**
+- **Word list after the menu:** its download now starts once the menu is showing, so the fonts get the connection to themselves. Everything that needs words waits for them: starting a page, Continue, Daily Page, Apprentice chapters, the Type Case, Word lists, and the name check on challenge links.
+- **PixiJS's browser setup bundled:** it now comes with the main script instead of being a separate download at the end. That adds about 6 KB compressed to the main script.
+
+**Tested with a headless Chrome script that holds back the word list:**
+- Pressing Start twice before the words arrive does nothing visible. When they arrive, the page's first card shows, and the second press is ignored rather than skipping it.
+- The control run, with the words already loaded, goes straight to the first card.
+- A full snapshot tour also ran through cleanly.
+
+One downside: on a very slow connection, clicking Start in that first moment gives no feedback until the words arrive. That's usually well under a second, but I can add a small "getting the words ready" note if you'd like.
+
+**Also fixed along the way:** the snapshot tour's "page done" shot had been showing the holiday unlock card, because the holiday stickers went by the real date and today is in the Thanksgiving window. The committed `latest/page-done.png` from the last few releases showed it too. The stickers now go by the same season the game uses, which in production is still just the date. I retook the `latest` shots.
+
+The README's page-speed section, REQUIREMENTS row 28 and the M28 progression notes are updated, and the release note reads "The menu comes up sooner on slow connections."
+
+## 🧑 Prompt
+
+> Yes, ship it
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan it
+
+  ```bash
+  npm run transcript >/dev/null 2>&1; for f in $(git status --short docs/transcripts | awk '{print $2}'); do grep -noE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "$f" | grep -v "noreply@anthropic.com"; grep -noE "(gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,})" "$f"; grep -noE "/Users/[a-z][A-Za-z0-9._-]+" "$f" | head -3; done; git status --short docs/transcripts
   ```
 
 </details>

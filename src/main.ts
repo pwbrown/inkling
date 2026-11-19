@@ -2,7 +2,8 @@
 import 'pixi.js/unsafe-eval';
 import './style.css';
 import { countTypeableWords, createContentSource, MIN_WORD_POOL } from './content/contentSource';
-import { loadEnglishPack } from './content/en';
+import { Blocklist } from './content/blocklist';
+import { loadEnglishPack, type ContentPack } from './content/en';
 import { HOLIDAY_WORDS } from './content/en/holidays';
 import type { Dictionary } from './content/vocabApi';
 import { isLayoutId, layoutById } from './content/layouts';
@@ -157,12 +158,48 @@ async function main(): Promise<void> {
   // The overlay's handlers only run once the game exists, after the word pack loads.
   const actions: { onLink: (id: OverlayLinkId) => void; start: () => void } = { onLink: () => {}, start: () => {} };
 
+  /**
+   * The word pack (~160 kB) loads in the background (M29). Its download
+   * starts once the menu is showing, so on a slow connection it doesn't
+   * compete with the fonts the menu needs, or earlier if something needs
+   * words first. Anything that needs words waits through `withWords`.
+   */
+  let pack: ContentPack | null = null;
+  let packLoading: Promise<ContentPack> | null = null;
+  const packReady = (): Promise<ContentPack> =>
+    (packLoading ??= loadEnglishPack().then((loaded) => {
+      pack = loaded;
+      return loaded;
+    }));
+  /**
+   * Run `action` now if the words are in, or as soon as they arrive. Only
+   * the first request made while waiting runs, so pressing Enter twice can't
+   * start a page and then skip its first card.
+   */
+  let waitingForWords = false;
+  const withWords =
+    <A extends unknown[]>(action: (...args: A) => void) =>
+    (...args: A): void => {
+      if (pack) {
+        action(...args);
+        return;
+      }
+      if (waitingForWords) return;
+      waitingForWords = true;
+      void packReady().then(() => {
+        waitingForWords = false;
+        action(...args);
+        syncMenu();
+      });
+    };
+  /** Until the pack arrives: no words (content made now is replaced before any page starts). */
+  const noWords: ContentPack = { locale: 'en', words: [], blocklist: new Blocklist([]) };
+  const words = (): ContentPack => pack ?? noWords;
+
   // Fonts first: canvas text is rasterised once, in whatever font is ready.
-  const packLoading = loadEnglishPack();
   await loadFonts();
 
-  const [pack, renderer] = await Promise.all([
-    packLoading,
+  const [renderer] = await Promise.all([
     createRenderer(host, {
       onConfirm: () => actions.start(),
       onLink: (id) => actions.onLink(id),
@@ -255,10 +292,10 @@ async function main(): Promise<void> {
     const weights = keyWeights(store.data.keyStats, keys);
     for (const key of focus) weights[key] = (weights[key] ?? 1) * NEW_KEY_WEIGHT;
     // The family-friendly word filter (content/contentFilter.ts) decides which words appear.
-    const blocklist = pack.blocklist;
+    const { blocklist } = words();
     return createContentSource({
       keys,
-      words: pack.words,
+      words: words().words,
       blocklist,
       trustedWords: true,
       keyWeights: weights,
@@ -283,8 +320,8 @@ async function main(): Promise<void> {
   const dailyContent = () =>
     createContentSource({
       keys: dailyKeys(layout()),
-      words: pack.words,
-      blocklist: pack.blocklist,
+      words: words().words,
+      blocklist: words().blocklist,
       trustedWords: true,
     });
 
@@ -337,7 +374,7 @@ async function main(): Promise<void> {
   };
 
   /** Enter on an in-game card (next page, or retry after game over), or Start on the menu. */
-  actions.start = () => {
+  actions.start = withWords(() => {
     if (dialogOpen) return;
     if (game.phase === 'notebookComplete') {
       goToMenu();
@@ -356,19 +393,19 @@ async function main(): Promise<void> {
       confirm(game);
     }
     loop.reset();
-  };
+  });
 
-  const startChapter = (chapter: number) => {
+  const startChapter = withWords((chapter: number) => {
     if (dialogOpen || game.phase !== 'ready') return;
     startApprentice(game, chapter);
     loop.reset();
-  };
+  });
 
   /**
    * Today's Daily Page, or the one a challenge link is for. Only the first
    * go at today's counts; a challenge for another day is just for fun.
    */
-  const playDaily = (challenge: Challenge | null = null) => {
+  const playDaily = withWords((challenge: Challenge | null = null) => {
     if (dialogOpen || game.phase !== 'ready') return;
     const today = dailyId(new Date());
     const id = challenge?.daily ?? today;
@@ -384,7 +421,7 @@ async function main(): Promise<void> {
     dailyGrades = [];
     dailyOutcome = null;
     loop.reset();
-  };
+  });
 
   /** Record the Daily Page's result, if this was the day's counted go. */
   const finishDaily = (finished: boolean) => {
@@ -457,9 +494,12 @@ async function main(): Promise<void> {
     const challenge = decodeChallenge(location.hash, isLayoutId);
     history.replaceState(null, '', `${location.pathname}${location.search}`);
     if (!challenge) return;
-    if (challenge.name && pack.blocklist.blocksString(challenge.name)) challenge.name = null;
-    pendingChallenge = challenge;
-    if (game.phase === 'ready' && !dialogOpen) menu.show('challenge');
+    // The name check needs the word filter, which comes with the word pack.
+    void packReady().then(({ blocklist }) => {
+      if (challenge.name && blocklist.blocksString(challenge.name)) challenge.name = null;
+      pendingChallenge = challenge;
+      if (game.phase === 'ready' && !dialogOpen) menu.show('challenge');
+    });
   };
 
   /** A save from a transfer link (or why it couldn't be read), waiting for the player to choose. */
@@ -519,15 +559,15 @@ async function main(): Promise<void> {
     menu.show('title');
   };
 
-  const continueSaved = () => {
+  const continueSaved = withWords(() => {
     const saved = store.data.notebook;
     if (dialogOpen || game.phase !== 'ready' || !saved) return;
     setContent(game, contentFor(store.data.keys));
     continueNotebook(game, saved);
     loop.reset();
-  };
+  });
 
-  const openKeys = () => {
+  const openKeys = withWords(() => {
     if (dialogOpen || game.phase !== 'ready') return;
     dialogOpen = true;
     openTypeCase(document.body, {
@@ -536,7 +576,7 @@ async function main(): Promise<void> {
       customPresets: customPresets(),
       initial: store.data.keys,
       keyStats: store.data.keyStats,
-      countWords: (keys) => countTypeableWords(pack.words, keys),
+      countWords: (keys) => countTypeableWords(words().words, keys),
       minWords: MIN_WORD_POOL,
       onDone: (keys) => {
         dialogOpen = false;
@@ -562,7 +602,7 @@ async function main(): Promise<void> {
         });
       },
     });
-  };
+  });
 
   const openSaves = () => {
     if (dialogOpen || game.phase !== 'ready') return;
@@ -636,16 +676,16 @@ async function main(): Promise<void> {
 
   /** Word -> tier, for picking a downloaded article's words (built on first use). */
   let vocabDictionary: Dictionary | null = null;
-  const openVocab = () => {
+  const openVocab = withWords(() => {
     if (dialogOpen || game.phase !== 'ready') return;
-    vocabDictionary ??= new Map(pack.words.map((entry) => [entry.word, entry.tier]));
+    vocabDictionary ??= new Map(words().words.map((entry) => [entry.word, entry.tier]));
     dialogOpen = true;
     /** Rebuild content so word pages pick up list changes. */
     const refresh = () => setContent(game, contentFor(store.data.keys));
     openWordLists(document.body, {
       lists: store.data.vocab,
       dictionary: vocabDictionary,
-      blocklist: pack.blocklist,
+      blocklist: words().blocklist,
       countFitting: (words) =>
         countTypeableWords(
           words.map((word) => ({ word, tier: 0 })),
@@ -674,7 +714,7 @@ async function main(): Promise<void> {
         dialogOpen = false;
       },
     });
-  };
+  });
 
   /** Use a key set for Practice and remember it. */
   const useKeys = (keys: readonly string[]) => {
@@ -1150,6 +1190,8 @@ async function main(): Promise<void> {
         boss,
         layoutId: store.data.layout,
         at: new Date(),
+        // By the calendar, whatever the Holiday looks setting (and `?season=` in development).
+        season: calendarSeason,
       },
     });
   };
@@ -1375,6 +1417,11 @@ async function main(): Promise<void> {
   });
   syncMenu();
   hideSplash();
+  // Now the words. Every way into a page makes its content afresh (through
+  // `withWords`); this just keeps the idle world's content real too.
+  void packReady().then(() => {
+    if (game.phase === 'ready') setContent(game, contentFor(store.data.keys));
+  });
 
   // After an update, say what's new, once. Only remember the version if it
   // stuck, or blocked storage would show the notes on every visit.
@@ -1390,12 +1437,14 @@ async function main(): Promise<void> {
     // Handy for poking at state from the console during development. Still
     // called `inkling` (the first name) because the snapshots script reads it
     // from builds of older milestones.
-    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, pack, store, menu, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
+    (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, get pack() { return pack; }, store, menu, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
   }
 }
 
 /** Fade out the first screen from index.html once the game is ready (M28). */
 function hideSplash(): void {
+  // Lets Lighthouse (and the browser's performance tools) show when the game became usable.
+  performance.mark('inky-keys:menu-ready');
   const splash = document.getElementById('splash');
   if (!splash) return;
   splash.classList.add('gone');

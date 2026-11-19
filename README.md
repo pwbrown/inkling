@@ -156,6 +156,8 @@ npx lighthouse http://localhost:4173/ --view
 
 As of 2.19.0 the game page scores about 96 for performance and 100 for accessibility, best practices and SEO, and the web pages score 100 for all four. What keeps it fast: `index.html` paints a splash screen from its own inline styles before any script runs, and the game's small stylesheet is inlined into the page (`vite.config.ts`), so nothing blocks that first paint. Font preloads were tried and made it slower, because on a slow connection they compete with the script the menu needs.
 
+Since 2.19.1 the menu also doesn't wait for the word pack: its download starts once the menu is showing, and anything that needs words (starting a page, the Type Case's word count, Word lists, a challenge name) waits for it through `withWords` in `src/main.ts`. PixiJS's browser setup is bundled with the game (`import 'pixi.js/browser'` in `src/render/renderer.ts`) instead of being fetched during start-up. On a throttled slow phone connection (`npx lighthouse … --throttling-method=devtools`), the `inky-keys:menu-ready` timing went from about 5.35 s to 4.3 s.
+
 ### Project layout
 
 | Path | What lives there |

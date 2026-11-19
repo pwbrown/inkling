@@ -383,6 +383,7 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 - The game's stylesheet is inlined into the page, so nothing holds up the first paint. Lighthouse mobile performance went from 74 to about 96: first paint 3.9 → 2.0 s, largest paint 4.5 → 2.4 s, no layout shift.
 - Tried and dropped: preloading the fonts and giving PixiJS its own chunk. Both made the first download slower on a slow connection.
 - The snapshot tour now starts with the splash.
+- **2.19.1:** the menu comes up about a second sooner on slow connections: the word pack downloads once the menu is showing, and PixiJS's browser setup comes with the main script. The holiday stickers now follow the same season as the looks, so the tour's `?season=none` keeps them (and their unlock card) out of the page-done shot.
 
 ## Keeping this up to date
 
