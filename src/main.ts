@@ -131,6 +131,24 @@ async function main(): Promise<void> {
   };
   applyColors();
 
+  // PROTOTYPE (M31): `?fairCopy=passage|30|60` opens the Fair Copy typing test on its own (dev only).
+  if (import.meta.env.DEV) {
+    const params = new URLSearchParams(location.search);
+    const { fairCopyMode, runFairCopy } = await import('./fairCopyPrototype');
+    const mode = fairCopyMode(params.get('fairCopy'));
+    if (mode !== undefined) {
+      const theme = params.get('theme');
+      if (theme === 'classic' || theme === 'contrast' || theme === 'night') {
+        setTheme(theme);
+        document.documentElement.dataset.theme = theme;
+      }
+      await loadFonts();
+      await runFairCopy(host, mode, reducedMotion(settings, prefersReducedMotion()), Number(params.get('passage') ?? 0) || 0);
+      hideSplash();
+      return;
+    }
+  }
+
   const customPresets = (): Preset[] => store.data.customPresets.map((p) => ({ ...p, builtIn: false }));
   /** A dialog (Type Case, Save data…) is open and owns the keyboard. */
   let dialogOpen = false;
