@@ -1,6 +1,6 @@
 # Free copy feature visibility
 
-Claude Code session started 2026-11-20. 2 prompts.
+Claude Code session started 2026-11-20. 4 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -178,12 +178,124 @@ Trimming the Fair Copy tile text so it matches the length of the others, then sh
 
 Layout verified. Now committing, merging and tagging.
 
-<details><summary>1 tool call</summary>
+<details><summary>2 tool calls</summary>
 
 - **Shell:** Export transcript and show changed files
 
   ```bash
   npm run transcript 2>&1 | tail -3; git status --short | head -20
+  ```
+- **Shell:** Scan transcript additions for private details
+
+  ```bash
+  git diff docs/transcripts docs/transcripts/README.md | grep '^+' > <temp file> cat docs/transcripts/2026-11-20-free-copy-feature-visibility-d6fe3f60.md >> <temp file> grep -nEi '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|/Users/|/private/|(sk|ghp|gho|xox[bp])[-_][A-Za-z0-9]{10,}|token[=:]|password' <temp file>
+  … (72 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Only redacted paths and earlier scan commands; nothing private. Committing and shipping.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit, merge to main, tag release, push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  How to play explains Fair Copy (2.26.1)
+
+  - In-game How to play: "Ways to play" now has a Fair Copy tile next to Free Write and Apprentice
+  - Website How to play guide: a Fair Copy section, and it's named in the page description
+  - Parents and teachers page: Fair Copy under what the game teaches
+  - README: Fair Copy in the main menu keys and the modes section
+  - index.html structured-data description mentions Fair Copy
+  - Release 2.26.1 note; drop the now-unused .how-tiles-2 style
+  - Session transcript
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  E
+  … (232 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I took "free copy" to mean Fair Copy. It's now explained everywhere the game modes are, and it has shipped as **2.26.1**. Typecheck, lint, tests (460) and the build all passed, and `main` and the `v2.26.1` tag are pushed. I didn't check that the live site has updated yet.
+
+**Where it shows up now:**
+- **In-game How to play:** the section heading is now "Ways to play" (it was "Free Write and Apprentice"). Fair Copy has its own tile next to the other two, using the same icon as on the main menu. I checked it in the browser and the three tiles fit side by side.
+- **Website How to play page** ([how-to-play.html](site/en/how-to-play.html)): a new Fair Copy section that covers the classic-book passages, the 30 and 60 second tests, how mistakes you leave in lower your speed, your best scores and the stickers. "Two ways to play" is now "Ways to play", and the page's search description names Fair Copy.
+- **Parents and teachers page** ([parents-and-teachers.html](site/en/parents-and-teachers.html)): a "Speed and accuracy" point under what the game teaches.
+- **[README.md](README.md):** Fair Copy (O) is in the main-menu list, and the modes section describes it.
+- **[index.html](index.html):** the description search engines read now mentions Fair Copy.
+
+The patch has a one-line note for players in What's new: "How to play now explains Fair Copy, the typing-speed test." The in-game How to play still doesn't mention the Daily Page, though the website does. I left that alone.
+
+## 🧑 Prompt
+
+> add the Daily Page to How to play too
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Branch and find Daily Page icon and strings
+
+  ```bash
+  git checkout -q -b feat/daily-how-to && sed -n 1,24p src/ui/icons.ts | grep -n "|" ; grep -n "tile('daily'" src/ui/menu.ts; grep -n "'daily\.\(intro\|title\)\|dailyMenu" src/i18n/en.ts | head
+  ```
+- **Shell:** Add Daily Page tile, release entry, run checks
+
+  ```bash
+  python3 - <<'EOF'
+  import pathlib
+  def rep(path, old, new):
+      p=pathlib.Path(path); s=p.read_text(); assert old in s, (path, old); p.write_text(s.replace(old,new,1))
+  rep('src/ui/menu.ts', """        h('ul', { className: 'how-tiles' }, [
+            iconTile('freeWrite', t('menu.practice'), t('how.mode.freeWrite')),
+            iconTile('apprentice', t('menu.apprentice'), t('how.mode.apprentice')),
+  """, """        h('ul', { className: 'how-tiles how-tiles-2' }, [
+            iconTile('freeWrite', t('menu.practice'), t('how.mode.freeWrite')),
+            iconTile('apprentice', t('menu.apprentice'), t('h
+  … (953 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5173/"}},{"name":"find","input":{"query":"How to play"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_34","action_summary":"Opens How to play"}},{"name":"computer","input":{"action":"scroll","coordinate":[400,300],"scroll_direction":"down","scroll_amount":2}},{"name":"computer","input":{"action":"screenshot"}}]}`
+- **browser_batch** `{"actions":[{"name":"find","input":{"query":"Ways to play"}}]}`
+
+</details>
+
+### 🤖 Claude
+
+Scrolling up to check the new 2×2 tile layout.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"scroll_to","ref":"ref_57"}},{"name":"computer","input":{"action":"screenshot"}}]}`
+
+</details>
+
+### 🤖 Claude
+
+The Daily Page is now in the in-game How to play. Its tile says: "One short notebook a day, the same for everyone. Only your first go counts, so compare scores with friends."
+
+- **Layout:** with four ways to play, three across left one tile on its own, so the section is now a 2×2 grid: Free Write and Apprentice on top, Daily Page and Fair Copy below. I checked it in the browser and the four tiles line up evenly.
+- **Release:** I bumped the version to 2.26.2, with the note "How to play now explains the Daily Page too."
+- **Checks:** typecheck, lint, tests (460) and the build all pass.
+
+You only asked me to ship the Fair Copy change, so this one is on `feat/daily-how-to` and isn't committed or pushed yet.
+
+## 🧑 Prompt
+
+> Yes, ship it
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Export transcript and scan it for private details
+
+  ```bash
+  npm run transcript 2>&1 | tail -2; S=<temp file> git diff docs/transcripts | grep '^+' > $S; git ls-files --others --exclude-standard docs/transcripts | xargs cat >> $S 2>/dev/null; grep -nEi '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|/Users/[a-z]|(sk|ghp|gho|xox[bp])[-_][A-Za-z0-9]{10,}' $S | grep -v noreply@anthropic | head; git status --short
   ```
 
 </details>
