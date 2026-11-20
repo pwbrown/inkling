@@ -523,7 +523,7 @@ export const GAME_CONFIG = {
     widthShare: 0.55,
     minWidthPx: 6,
   },
-  /** Fair Copy, the typing-speed test (src/core/fairCopy.ts). Prototype numbers. */
+  /** Fair Copy, the typing-speed test (src/core/fairCopy.ts). */
   fairCopy: {
     /** Each mistake left in costs this many characters of net speed (5 = one word, the usual net-WPM rule). */
     errorPenaltyChars: 5,
@@ -532,7 +532,7 @@ export const GAME_CONFIG = {
     /** A key needs this many timed presses to count among the slowest keys. */
     slowKeyMinPresses: 2,
     slowKeysShown: 3,
-    /** The scribe cheers every this many correct keys in a row (lively layout). */
+    /** The scribe cheers every this many correct keys in a row. */
     streakCheer: 30,
   },
   /** The faint manuscript the scribe writes as a page goes on (src/render/manuscript.ts). */

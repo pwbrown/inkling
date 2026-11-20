@@ -44,6 +44,7 @@ import { SaveFormatError, defaultSave, migrate, type SaveData } from './storage/
 import { MAX_TRANSFER_LENGTH, canTransfer, decodeTransfer, encodeTransfer, hasTransfer, type Transfer } from './storage/transfer';
 import { PlayerStore, cleanName, saveKeyFor, uniqueName, type Player } from './storage/profiles';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
+import { FairCopySession, fairCopyMode } from './fairCopySession';
 import { loadFonts } from './fonts';
 import { registerOffline } from './pwa';
 import { difficultyLabel, themedHandsArt, type OverlayLinkId } from './render/overlay';
@@ -130,24 +131,6 @@ async function main(): Promise<void> {
     sfx.setVolume(settings.volume, settings.muted);
   };
   applyColors();
-
-  // PROTOTYPE (M31): `?fairCopy=passage|30|60` opens the Fair Copy typing test on its own (dev only).
-  if (import.meta.env.DEV) {
-    const params = new URLSearchParams(location.search);
-    const { fairCopyMode, runFairCopy } = await import('./fairCopyPrototype');
-    const mode = fairCopyMode(params.get('fairCopy'));
-    if (mode !== undefined) {
-      const theme = params.get('theme');
-      if (theme === 'classic' || theme === 'contrast' || theme === 'night') {
-        setTheme(theme);
-        document.documentElement.dataset.theme = theme;
-      }
-      await loadFonts();
-      await runFairCopy(host, mode, reducedMotion(settings, prefersReducedMotion()), Number(params.get('passage') ?? 0) || 0);
-      hideSplash();
-      return;
-    }
-  }
 
   const customPresets = (): Preset[] => store.data.customPresets.map((p) => ({ ...p, builtIn: false }));
   /** A dialog (Type Case, Save data…) is open and owns the keyboard. */
@@ -880,6 +863,33 @@ async function main(): Promise<void> {
       }
     });
 
+  /** Fair Copy, the typing-speed test, while it's open (it owns the keyboard then). */
+  let fairCopy: FairCopySession | null = null;
+  /** The passage the next Fair Copy starts on, so each visit brings a new one. */
+  let fairCopyPassage = 0;
+  const startFairCopy = (seconds: number | null, passage = fairCopyPassage) => {
+    fairCopy?.destroy();
+    fairCopy = new FairCopySession(renderer.app, {
+      mode: seconds,
+      passage,
+      reducedMotion: reducedMotion(settings, prefersReducedMotion()),
+      onExit: () => {
+        fairCopy?.destroy();
+        fairCopy = null;
+        menu.show('fairCopy');
+      },
+      announce: (text) => (announcer.textContent = text),
+      onEvents: (events) => {
+        if (events.includes('finished')) sfx.play('page');
+        else if (events.includes('error')) sfx.play('error');
+        else if (events.includes('correct')) sfx.play('key');
+      },
+    });
+    fairCopyPassage = passage + 1;
+    menu.hide();
+    if (import.meta.env.DEV) (window as unknown as { fairCopy: unknown }).fairCopy = fairCopy.devHelpers();
+  };
+
   const menu = new Menu(document.body, {
     continueDetail: () => {
       const saved = store.data.notebook;
@@ -1000,6 +1010,7 @@ async function main(): Promise<void> {
       return result ? t('menu.dailyDone', { id, score: formatNumber(result.score) }) : t('menu.dailyNew', { id });
     },
     onPlayDaily: () => after(() => playDaily()),
+    onFairCopy: (seconds) => startFairCopy(seconds),
     dailySigned: () => signDaily,
     signName: () => cleanChallengeName(players.active.name),
     onSignDaily: (on) => {
@@ -1112,6 +1123,11 @@ async function main(): Promise<void> {
 
   /** Show the right menu for the current phase (the main menu when idle, the pause menu when paused). */
   function syncMenu(): void {
+    // Fair Copy has the screen; it shows the menu itself when the player leaves.
+    if (fairCopy) {
+      if (menu.visible) menu.hide();
+      return;
+    }
     if (game.phase === 'ready') {
       if (!menu.visible || menu.screen === 'pause') menu.show('title');
     } else if (game.phase === 'paused') {
@@ -1477,7 +1493,7 @@ async function main(): Promise<void> {
         }),
     },
     // Menus and dialogs handle their own keys.
-    () => dialogOpen || menu.visible,
+    () => dialogOpen || menu.visible || fairCopy !== null,
   );
 
   // Pause when the player looks away (REQUIREMENTS §10), and make sure the save is written.
@@ -1543,6 +1559,7 @@ async function main(): Promise<void> {
       if (event.type === 'ability') sfx.play(event.id === 'blotter' ? 'blotter' : 'ability');
     }
     renderer.sync(game, alpha, ticker.deltaMS);
+    fairCopy?.update(ticker.deltaMS);
     syncMenu();
   });
   syncMenu();
@@ -1584,6 +1601,10 @@ async function main(): Promise<void> {
     // Handy for poking at state from the console during development. Still
     // called `inkling` (the first name) because the snapshots script reads it
     // from builds of older milestones.
+    // `?fairCopy=passage|30|60` (with `&passage=0..2`) opens Fair Copy straight away, for screenshots.
+    const params = new URLSearchParams(location.search);
+    const fairCopyLink = fairCopyMode(params.get('fairCopy'));
+    if (fairCopyLink !== undefined) startFairCopy(fairCopyLink, Number(params.get('passage') ?? 0) || 0);
     (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, get pack() { return pack; }, store, menu, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
   }
 }

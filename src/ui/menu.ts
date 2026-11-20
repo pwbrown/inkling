@@ -29,6 +29,7 @@ export type MenuScreen =
   | 'playerEdit'
   | 'about'
   | 'daily'
+  | 'fairCopy'
   | 'stickers'
   | 'challenge'
   | 'transfer';
@@ -186,6 +187,8 @@ export interface MenuHooks {
   /** e.g. "#3 · not played yet" for the title screen. */
   dailyDetail(): string;
   onPlayDaily(): void;
+  /** Start Fair Copy: one passage (null) or a timed test of that many seconds. */
+  onFairCopy(seconds: number | null): void;
   /** Whether challenge links are signed with the player's name. */
   dailySigned(): boolean;
   /** The name a signed link would carry, or null if the player's name has none to show. */
@@ -339,6 +342,9 @@ export class Menu {
       case 'daily':
         this.panel.replaceChildren(...this.daily());
         break;
+      case 'fairCopy':
+        this.panel.replaceChildren(...this.fairCopy());
+        break;
       case 'stickers':
         this.panel.replaceChildren(...this.stickers());
         break;
@@ -446,10 +452,11 @@ export class Menu {
           primary: !cont,
         }),
         this.tile('daily', 'half', t('menu.daily'), () => this.show('daily'), { detail: this.hooks.dailyDetail(), key: 't' }),
-        this.tile('apprentice', 'full', t('menu.apprentice'), () => this.show('contents'), {
+        this.tile('apprentice', 'half', t('menu.apprentice'), () => this.show('contents'), {
           detail: this.hooks.apprenticeDetail(),
           key: 'a',
         }),
+        this.tile('fairCopy', 'half', t('menu.fairCopy'), () => this.show('fairCopy'), { detail: t('menu.fairCopyDetail'), key: 'o' }),
         this.tile('desk', 'half', t('menu.desk'), () => this.show('desk'), { key: 'd' }),
         this.tile('stickers', 'half', t('menu.stickers'), () => this.show('stickers'), { detail: this.hooks.stickerDetail(), key: 'k' }),
         this.tile('words', 'third', t('menu.wordLists'), () => this.hooks.onWordLists(), { key: 'w' }),
@@ -929,6 +936,31 @@ export class Menu {
   }
 
   /** Today's Daily Page: play it, or see and copy the result. */
+  /** Fair Copy: pick one passage or a timed test. */
+  private fairCopy(): HTMLElement[] {
+    return [
+      h('h2', { id: 'menu-title' }, [t('fairCopyMenu.title')]),
+      h('p', { className: 'tc-intro' }, [t('fairCopyMenu.intro')]),
+      h('nav', { className: 'menu-list' }, [
+        this.button('fair-passage', t('fairCopyMenu.passage'), () => this.hooks.onFairCopy(null), {
+          detail: t('fairCopyMenu.passageDetail'),
+          key: 'p',
+          primary: true,
+          autofocus: true,
+        }),
+        ...(GAME_CONFIG.fairCopy.timedSeconds as readonly number[]).map((seconds) =>
+          this.button(`fair-${seconds}`, t('fairCopyMenu.timed', { seconds }), () => this.hooks.onFairCopy(seconds), {
+            detail: t('fairCopyMenu.timedDetail'),
+            key: String(seconds).charAt(0),
+          }),
+        ),
+      ]),
+      h('div', { className: 'tc-actions' }, [
+        h('button', { type: 'button', className: 'tc-secondary', 'data-id': 'back', onClick: () => this.show('title') }, [t('menu.back')]),
+      ]),
+    ];
+  }
+
   private daily(): HTMLElement[] {
     const d = this.hooks.daily();
     const copied = h('span', { className: 'daily-copied', role: 'status', 'aria-live': 'polite' });

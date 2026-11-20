@@ -1,5 +1,5 @@
 /**
- * Fair Copy (PROTOTYPE, M31): the text is written on the notebook lines,
+ * Fair Copy (M31): the text is written on the notebook lines,
  * double spaced like a fair copy, where the manuscript scribbles normally go.
  * Untyped text is pale, typed text is in the scribe's ink, and mistakes are
  * in margin red with what was actually typed above them. The scribe walks
@@ -18,6 +18,13 @@ import { Effects } from './effects';
 import { Scribe } from './scribe';
 import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, TEXT_FONT, glyph, keyLabel } from './theme';
 import { outCubic } from './tween';
+
+/** Clicks on the result card. */
+export interface FairCopyActions {
+  onNext(): void;
+  onAgain(): void;
+  onMenu(): void;
+}
 
 /** What the view needs to know about a test before it starts. */
 export interface FairCopySetup {
@@ -175,6 +182,7 @@ export class FairCopyView {
     text: string,
     private readonly setup: FairCopySetup,
     private readonly reducedMotion: boolean,
+    private readonly actions: FairCopyActions,
   ) {
     this.ascent = CanvasTextMetrics.measureText('Hg', MEASURE).fontProperties.ascent;
     this.root.addChild(drawPage());
@@ -462,8 +470,30 @@ export class FairCopyView {
     const note =
       grade === 'A+' && r.mistakesLeft === 0 ? t('fairCopy.note.neat') : r.mistakesLeft > 2 ? t('fairCopy.note.leftIn') : slowest ? t('fairCopy.note.slowKey', { key: keyLabel(slowest.key) }) : t('fairCopy.note.good');
     centred(new Text({ text: note, style: { fontFamily: DISPLAY_FONT, padding: DISPLAY_PADDING, fontSize: 28, fontWeight: '700', fill: COLORS.margin } }), 10);
-    centred(new Text({ text: t('fairCopy.result.prompt'), style: { fontFamily: TEXT_FONT, fontSize: 17, fontWeight: '700', fill: COLORS.margin } }), 0);
-    y += PAD;
+    // Enter goes on; the links below say so and can be clicked, like the game's cards.
+    const prompt = new Text({ text: t('fairCopy.result.prompt'), style: { fontFamily: TEXT_FONT, fontSize: 18, fontWeight: '700', fill: COLORS.margin } });
+    prompt.eventMode = 'static';
+    prompt.cursor = 'pointer';
+    prompt.on('pointertap', () => this.actions.onNext());
+    centred(prompt, 10);
+    const links = [
+      { label: t('fairCopy.link.again'), act: () => this.actions.onAgain() },
+      { label: t('fairCopy.link.menu'), act: () => this.actions.onMenu() },
+    ].map(({ label, act }) => {
+      const link = new Text({ text: label, style: { fontFamily: TEXT_FONT, fontSize: 17, fontWeight: '600', fontStyle: 'italic', fill: COLORS.inkLight } });
+      link.eventMode = 'static';
+      link.cursor = 'pointer';
+      link.on('pointertap', act);
+      return link;
+    });
+    const linkGap = 30;
+    let lx = cx - (links.reduce((sum, l) => sum + l.width, 0) + linkGap * (links.length - 1)) / 2;
+    for (const link of links) {
+      link.position.set(lx, y);
+      lx += link.width + linkGap;
+      parts.push(link);
+    }
+    y += (links[0]?.height ?? 0) + PAD;
 
     const top = (WORLD_HEIGHT - y) / 2;
     const left = (WORLD_WIDTH - CARD_WIDTH) / 2;

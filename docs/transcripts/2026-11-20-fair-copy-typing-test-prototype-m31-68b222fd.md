@@ -1,6 +1,6 @@
 # Fair Copy typing-test prototype (M31)
 
-Claude Code session started 2026-11-20. 6 prompts.
+Claude Code session started 2026-11-20. 11 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -731,12 +731,525 @@ Checks pass. I've added this decision to the hand-over note and replaced the scr
 
 Build and checks pass. Confirming the prototype stays out of the production bundle, then exporting the transcript.
 
-<details><summary>1 tool call</summary>
+<details><summary>2 tool calls</summary>
 
 - **Shell:** Ran a command
 
   ```bash
   grep -l "chainPassages\|Huckleberry" dist/assets/*.js 2>/dev/null | head; echo "---"; npm run transcript 2>&1 | tail -8; git status --short docs/transcripts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  F=docs/transcripts/2026-11-20-fair-copy-typing-test-prototype-m31-68b222fd.md; grep -nE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $F | grep -v "noreply@anthropic" | head; grep -nE "/Users/|Library/Application|philip|token|secret|api[_-]?key|password|Bearer" -i $F | head -20; git diff docs/transcripts/README.md | head -20
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Transcript is clean: usernames are already redacted, and it has no emails or tokens. Committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git add .claude/launch.json src/core/config.ts src/i18n/en.ts src/main.ts src/core/fairCopy.ts src/core/fairCopy.test.ts src/fairCopyPrototype.ts src/render/fairCopyView.ts docs/transcripts && git commit -q -F - <<'EOF'
+  Fair Copy typing-test prototype (M31, dev only)
+
+  - New pure rules in src/core/fairCopy.ts (with tests): whole-passage and
+    timed 30s/60s tests, clock from the first key, mistakes left in cost 5
+    characters of net speed each, Backspace optional, net/raw WPM,
+    accuracy, best run and slowest keys; 3 public-domain passages
+  - src/render/fairCopyView.ts: the text double spaced on 
+  … (590 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I committed the Fair Copy prototype as `3cfd87f` on `feat/m31-fair-copy`. It isn't merged or pushed.
+
+- **Checks:** `npm run check` (449 tests) and `npm run build` both pass. The production bundle doesn't contain the prototype, because it only loads in dev.
+- **Transcript:** I exported this session's transcript into `docs/transcripts/` and included it in the commit. I scanned it first: usernames in paths are already replaced with `[removed]`, and it has no emails, tokens or codes.
+- **What's in it:**
+  - the rules and tests (`src/core/fairCopy.ts`)
+  - the page view (`src/render/fairCopyView.ts`)
+  - the dev-only entry (`src/fairCopyPrototype.ts`)
+  - the dev-only switch in `main.ts`
+  - the `fairCopy` block in `config.ts` and `fairCopy.*` strings in `en.ts`
+  - the extra dev server on port 5183 in `.claude/launch.json`
+
+There's no release entry or version bump, since the mode isn't reachable from the menu yet.
+
+## 🧑 Prompt
+
+> merge it into main
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git worktree list; echo ---; git log --oneline -3 main; echo ---; git merge-base --is-ancestor main feat/m31-fair-copy && echo "ff possible"; git -C /Users/[removed]/projects/inky-keys status --short --branch | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+`main` has moved ahead (the M30 commit `19adc4c` landed), so a fast-forward isn't possible yet. Rebasing the branch onto it first.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git show --stat --oneline main | head -40; git rebase main 2>&1 | tail -5; git status --short | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  git diff docs/transcripts/README.md src/core/config.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Both conflicts are just two additions side by side; keeping both.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  import re
+  p='docs/transcripts/README.md'
+  s=open(p).read()
+  s=re.sub(r"<<<<<<< HEAD\n(.*?)=======\n(.*?)>>>>>>> [^\n]*\n", lambda m: m.group(1)+m.group(2), s, flags=re.S)
+  open(p,'w').write(s)
+  p='src/core/config.ts'
+  s=open(p).read()
+  s=re.sub(r"<<<<<<< HEAD\n(.*?)=======\n(.*?)>>>>>>> [^\n]*\n", lambda m: m.group(1)+"  },\n"+m.group(2), s, flags=re.S)
+  open(p,'w').write(s)
+  EOF
+  grep -c "<<<<<<<\|>>>>>>>" docs/transcripts/README.md src/core/config.ts; sed -n 505,545p src/core/config.ts; tail -3 docs/transcripts/README.md
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  git add docs/transcripts/README.md src/core/config.ts && GIT_EDITOR=true git rebase --continue 2>&1 | tail -2 && npm run check 2>&1 | grep -E "error|Tests |failed"; npm run build 2>&1 | grep -iE "error|built in" | head -3; git log --oneline -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Rebased cleanly; checks (453 tests) and build pass. Quick look that the prototype still runs alongside M30's creature changes.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5183/?fairCopy=30"}},{"name":"computer","input":{"action":"wait","duration":2}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"fairCopy.play('It is a trith universally',150); fairCopy.settle(300); [fairCopy.test.b
+… (158 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The test state updated but the screenshot looks stale, and there's a 500 left over from the dev server reloading during the rebase. Reloading fresh to be sure.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"location.reload(); 'reloading'"}},{"name":"computer","input":{"action":"wait","duration":3}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"fairCopy.play('It is a trith universally',150); fairCop
+… (191 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Runs cleanly on the rebased branch. Fast-forwarding `main` and deleting the branch.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git status --short | head -3; git merge --ff-only feat/m31-fair-copy 2>&1 | tail -2 && git log --oneline -2 && cd /Users/[removed]/projects/inky-keys/.claude/worktrees/infallible-elgamal-cca286 && git checkout -q --detach && git branch -d feat/m31-fair-copy && git status --short --branch | head -2
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The Fair Copy prototype is now on `main` as `7e7c145`. Nothing is pushed.
+
+- **Rebase first:** `main` had moved on since I committed, because the M30 commit `19adc4c` (capital marks, steadier creatures) was merged. A fast-forward wasn't possible, so I rebased the branch onto it. Two files clashed, and in both cases each side had simply added lines in the same spot, so I kept both:
+  - `config.ts`: M30's `capitalTick` block and the `fairCopy` block now sit next to each other.
+  - `docs/transcripts/README.md`: both new transcript links are listed.
+- **Checked after the rebase:** `npm run check` passes (now 453 tests, including M30's) and `npm run build` passes. I reloaded the dev server and a 30-second test still works with M30's creature and scribe changes, with no errors.
+- **Merge:** fast-forwarded `main` with `--ff-only`, then deleted `feat/m31-fair-copy` with `git branch -d`. This worktree is now on a detached HEAD at the same commit.
+
+There's still no release entry or version bump, since Fair Copy is only reachable through the dev URL.
+
+## 🧑 Prompt
+
+> push it
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git fetch -q origin && git status -sb | head -1 && git log --oneline origin/main..main && git push origin main 2>&1 | tail -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Pushed: `origin/main` is now at `7e7c145` ("Fair Copy typing-test prototype (M31, dev only)"), one commit after `19adc4c`. I didn't push any tags.
+
+Pushing to `main` may deploy the site. Players won't see Fair Copy, because the `?fairCopy=` switch only works in dev and the prototype is left out of the production bundle.
+
+## 🧑 Prompt
+
+> add a main menu entry for Fair Copy
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git checkout -q -b feat/m31-fair-copy-menu main && git log --oneline -1 && grep -n "onDaily\|onPractice\|daily\b\|'daily'\|interface MenuActions\|export interface\|data-action\|primary\|button(" src/ui/menu.ts | head -60
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 20,40p src/ui/menu.ts; sed -n 125,200p src/ui/menu.ts; sed -n 300,470p src/ui/menu.ts; grep -n "IconId\|^export const ICONS\|  [a-z]*: '" src/ui/icons.ts | head -30
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "PLAYER_KEY =\|data-key\b\|'data-key'" src/ui/menu.ts | head; grep -n "const syncMenu\|function syncMenu\|const goToMenu\|new Menu(\|menu.show(\|menu.hide(\|onPlayDaily:\|menu.visible" src/main.ts | head -30; grep -n "^export class Menu\|  show(\|  hide(\|get visible\|keydown" src/ui/menu.ts | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 855,882p src/main.ts; sed -n 1108,1130p src/main.ts; sed -n 242,300p src/ui/menu.ts; sed -n 1255,1290p src/ui/menu.ts; grep -n "phase === 'ready'\|case 'ready'" src/render/renderer.ts src/render/overlay.ts | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "announcer" src/main.ts | head -3; sed -n 1,40p src/core/releases.ts; grep -n '"version"' package.json; sed -n 1,25p src/ui/icons.ts; grep -n "private onKeyDown" -A8 src/ui/menu.ts
+  ```
+- **Wrote** `/Users/playerless-placeholder`
+- **Wrote** `src/fairCopySession.ts`
+
+</details>
+
+### 🤖 Claude
+
+Now the view: clickable result-card links (next, again, menu) and updated hints.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "layoutLinks\|private layoutLinks" -A40 src/render/overlay.ts | sed -n '/private layoutLinks/,/^--$/p' | head -50
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/render/fairCopyView.ts'
+  s=open(p).read()
+  def rep(old,new):
+      global s
+      assert old in s, old
+      s=s.replace(old,new)
+  rep('''/** What the view needs to know about a test before it starts. */''','''/** Clicks on the result card. */
+  export interface FairCopyActions {
+    onNext(): void;
+    onAgain(): void;
+    onMenu(): void;
+  }
+
+  /** What the view needs to know about a test before it starts. */''')
+  rep('''    private readonly reducedMotion: boolean,
+    ) {
+      this.ascent''','''    private readonly reducedMotion: boolean,
+      private readonly actions: FairCopyActions,
+    ) {
+  … (2889 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now the menu: a Fair Copy tile, an icon, and the picker screen.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  import re
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+
+  edit('src/ui/icons.ts',[
+  ("  | 'daily'\n","  | 'daily'\n  | 'fairCopy'\n"),
+  ("const PATHS: Record<IconId, string> = {\n","const PATHS: Record<IconId, string> = {\n  // A written page with a stopwatch: the typing-speed test.\n  fairCopy:\n    '<path d=\"M5 4h15v24H5z\"/><path d=\"M9 10h7M9 15h7M9 20h4\"/><circle class=\"ico-a\" cx=\"23\" cy=\"21\" r=\"6\"/><path class=\"ico-a\" d=\"M23 18v3l2 1.5M21.5 13.5h3\"/>',\n"),
+
+  … (2322 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n '/  private daily(): HTMLElement\[\] {/,/^  }/p' src/ui/menu.ts | sed -n 20,45p; grep -n "import.*config" src/ui/menu.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  a="""      h('div', { className: 'menu-buttons' }, [
+          this.button('fair-passage'"""
+  assert a in s
+  s=s.replace(a,"""      h('nav', { className: 'menu-list' }, [
+          this.button('fair-passage'""")
+  a="""      ]),
+        h('div', { className: 'tc-actions' }, [
+          h('button', { type: 'button', className: 'tc-primary', 'data-id': 'back', onClick: () => this.show('title') }, [t('menu.back')]),
+        ]),
+      ];
+    }
+
+    private daily()"""
+  assert a in s
+  s=s.replace(a,"""      ]),
+        h('div', { className: 'tc-actions' }, [
+          h('
+  … (411 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now wiring it into `main.ts`: replacing the dev-only early return with an in-app session that the menu starts.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "  const menu = new Menu(document.body" src/main.ts; grep -n "type Sound\|export type Sound" -A12 src/audio/sfx.ts | head -16; grep -n "  play(" src/audio/sfx.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/main.ts'
+  s=open(p).read()
+  def rep(a,b):
+      global s
+      assert s.count(a)==1, a
+      s=s.replace(a,b)
+  rep('''  // PROTOTYPE (M31): `?fairCopy=passage|30|60` opens the Fair Copy typing test on its own (dev only).
+    if (import.meta.env.DEV) {
+      const params = new URLSearchParams(location.search);
+      const { fairCopyMode, runFairCopy } = await import('./fairCopyPrototype');
+      const mode = fairCopyMode(params.get('fairCopy'));
+      if (mode !== undefined) {
+        const theme = params.get('theme');
+        if (theme === 'classic' || theme === 'contrast' || theme === 'nigh
+  … (2972 more characters)
+  ```
+
+</details>
+
+## 🧑 Sent while Claude was working
+
+> why is it called fair copy?
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/i18n/en.ts',[("  // Fair Copy, the typing test (PROTOTYPE, M31).","  // Fair Copy, the typing-speed test (M31).")])
+  edit('src/render/fairCopyView.ts',[(" * Fair Copy (PROTOTYPE, M31): the text"," * Fair Copy (M31): the text")])
+  edit('src/core/fairCopy.ts',[(" * PROTOTYPE (M31): no saving yet; passages are hard-coded until the design is signed off."," * Nothing is saved yet, and the passages are a small hard-coded set fo
+  … (712 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/i18n/en.ts'
+  s=open(p).read()
+  a="  'release.2.22.0.capitals':"
+  s=s.replace(a,"  'release.2.23.0.fairCopy': 'New on the main menu: Fair Copy, a typing-speed test. Copy out a passage from a classic book, or type for 30 or 60 seconds.',\n"+a,1)
+  open(p,'w').write(s)
+  EOF
+  npm install --package-lock-only -s >/dev/null 2>&1; git diff --stat package-lock.json; npm run check 2>&1 | grep -E "error|Tests |failed|✗|×" | head; npm run build 2>&1 | grep -iE "error|built in"
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "keeps notes brief" -A8 src/core/releases.test.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -i '' "s/  'release.2.23.0.fairCopy': .*/  'release.2.23.0.fairCopy': 'New: Fair Copy, a typing-speed test. Copy out a passage from a classic book, or type for 30 or 60 seconds.',/" src/i18n/en.ts && npm run check 2>&1 | grep -E "error|Tests |failed"
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Checks and build pass. Checking it in the browser: menu tile, picker, a test, and the way back.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"resize_window","input":{"width":960,"height":540}},{"name":"navigate","input":{"url":"http://localhost:5183/"}},{"name":"computer","input":{"action":"wait","duration":3}},{"name":"read_console_messages","input":{"onlyErrors":true}},{"name":"computer","input":{"action":"screensho
+… (6 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The tile sits beside Apprentice. Opening the picker with its O shortcut.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"window.key=(k)=>document.body.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true})); document.activeElement.blur(); key('o'); 'ok'"}},{"name":"computer","input":{"action":"wait","duration":1}
+… (55 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Picker works. Starting a 30s test with the 3 key, typing with real key events, then Esc back.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"document.activeElement.blur(); key('3'); await new Promise(r=>setTimeout(r,100)); for (const k of 'It is a trith') window.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true})); await new Prom
+… (472 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Esc returns to the picker, and the 3 that started the test wasn't typed into it. Now the result card and its shortcuts.
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"document.activeElement.blur(); key('p'); await new Promise(r=>setTimeout(r,100)); const T=fairCopy.test().text; let k=''; for(let i=0;i<T.length;i++) k+= (i===40)? 'x' : T[i]; fairCopy.play(k,180); fairCopy.settle(2000
+… (1001 more characters)`
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/i18n/en.ts',[("  'fairCopy.announce': 'Fair copy done: {wpm} words per minute, {accuracy}% accurate, {left} mistakes left in.',",
+  "  'fairCopy.announce': 'Fair copy done: {wpm} words per minute, {accuracy}% accurate, {left} mistakes left in.',\n  'fairCopy.announceOne': 'Fair copy done: {wpm} words per minute, {accuracy}% accurate, 1 mistake left in.',")])
+  edit('src/fairCopySession.ts',[("        t('fairCopy.announce', 
+  … (120 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"navigate","input":{"url":"http://localhost:5183/?fairCopy=passage&passage=2&theme=night"}},{"name":"computer","input":{"action":"wait","duration":3}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"fairCopy.play(fairCopy.test().text, 150); fairCopy.age(3000
+… (116 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The `&theme=` dev switch went away with the old prototype entry, so this card is in day mode; the theme now comes from Settings. Clicking the card's "Main menu" link:
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[462,338],"action_summary":"Clicks the Main menu link on the result card"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"screenshot","scale":0.5}},{"name":"resize_window","i
+… (29 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The click goes back to the picker (the yellow 60-seconds button is just hover). Final checks, then screenshots.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  npm run check 2>&1 | grep -E "error|Tests |failed"; npm run build 2>&1 | grep -iE "error|built in"; grep -l "Huckleberry" dist/assets/*.js | head -2; R="/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys--claude-worktrees-infallible-elgamal-cca286/68b222fd-ec99-4e3f-8667-ceb97a749a3e/tool-results"; N="/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006"; D="$N/fair-copy-screens/v3-menu"; mkdir -p "$D"; cp "$R/mcp-Claude_Browser-blob-1795152394939-1pz9o7.jpg" "$D/1-main-menu.jpg"; cp "$R/mcp-Claude_Browser-bl
+  … (750 more characters)
+  ```
+- **SendUserFile** `{"files":["/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006/fair-copy-screens/v3-menu/1-main-menu.jpg","/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006/fair-copy-scr
+… (335 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Fair Copy now has a main-menu entry and runs inside the game. It's on a new branch, `feat/m31-fair-copy-menu`, and not committed yet. Checks (453 tests) and the production build pass. I tried it in the browser: menu, picker, a timed test, the result card, and getting back to the menu, by key and by click. I've sent screenshots of the menu tile, the picker and the result card.
+
+**What players get**
+- **Menu tile:** a "Fair Copy" tile with the shortcut O, beside Apprentice. Apprentice went from full width to half width to make room. It has a new icon: a written page with a stopwatch.
+- **Picker:** a short intro and three choices: One passage (P), 30 seconds (3), 60 seconds (6), plus Back. Each visit starts on the next passage.
+- **During the test:** Esc goes back to the picker. The key that started the test isn't typed into it. Typing makes the game's usual key and error sounds.
+- **Result card:**
+  - Enter brings another passage, R tries the same one again, and M goes to the menu. These shortcuts wait a moment after the test ends, so stray typing can't trigger them.
+  - "Try this one again" and "Main menu" can also be clicked.
+  - Screen readers hear the result.
+
+**Behind the scenes**
+- Fair Copy now draws on the game's own canvas from a new `src/fairCopySession.ts`. While it's open, it takes over the keyboard from the game. The old separate prototype file is deleted.
+- I added release 2.23.0 ("New: Fair Copy, a typing-speed test…") and bumped the version in `package.json`. That's the project's rule for anything players notice.
+- The `?fairCopy=passage|30|60` dev link still works. The `&theme=night` part doesn't any more; night mode now comes from Settings, like the rest of the game.
+
+**Not done yet**
+- Results aren't saved, so there are no personal bests.
+- The Fair Copy sticker shelf you asked for isn't built.
+
+Both need a save-format change, so they'd be a follow-up.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  npm run transcript 2>&1 | tail -1; git status --short docs/; F=$(git status --short docs/transcripts | grep -o 'docs/transcripts/2026[^ ]*68b222fd.md' | head -1); echo $F; grep -nE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $F | grep -v noreply@anthropic | head -3; grep -niE "/Users/[a-z]|ghp_|sk-|token|password|Bearer" $F | grep -v "\[removed\]" | head -5
   ```
 
 </details>

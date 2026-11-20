@@ -7,7 +7,7 @@
  * ends cost net speed (`errorPenaltyChars` each); every wrong key counts
  * against accuracy, fixed or not.
  *
- * PROTOTYPE (M31): no saving yet; passages are hard-coded until the design is signed off.
+ * Nothing is saved yet, and the passages are a small hard-coded set for now.
  */
 import { GAME_CONFIG } from './config';
 import { applyEdit } from './editing';

@@ -8,6 +8,7 @@ export type IconId =
   | 'continue'
   | 'freeWrite'
   | 'daily'
+  | 'fairCopy'
   | 'apprentice'
   | 'desk'
   | 'stickers'
@@ -20,6 +21,9 @@ export type IconId =
   | 'pageDone';
 
 const PATHS: Record<IconId, string> = {
+  // A written page with a stopwatch: the typing-speed test.
+  fairCopy:
+    '<path d="M5 4h15v24H5z"/><path d="M9 10h7M9 15h7M9 20h4"/><circle class="ico-a" cx="23" cy="21" r="6"/><path class="ico-a" d="M23 18v3l2 1.5M21.5 13.5h3"/>',
   // A bookmark ribbon with an arrow: pick up where you left off.
   continue: '<path d="M8 4h13v24l-6.5-5L8 28z"/><path class="ico-a" d="M18 14h10m-4-4 4 4-4 4"/>',
   // A quill over a line of ink.
