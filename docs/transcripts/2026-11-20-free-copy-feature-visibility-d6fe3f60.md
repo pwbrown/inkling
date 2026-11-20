@@ -299,3 +299,33 @@ You only asked me to ship the Fair Copy change, so this one is on `feat/daily-ho
   ```
 
 </details>
+
+### 🤖 Claude
+
+Transcript scan is clean. Committing, merging and tagging.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit, merge to main, tag and push 2.26.2
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  How to play explains the Daily Page (2.26.2)
+
+  - In-game How to play: Daily Page tile in "Ways to play"
+  - Ways to play tiles laid out 2x2 for the four modes
+  - Release 2.26.2 note
+  - Session transcript
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git checkout -q main && git merge --ff-only feat/daily-how-to | tail -1 && git branch -d feat/daily-how-to && npm run release:tag 2>&1 | grep Tagged && git push origin main 2>&1 | tail -1 && git push origin v2.26.2 2>&1 | tail -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+2.26.2 is shipped: How to play now has the Daily Page tile, laid out 2×2 with the other three ways to play. The change is merged into `main` with a fast-forward, the `feat/daily-how-to` branch is deleted, and `main` and the `v2.26.2` tag are pushed. I haven't checked that the live site has updated.
+
+The commit includes the updated session transcript. I scanned it for emails, personal file paths and tokens and found none.

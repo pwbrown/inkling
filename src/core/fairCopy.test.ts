@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   PASSAGES,
+  PASSAGE_BREAK,
+  PassageDeck,
   backspace,
   chainPassages,
   createFairCopy,
+  drawPassages,
   elapsedMs,
   fairCopyResult,
   isFinished,
@@ -70,7 +73,7 @@ describe('Fair Copy', () => {
   });
 
   it('ends a timed test when its time is up, not before', () => {
-    const test = createFairCopy(chainPassages(0, 2000).text, 30_000);
+    const test = createFairCopy(chainPassages(PASSAGES).text, 30_000);
     expect(remainingMs(test, 0)).toBe(30_000);
     typeKey(test, 'I', 1000);
     expect(tick(test, 30_999)).toEqual([]);
@@ -94,15 +97,42 @@ describe('Fair Copy', () => {
     expect(fairCopyResult(test, 0).slowestKeys.map((k) => k.key)).toEqual(['b', 'a']);
   });
 
-  it('strings passages together for a timed test', () => {
-    const { text, spans } = chainPassages(1, 600);
-    expect(spans[0]!.passage).toBe(PASSAGES[1]);
-    expect(text.startsWith(PASSAGES[1]!.text)).toBe(true);
-    expect(text.length).toBeGreaterThanOrEqual(600);
-    expect(text.slice(spans[1]!.start)).toMatch(new RegExp(`^${PASSAGES[2]!.text.slice(0, 10)}`));
+  it('strings passages together for a timed test, with Enter between them', () => {
+    const { text, spans } = chainPassages([PASSAGES[1]!, PASSAGES[2]!]);
+    expect(spans.map((s) => s.passage)).toEqual([PASSAGES[1], PASSAGES[2]]);
+    expect(text).toBe(PASSAGES[1]!.text + PASSAGE_BREAK + PASSAGES[2]!.text);
+    expect(spans[1]!.start).toBe(PASSAGES[1]!.text.length + 1);
+
+    // Enter is a key like any other: it goes on to the next passage, and anything else there is a mistake.
+    const test = createFairCopy('ab' + PASSAGE_BREAK + 'c');
+    expect(typeKey(test, 'a', 0)).toEqual(['started', 'correct']);
+    typeKey(test, 'b', 100);
+    expect(typeKey(test, ' ', 200)).toEqual(['error']);
+    backspace(test, 300);
+    expect(typeKey(test, PASSAGE_BREAK, 400)).toEqual(['correct']);
   });
 
-  it('has passages made only of plain, typeable characters', () => {
+  it('deals every passage before any comes round again, never one twice in a row', () => {
+    let seed = 1;
+    const deck = new PassageDeck(() => ((seed = (seed * 16807) % 2147483647) / 2147483647));
+    const dealt = Array.from({ length: PASSAGES.length * 6 }, () => deck.next());
+    for (let round = 0; round < 6; round++) {
+      const ids = dealt.slice(round * PASSAGES.length, (round + 1) * PASSAGES.length).map((p) => p.id);
+      expect(new Set(ids).size).toBe(PASSAGES.length);
+    }
+    for (let i = 1; i < dealt.length; i++) expect(dealt[i]).not.toBe(dealt[i - 1]);
+  });
+
+  it('draws enough passages to outlast a timed test', () => {
+    const deck = new PassageDeck(() => 0.5);
+    const passages = drawPassages(deck, 1500, PASSAGES[0]);
+    expect(passages[0]).toBe(PASSAGES[0]);
+    expect(chainPassages(passages).text.length).toBeGreaterThanOrEqual(1500);
+    expect(new Set(passages).size).toBe(passages.length);
+  });
+
+  it('has passages made only of plain, typeable characters, each with its own id', () => {
     for (const passage of PASSAGES) expect(passage.text).toMatch(/^[\x20-\x7e]+$/);
+    expect(new Set(PASSAGES.map((p) => p.id)).size).toBe(PASSAGES.length);
   });
 });

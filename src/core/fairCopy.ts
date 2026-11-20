@@ -7,7 +7,7 @@
  * ends cost net speed (`errorPenaltyChars` each); every wrong key counts
  * against accuracy, fixed or not.
  *
- * Nothing is saved yet, and the passages are a small hard-coded set for now.
+ * A timed test strings passages together; Enter moves on to the next one.
  */
 import { GAME_CONFIG } from './config';
 import { applyEdit } from './editing';
@@ -48,10 +48,257 @@ export const PASSAGES: readonly Passage[] = [
       "You don't know about me without you have read a book by the name of The Adventures of Tom Sawyer; but that ain't no matter. " +
       'That book was made by Mr. Mark Twain, and he told the truth, mainly. There was things which he stretched, but mainly he told the truth.',
   },
+  {
+    id: 'melville-moby',
+    title: 'Moby-Dick',
+    author: 'Herman Melville',
+    text:
+      'Call me Ishmael. Some years ago - never mind how long precisely - having little or no money in my purse, and nothing particular ' +
+      'to interest me on shore, I thought I would sail about a little and see the watery part of the world. ' +
+      'It is a way I have of driving off the spleen and regulating the circulation.',
+  },
+  {
+    id: 'tolstoy-anna',
+    title: 'Anna Karenina',
+    author: 'Leo Tolstoy',
+    text:
+      "Happy families are all alike; every unhappy family is unhappy in its own way. Everything was in confusion in the Oblonskys' house. " +
+      'The wife had discovered that the husband was carrying on an intrigue with a French girl, who had been a governess in their family, ' +
+      'and she had announced to her husband that she could not go on living in the same house with him.',
+  },
+  {
+    id: 'carroll-alice',
+    title: "Alice's Adventures in Wonderland",
+    author: 'Lewis Carroll',
+    text:
+      'Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had ' +
+      "peeped into the book her sister was reading, but it had no pictures or conversations in it, 'and what is the use of a book,' " +
+      "thought Alice 'without pictures or conversations?'",
+  },
+  {
+    id: 'bronte-jane',
+    title: 'Jane Eyre',
+    author: 'Charlotte Bronte',
+    text:
+      'There was no possibility of taking a walk that day. We had been wandering, indeed, in the leafless shrubbery an hour in the morning; ' +
+      'but since dinner (Mrs. Reed, when there was no company, dined early) the cold winter wind had brought with it clouds so sombre, ' +
+      'and a rain so penetrating, that further out-door exercise was now out of the question.',
+  },
+  {
+    id: 'fitzgerald-gatsby',
+    title: 'The Great Gatsby',
+    author: 'F. Scott Fitzgerald',
+    text:
+      "In my younger and more vulnerable years my father gave me some advice that I've been turning over in my mind ever since. " +
+      '"Whenever you feel like criticizing any one," he told me, "just remember that all the people in this world ' +
+      "haven't had the advantages that you've had.\"",
+  },
+  {
+    id: 'barrie-peter',
+    title: 'Peter Pan',
+    author: 'J. M. Barrie',
+    text:
+      'All children, except one, grow up. They soon know that they will grow up, and the way Wendy knew was this. ' +
+      'One day when she was two years old she was playing in a garden, and she plucked another flower and ran with it to her mother.',
+  },
+  {
+    id: 'baum-oz',
+    title: 'The Wonderful Wizard of Oz',
+    author: 'L. Frank Baum',
+    text:
+      'Dorothy lived in the midst of the great Kansas prairies, with Uncle Henry, who was a farmer, and Aunt Em, who was the farmer\'s wife. ' +
+      'Their house was small, for the lumber to build it had to be carried by wagon many miles.',
+  },
+  {
+    id: 'dickens-carol',
+    title: 'A Christmas Carol',
+    author: 'Charles Dickens',
+    text:
+      'Marley was dead: to begin with. There is no doubt whatever about that. The register of his burial was signed by the clergyman, ' +
+      'the clerk, the undertaker, and the chief mourner. Scrooge signed it.',
+  },
+  {
+    id: 'shelley-frankenstein',
+    title: 'Frankenstein',
+    author: 'Mary Shelley',
+    text:
+      'You will rejoice to hear that no disaster has accompanied the commencement of an enterprise which you have regarded with such ' +
+      'evil forebodings. I arrived here yesterday, and my first task is to assure my dear sister of my welfare and increasing confidence ' +
+      'in the success of my undertaking.',
+  },
+  {
+    id: 'doyle-bohemia',
+    title: 'A Scandal in Bohemia',
+    author: 'Arthur Conan Doyle',
+    text:
+      'To Sherlock Holmes she is always the woman. I have seldom heard him mention her under any other name. ' +
+      'In his eyes she eclipses and predominates the whole of her sex. It was not that he felt any emotion akin to love for Irene Adler.',
+  },
+  {
+    id: 'alcott-little-women',
+    title: 'Little Women',
+    author: 'Louisa May Alcott',
+    text:
+      '"Christmas won\'t be Christmas without any presents," grumbled Jo, lying on the rug. ' +
+      '"It\'s so dreadful to be poor!" sighed Meg, looking down at her old dress. ' +
+      '"I don\'t think it\'s fair for some girls to have plenty of pretty things, and other girls nothing at all," added little Amy, with an injured sniff.',
+  },
+  {
+    id: 'burnett-secret-garden',
+    title: 'The Secret Garden',
+    author: 'Frances Hodgson Burnett',
+    text:
+      'When Mary Lennox was sent to Misselthwaite Manor to live with her uncle everybody said she was the most disagreeable-looking child ever seen. ' +
+      'It was true, too. She had a little thin face and a little thin body, thin light hair and a sour expression.',
+  },
+  {
+    id: 'grahame-willows',
+    title: 'The Wind in the Willows',
+    author: 'Kenneth Grahame',
+    text:
+      'The Mole had been working very hard all the morning, spring-cleaning his little home. First with brooms, then with dusters; ' +
+      'then on ladders and steps and chairs, with a brush and a pail of whitewash; till he had dust in his throat and eyes, ' +
+      'and splashes of whitewash all over his black fur, and an aching back and weary arms.',
+  },
+  {
+    id: 'london-call',
+    title: 'The Call of the Wild',
+    author: 'Jack London',
+    text:
+      'Buck did not read the newspapers, or he would have known that trouble was brewing, not alone for himself, ' +
+      'but for every tide-water dog, strong of muscle and with warm, long hair, from Puget Sound to San Diego.',
+  },
+  {
+    id: 'wilde-dorian',
+    title: 'The Picture of Dorian Gray',
+    author: 'Oscar Wilde',
+    text:
+      'The studio was filled with the rich odour of roses, and when the light summer wind stirred amidst the trees of the garden, ' +
+      'there came through the open door the heavy scent of the lilac, or the more delicate perfume of the pink-flowering thorn.',
+  },
+  {
+    id: 'dickens-expectations',
+    title: 'Great Expectations',
+    author: 'Charles Dickens',
+    text:
+      "My father's family name being Pirrip, and my Christian name Philip, my infant tongue could make of both names nothing longer " +
+      'or more explicit than Pip. So, I called myself Pip, and came to be called Pip.',
+  },
+  {
+    id: 'austen-emma',
+    title: 'Emma',
+    author: 'Jane Austen',
+    text:
+      'Emma Woodhouse, handsome, clever, and rich, with a comfortable home and happy disposition, seemed to unite some of the best blessings ' +
+      'of existence; and had lived nearly twenty-one years in the world with very little to distress or vex her.',
+  },
+  {
+    id: 'sewell-black-beauty',
+    title: 'Black Beauty',
+    author: 'Anna Sewell',
+    text:
+      'The first place that I can well remember was a large pleasant meadow with a pond of clear water in it. ' +
+      'Some shady trees leaned over the pond, and rushes and water-lilies grew at the deep end.',
+  },
+  {
+    id: 'kipling-jungle',
+    title: 'The Jungle Book',
+    author: 'Rudyard Kipling',
+    text:
+      "It was seven o'clock of a very warm evening in the Seeonee hills when Father Wolf woke up from his day's rest, scratched himself, " +
+      'yawned, and spread out his paws one after the other to get rid of the sleepy feeling in their tips.',
+  },
+  {
+    id: 'wells-time-machine',
+    title: 'The Time Machine',
+    author: 'H. G. Wells',
+    text:
+      'The Time Traveller (for so it will be convenient to speak of him) was expounding a recondite matter to us. ' +
+      'His grey eyes shone and twinkled, and his usually pale face was flushed and animated.',
+  },
+  {
+    id: 'conrad-heart',
+    title: 'Heart of Darkness',
+    author: 'Joseph Conrad',
+    text:
+      'The Nellie, a cruising yawl, swung to her anchor without a flutter of the sails, and was at rest. ' +
+      'The flood had made, the wind was nearly calm, and being bound down the river, the only thing for it was to come to and wait for the turn of the tide.',
+  },
+  {
+    id: 'nesbit-railway',
+    title: 'The Railway Children',
+    author: 'E. Nesbit',
+    text:
+      "They were not railway children to begin with. I don't suppose they had ever thought about railways except as a means of getting " +
+      "to Maskelyne and Cook's, the Pantomime, Zoological Gardens, and Madame Tussaud's.",
+  },
+  {
+    id: 'burnett-little-princess',
+    title: 'A Little Princess',
+    author: 'Frances Hodgson Burnett',
+    text:
+      "Once on a dark winter's day, when the yellow fog hung so thick and heavy in the streets of London that the lamps were lighted " +
+      'and the shop windows blazed with gas as they do at night, an odd-looking little girl sat in a cab with her father ' +
+      'and drove rather slowly through the big thoroughfares.',
+  },
+  {
+    id: 'woolf-dalloway',
+    title: 'Mrs Dalloway',
+    author: 'Virginia Woolf',
+    text:
+      'Mrs. Dalloway said she would buy the flowers herself. For Lucy had her work cut out for her. ' +
+      "The doors would be taken off their hinges; Rumpelmayer's men were coming. " +
+      'And then, thought Clarissa Dalloway, what a morning, fresh as if issued to children on a beach.',
+  },
 ];
 
 export function isPassageId(value: unknown): value is string {
   return typeof value === 'string' && PASSAGES.some((p) => p.id === value);
+}
+
+/** What separates passages in a timed test: the player presses Enter, as for a new paragraph. */
+export const PASSAGE_BREAK = '\n';
+
+/**
+ * Deals passages in a shuffled order, every one before any comes round again,
+ * and never the same one twice in a row across a reshuffle.
+ */
+export class PassageDeck {
+  private queue: Passage[] = [];
+  private last: Passage | null = null;
+
+  constructor(
+    private readonly rand: () => number,
+    private readonly passages: readonly Passage[] = PASSAGES,
+  ) {}
+
+  next(): Passage {
+    if (this.queue.length === 0) {
+      const deck = [...this.passages];
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(this.rand() * (i + 1));
+        [deck[i], deck[j]] = [deck[j]!, deck[i]!];
+      }
+      if (deck.length > 1 && deck[0] === this.last) [deck[0], deck[1]] = [deck[1]!, deck[0]!];
+      this.queue = deck;
+    }
+    this.last = this.queue.shift()!;
+    return this.last;
+  }
+}
+
+/** Passages from `deck` for a timed test, `first` and then as many as it takes for at least `minChars` (more than anyone types in time). */
+export function drawPassages(deck: { next(): Passage }, minChars: number, first: Passage = deck.next()): Passage[] {
+  const passages = [first];
+  let chars = first.text.length;
+  // Skip one already in this test (a chosen `first` can come round in the deck), unless they've all been used.
+  for (let skips = 0; chars < minChars; ) {
+    const next = deck.next();
+    if (passages.includes(next) && skips++ < PASSAGES.length) continue;
+    passages.push(next);
+    chars += 1 + next.text.length;
+  }
+  return passages;
 }
 
 /** A passage's place in a test's text (a timed test strings several together). */
@@ -60,16 +307,12 @@ export interface PassageSpan {
   start: number;
 }
 
-/**
- * Text for a timed test: passages one after another from `first`, round and
- * round, until there's at least `minChars` (more than anyone types in time).
- */
-export function chainPassages(first: number, minChars: number, passages: readonly Passage[] = PASSAGES): { text: string; spans: PassageSpan[] } {
+/** Text for a test: the passages one after another, with a PASSAGE_BREAK (Enter) between each. */
+export function chainPassages(passages: readonly Passage[]): { text: string; spans: PassageSpan[] } {
   const spans: PassageSpan[] = [];
   let text = '';
-  for (let i = first; text.length < minChars && passages.length > 0; i++) {
-    const passage = passages[i % passages.length]!;
-    if (text !== '') text += ' ';
+  for (const passage of passages) {
+    if (text !== '') text += PASSAGE_BREAK;
     spans.push({ passage, start: [...text].length });
     text += passage.text;
   }

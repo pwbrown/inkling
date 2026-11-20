@@ -1,20 +1,25 @@
 /**
- * Fair Copy (M31): the text is written on the notebook lines,
- * double spaced like a fair copy, where the manuscript scribbles normally go.
- * Untyped text is pale, typed text is in the scribe's ink, and mistakes are
- * in margin red with what was actually typed above them. The scribe walks
- * the gap line under the caret, cheers long runs and winces at slips.
+ * Fair Copy (M31): the text is written on the notebook lines of the game's
+ * own page (the player's paper, the season's decor). Untyped text is pale,
+ * typed text is in ink, and mistakes are in margin red with what was actually
+ * typed above them. The scribe sits in the margin by the line being copied,
+ * cheers long runs and winces at slips.
  *
  * A passage fits on the page; a timed test's longer text scrolls, keeping the
- * caret on the second line. Reads the test; never changes it.
+ * caret on the second line. Between passages an Enter mark (↵) waits, with a
+ * "Press Enter" note while the caret is on its line. Reads the test; never changes it.
  */
 import { CanvasTextMetrics, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { GAME_CONFIG } from '../core/config';
-import { fairCopyResult, marks, remainingMs, type FairCopy, type FairCopyEvent, type FairCopyResult, type PassageSpan } from '../core/fairCopy';
+import { PASSAGE_BREAK, fairCopyResult, marks, remainingMs, type FairCopy, type FairCopyEvent, type FairCopyResult, type PassageSpan } from '../core/fairCopy';
 import { pageGrade } from '../core/grade';
+import type { Cosmetics } from '../core/rewards';
+import type { SeasonId } from '../core/seasons';
 import { FIRST_LINE_Y, LINE_SPACING, MARGIN_X, WORLD_HEIGHT, WORLD_WIDTH, laneCount } from '../core/world';
 import { formatNumber, t, type MessageKey } from '../i18n';
 import { Effects } from './effects';
+import { drawPage, splatterColor } from './renderer';
+import { SeasonDecor } from './seasonDecor';
 import { Scribe } from './scribe';
 import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, TEXT_FONT, glyph, keyLabel } from './theme';
 import { outCubic } from './tween';
@@ -38,16 +43,19 @@ export interface FairCopySetup {
   spans: readonly PassageSpan[];
   /** A timed test's length, or null for one passage. */
   seconds: number | null;
+  /** Dressed like the game's page. */
+  cosmetics: Cosmetics;
+  season: SeasonId | null;
 }
 
 const FONT_SIZE = 26;
 const LEFT = MARGIN_X + GAME_CONFIG.manuscript.insetLeft;
 const RIGHT = WORLD_WIDTH - GAME_CONFIG.manuscript.insetRight;
-/** Double spaced: text on every other ruled line, the scribe on the line between. */
-const TEXT_LINES = Math.ceil(laneCount() / 2);
+/** Text on every ruled line. */
+const TEXT_LINES = laneCount();
 /** While scrolling, the caret stays on this row, so the line before it stays in view. */
 const CARET_ROW = 1;
-const baselineOf = (row: number) => FIRST_LINE_Y + row * LINE_SPACING * 2;
+const baselineOf = (row: number) => FIRST_LINE_Y + row * LINE_SPACING;
 const CARD_WIDTH = 620;
 const PAD = 32;
 /** The countdown turns red for the last few seconds. */
@@ -55,7 +63,11 @@ const COUNTDOWN_WARN_MS = 5000;
 
 const textStyle = (fill: number) => new TextStyle({ fontFamily: TEXT_FONT, fontSize: FONT_SIZE, fill });
 const MEASURE = textStyle(0);
-const measure = (s: string) => CanvasTextMetrics.measureText(s, MEASURE).width;
+/** How a character is drawn: the passage break as an Enter mark, a space after the last word. */
+const shown = (c: string) => (c === PASSAGE_BREAK ? ' \u21b5' : c);
+const measure = (s: string) => CanvasTextMetrics.measureText([...s].map(shown).join(''), MEASURE).width;
+/** Room kept after a passage's Enter mark for its "Press Enter" note. */
+const BREAK_NOTE_ROOM = 190;
 
 interface Line {
   /** Index of the first character in the text. */
@@ -84,6 +96,16 @@ function wrap(text: string, spans: readonly PassageSpan[]): Line[] {
       current += token;
     }
     if (current !== '') lines.push({ start, chars: [...current], x });
+    // Before a break, leave room on the line for the "Press Enter" note: carry the last word over if need be.
+    const last = lines.at(-1);
+    if (i < spans.length - 1 && last && last.x + measure(last.chars.join('')) + BREAK_NOTE_ROOM > RIGHT) {
+      const words = last.chars.join('').match(/\S+\s*/g) ?? [];
+      if (words.length > 1) {
+        const carried = [...words.at(-1)!];
+        last.chars = last.chars.slice(0, last.chars.length - carried.length);
+        lines.push({ start: last.start + last.chars.length, chars: carried, x: LEFT });
+      }
+    }
   });
   return lines;
 }
@@ -126,7 +148,7 @@ class LineView {
       const state = states[i]!;
       let j = i;
       while (j < chars.length && states[j] === state) j++;
-      const run = chars.slice(i, j).join('');
+      const run = chars.slice(i, j).map(shown).join('');
       const runX = x + measure(chars.slice(0, i).join(''));
       const fill = state === 'r' ? COLORS.ink : state === 'w' ? COLORS.margin : COLORS.inkFaded;
       const text = new Text({ text: run, style: textStyle(fill) });
@@ -135,7 +157,7 @@ class LineView {
       this.root.addChild(text);
       if (state === 'w') {
         // Not by colour alone: a wavy underline, and the letters actually typed above.
-        const x1 = runX + Math.max(measure(run), 8);
+        const x1 = runX + Math.max(measure(chars.slice(i, j).join('')), 8);
         squiggle.moveTo(runX, 6);
         for (let px = runX; px <= x1; px += 4) squiggle.lineTo(px, 6 + (Math.round((px - runX) / 4) % 2 ? 3 : 0));
         const above = new Text({
@@ -171,12 +193,15 @@ export class FairCopyView {
   private readonly hudLeft: Text;
   private readonly hudRight: Text;
   private readonly footer: Text;
+  /** "Press Enter", by the passage break the caret is heading for. */
+  private readonly breakNote = new Container();
+  private readonly decor: SeasonDecor;
+  private timeMs = 0;
   private readonly result = new Container();
   private readonly ascent: number;
   private firstLine = 0;
   private caretBlinkMs = 0;
   private lastLength = -1;
-  private scribeX = 0;
   private scribeY = 0;
   private hudMs = 0;
   private resultMs = -1;
@@ -192,7 +217,9 @@ export class FairCopyView {
     private readonly actions: FairCopyActions,
   ) {
     this.ascent = CanvasTextMetrics.measureText('Hg', MEASURE).fontProperties.ascent;
-    this.root.addChild(drawPage());
+    this.root.addChild(drawPage(setup.cosmetics.paper));
+    this.decor = new SeasonDecor(setup.season, reducedMotion);
+    this.root.addChild(this.decor.root);
 
     this.heading = new Text({
       text: setup.seconds === null ? t('fairCopy.heading') : t('fairCopy.headingTimed', { seconds: setup.seconds }),
@@ -215,23 +242,37 @@ export class FairCopyView {
       textLayer.addChild(view.root);
     }
 
-    this.hudLeft = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 18, fontWeight: '600', fill: COLORS.ink } });
+    // Sized like the game's HUD (render/hud.ts).
+    this.hudLeft = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 16, fontWeight: '600', fill: COLORS.ink } });
     this.hudLeft.position.set(24, 16);
-    this.hudRight = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 24, fontWeight: '700', fill: COLORS.ink } });
+    this.hudRight = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 20, fontWeight: '700', fill: COLORS.ink } });
     this.hudRight.anchor.set(1, 0);
-    this.hudRight.position.set(WORLD_WIDTH - 24, 12);
-    this.footer = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 16, fill: COLORS.pencil } });
+    this.hudRight.position.set(WORLD_WIDTH - 24, 14);
+    this.footer = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 15, fill: COLORS.inkLight } });
     this.footer.anchor.set(0.5, 1);
     this.footer.position.set(WORLD_WIDTH / 2, WORLD_HEIGHT - 8);
 
+    // The note by a passage break, in the red pen of the game's tutorial notes.
+    const noteText = new Text({ text: t('fairCopy.pressEnter'), style: { fontFamily: DISPLAY_FONT, padding: DISPLAY_PADDING, fontSize: 28, fontWeight: '700', fill: COLORS.margin } });
+    noteText.anchor.set(0, 0.5);
+    noteText.position.set(34, 0);
+    const noteArrow = new Graphics()
+      .moveTo(28, 2)
+      .quadraticCurveTo(16, -6, 4, 0)
+      .moveTo(12, -6)
+      .lineTo(4, 0)
+      .lineTo(12, 5)
+      .stroke({ width: 3, color: COLORS.margin, cap: 'round', join: 'round' });
+    this.breakNote.addChild(noteArrow, noteText);
+    this.breakNote.visible = false;
+
     this.scribe = new Scribe(0, 0);
     this.scribe.start('', true);
-    this.effects = new Effects(reducedMotion);
-    this.root.addChild(textLayer, this.caret, this.scribe.root, this.effects.stainLayer, this.effects.particleLayer, this.hudLeft, this.hudRight, this.footer, this.result);
+    this.scribe.setSeason(setup.season);
+    this.effects = new Effects(reducedMotion, splatterColor(setup.cosmetics.splatter));
+    this.root.addChild(textLayer, this.caret, this.breakNote, this.scribe.root, this.effects.stainLayer, this.effects.particleLayer, this.hudLeft, this.hudRight, this.footer, this.result);
     this.scroll(0);
-    const [x, y] = this.scribeSpot(0);
-    this.scribeX = x;
-    this.scribeY = y;
+    this.scribeY = this.scribeSpot(0)[1];
   }
 
   /** How the finished test compares with the player's best, for the card. Call before the card is built (on finishing). */
@@ -270,14 +311,16 @@ export class FairCopyView {
     const blinkOn = this.reducedMotion || this.caretBlinkMs < 500 || Math.floor(this.caretBlinkMs / 530) % 2 === 0;
     if (!finished && blinkOn) this.caret.rect(cx - 1, cy - this.ascent - 2, 2.5, this.ascent + 8).fill(COLORS.ink);
 
-    // The scribe follows the caret along the gap line under it.
+    // The scribe keeps pace down the margin, beside the line being copied.
     const [sx, sy] = this.scribeSpot(index);
     const k = this.reducedMotion ? 1 : Math.min(1, frameMs / 90);
-    this.scribeX += (sx - this.scribeX) * k;
     this.scribeY += (sy - this.scribeY) * k;
-    this.scribe.root.position.set(this.scribeX, this.scribeY);
+    this.scribe.root.position.set(sx, this.scribeY);
     this.scribe.update(frameMs, this.reducedMotion, ok.at(-1) === false);
     this.effects.update(frameMs);
+    this.decor.update(frameMs);
+    this.timeMs += frameMs;
+    this.syncBreakNote(test, index);
 
     // Which passage the caret is in, by its author.
     const span = [...this.setup.spans].reverse().find((s) => s.start <= index) ?? null;
@@ -341,11 +384,21 @@ export class FairCopyView {
     return i === -1 ? this.lines.length - 1 : i;
   }
 
-  /** Where the scribe stands for the caret before `index`: on the gap line, just to its left. */
+  /** Where the scribe stands for the caret before `index`: in the margin, on the caret's line, quill towards the text. */
   private scribeSpot(index: number): [number, number] {
     const i = this.lineIndexOf(index);
-    const x = this.lines[i]?.caretX(index) ?? LEFT;
-    return [Math.max(MARGIN_X + 14, x - 12), baselineOf(i - this.firstLine) + LINE_SPACING - 4];
+    return [MARGIN_X - 44, baselineOf(i - this.firstLine) + 4];
+  }
+
+  /** "Press Enter" by the break at the end of the caret's line, if there is one there. */
+  private syncBreakNote(test: FairCopy, index: number): void {
+    const line = this.lines[this.lineIndexOf(index)];
+    const end = line ? line.line.start + line.line.chars.length - 1 : -1;
+    const show = test.finishedAt === null && line !== undefined && line.line.chars.at(-1) === PASSAGE_BREAK && index <= end;
+    this.breakNote.visible = show;
+    if (!show) return;
+    const bob = this.reducedMotion ? 0 : Math.sin(this.timeMs / 260) * 3;
+    this.breakNote.position.set(line.caretX(end + 1) + 6 + bob, line.root.y - this.ascent / 2 + 2);
   }
 
   private showResult(result: FairCopyResult, frameMs: number): void {
@@ -557,14 +610,4 @@ export class FairCopyView {
     this.stamp = stamp;
     this.result.addChild(backdrop, card);
   }
-}
-
-/** The notebook page: paper, rules and the margin line (as the game's renderer draws them, without cosmetics). */
-function drawPage(): Graphics {
-  const page = new Graphics();
-  page.rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT).fill(COLORS.paper);
-  for (let y = FIRST_LINE_Y - LINE_SPACING; y < WORLD_HEIGHT - LINE_SPACING / 2; y += LINE_SPACING) page.moveTo(0, y).lineTo(WORLD_WIDTH, y);
-  page.stroke({ width: 1.5, color: COLORS.rule });
-  page.moveTo(MARGIN_X, 0).lineTo(MARGIN_X, WORLD_HEIGHT).stroke({ width: 2.5, color: COLORS.margin });
-  return page;
 }

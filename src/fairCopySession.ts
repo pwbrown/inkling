@@ -3,13 +3,15 @@
  * While a session is open it owns the keyboard: the game's handler is
  * suspended (main.ts) and this one takes over until the player leaves.
  *
- * Rules are in core/fairCopy.ts, drawing in render/fairCopyView.ts. Nothing
- * is saved yet.
+ * Rules are in core/fairCopy.ts, drawing in render/fairCopyView.ts. Results
+ * are saved by main.ts (onFinished).
  */
 import type { Application } from 'pixi.js';
 import { Container } from 'pixi.js';
 import { GAME_CONFIG } from './core/config';
-import { PASSAGES, backspace, chainPassages, createFairCopy, fairCopyResult, isFinished, tick, typeKey, type FairCopy, type FairCopyEvent, type FairCopyResult } from './core/fairCopy';
+import { PASSAGE_BREAK, backspace, chainPassages, createFairCopy, drawPassages, fairCopyResult, isFinished, tick, typeKey, type FairCopy, type FairCopyEvent, type FairCopyResult, type Passage } from './core/fairCopy';
+import type { Cosmetics } from './core/rewards';
+import type { SeasonId } from './core/seasons';
 import { WORLD_HEIGHT, WORLD_WIDTH } from './core/world';
 import { formatNumber, t } from './i18n';
 import { bindKeyboard } from './input/keyboard';
@@ -30,9 +32,14 @@ const timedChars = (seconds: number) => Math.ceil((250 * 5 * seconds) / 60);
 
 export interface FairCopyOptions {
   mode: FairCopyMode;
-  /** Which passage to start with. */
-  passage: number;
+  /** Deals the passages, shuffled (kept by main.ts, so each visit carries on through it). */
+  deck: { next(): Passage };
+  /** Start on this passage instead of the deck's next (dev links). */
+  first?: Passage;
   reducedMotion: boolean;
+  /** The page dresses like the game's: the player's paper, ink splatter and the scribe's holiday hat. */
+  cosmetics: Cosmetics;
+  season: SeasonId | null;
   /** The player left (Esc, or M on the result card). */
   onExit(): void;
   /** A result, for screen readers. */
@@ -47,7 +54,8 @@ export class FairCopySession {
   private readonly root = new Container();
   private test!: FairCopy;
   private view!: FairCopyView;
-  private index: number;
+  /** This test's passages, kept for "try again". */
+  private passages: Passage[] = [];
   private readonly unbind: () => void;
   private readonly fit = () => {
     const { width, height } = this.app.screen;
@@ -60,12 +68,11 @@ export class FairCopySession {
     private readonly app: Application,
     private readonly options: FairCopyOptions,
   ) {
-    this.index = ((options.passage % PASSAGES.length) + PASSAGES.length) % PASSAGES.length;
     // On top of the game's scene, which carries on drawing (idle) underneath.
     app.stage.addChild(this.root);
     this.fit();
     app.renderer.on('resize', this.fit);
-    this.begin(this.index);
+    this.begin(options.first);
 
     // Added on the next turn, so the key that opened Fair Copy from the menu isn't typed into it.
     let ready = false;
@@ -78,11 +85,13 @@ export class FairCopySession {
           // Result card shortcuts, after a moment so typing carried past the end doesn't trigger them.
           if (!this.cardReady()) return;
           const lower = char.toLowerCase();
-          if (lower === 'r') this.begin(this.index);
+          if (lower === 'r') this.again();
           else if (lower === 'm') this.options.onExit();
         },
         onConfirm: () => {
-          if (isFinished(this.test) && this.cardReady()) this.begin(this.index + 1);
+          // Mid-test, Enter is a key like any other: it moves on to the next passage (and is a mistake anywhere else).
+          if (!isFinished(this.test)) this.react(typeKey(this.test, PASSAGE_BREAK, performance.now()));
+          else if (this.cardReady()) this.begin();
         },
         onPause: () => this.options.onExit(),
         onSpecial: (key) => {
@@ -138,18 +147,33 @@ export class FairCopySession {
     return end !== null && performance.now() - end >= GAME_CONFIG.menu.shortcutDelayMs;
   }
 
-  private begin(next: number): void {
-    this.index = next % PASSAGES.length;
+  /** A new test from the deck (starting on `first`, if given). */
+  private begin(first?: Passage): void {
     const seconds = this.options.mode;
-    const passage = PASSAGES[this.index]!;
-    const { text, spans } = seconds === null ? { text: passage.text, spans: [{ passage, start: 0 }] } : chainPassages(this.index, timedChars(seconds));
+    this.start(seconds === null ? [first ?? this.options.deck.next()] : drawPassages(this.options.deck, timedChars(seconds), first));
+  }
+
+  /** The same passages again. */
+  private again(): void {
+    this.start(this.passages);
+  }
+
+  private start(passages: Passage[]): void {
+    this.passages = passages;
+    const seconds = this.options.mode;
+    const { text, spans } = chainPassages(passages);
     this.test = createFairCopy(text, seconds === null ? null : seconds * 1000);
     this.view?.root.destroy({ children: true });
-    this.view = new FairCopyView(text, { spans, seconds }, this.options.reducedMotion, {
-      onNext: () => this.begin(this.index + 1),
-      onAgain: () => this.begin(this.index),
-      onMenu: () => this.options.onExit(),
-    });
+    this.view = new FairCopyView(
+      text,
+      { spans, seconds, cosmetics: this.options.cosmetics, season: this.options.season },
+      this.options.reducedMotion,
+      {
+        onNext: () => this.begin(),
+        onAgain: () => this.again(),
+        onMenu: () => this.options.onExit(),
+      },
+    );
     this.root.addChild(this.view.root);
   }
 
@@ -160,7 +184,7 @@ export class FairCopySession {
     if (events.includes('finished')) {
       const r = fairCopyResult(this.test, performance.now());
       // A whole passage counts as copied out, mistakes and all; a timed test doesn't.
-      const copiedId = this.options.mode === null ? (PASSAGES[this.index]?.id ?? null) : null;
+      const copiedId = this.options.mode === null ? (this.passages[0]?.id ?? null) : null;
       this.view.setRecord(this.options.onFinished?.(r, this.options.mode, copiedId) ?? null);
       this.options.announce(
         t(r.mistakesLeft === 1 ? 'fairCopy.announceOne' : 'fairCopy.announce', {

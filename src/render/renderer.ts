@@ -92,7 +92,7 @@ const HIGHLIGHT_RING_MS = 900;
 const HIGHLIGHT_RING_HOLD = 0.45;
 
 /** Splatter colors for the unlockable ink choices. */
-function splatterColor(choice: Cosmetics['splatter']): number {
+export function splatterColor(choice: Cosmetics['splatter']): number {
   switch (choice) {
     case 'crimson':
       return COLORS.inkCrimson;
@@ -107,7 +107,7 @@ function splatterColor(choice: Cosmetics['splatter']): number {
   }
 }
 
-function drawPage(style: Cosmetics['paper']): Graphics {
+export function drawPage(style: Cosmetics['paper']): Graphics {
   const page = new Graphics();
   // Parchment warms the paper; strongest on the classic theme, a hint elsewhere.
   // The holiday papers (M26) tint it warm or cool and print a faint border.

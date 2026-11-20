@@ -44,6 +44,7 @@ import { SaveFormatError, defaultSave, fairCopyKey, migrate, type SaveData } fro
 import { MAX_TRANSFER_LENGTH, canTransfer, decodeTransfer, encodeTransfer, hasTransfer, type Transfer } from './storage/transfer';
 import { PlayerStore, cleanName, saveKeyFor, uniqueName, type Player } from './storage/profiles';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
+import { PASSAGES, PassageDeck, type Passage } from './core/fairCopy';
 import { FairCopySession, fairCopyMode } from './fairCopySession';
 import { loadFonts } from './fonts';
 import { registerOffline } from './pwa';
@@ -866,14 +867,17 @@ async function main(): Promise<void> {
 
   /** Fair Copy, the typing-speed test, while it's open (it owns the keyboard then). */
   let fairCopy: FairCopySession | null = null;
-  /** The passage the next Fair Copy starts on, so each visit brings a new one. */
-  let fairCopyPassage = 0;
-  const startFairCopy = (seconds: number | null, passage = fairCopyPassage) => {
+  /** Deals Fair Copy's passages, shuffled: every one before any comes round again. */
+  const passageDeck = new PassageDeck(Math.random);
+  const startFairCopy = (seconds: number | null, first?: Passage) => {
     fairCopy?.destroy();
     fairCopy = new FairCopySession(renderer.app, {
       mode: seconds,
-      passage,
+      deck: passageDeck,
+      first,
       reducedMotion: reducedMotion(settings, prefersReducedMotion()),
+      cosmetics: store.data.profile.cosmetics,
+      season: season(),
       onExit: () => {
         fairCopy?.destroy();
         fairCopy = null;
@@ -895,7 +899,6 @@ async function main(): Promise<void> {
         else if (events.includes('correct')) sfx.play('key');
       },
     });
-    fairCopyPassage = passage + 1;
     menu.hide();
     if (import.meta.env.DEV) (window as unknown as { fairCopy: unknown }).fairCopy = fairCopy.devHelpers();
   };
@@ -1615,10 +1618,13 @@ async function main(): Promise<void> {
     // Handy for poking at state from the console during development. Still
     // called `inkling` (the first name) because the snapshots script reads it
     // from builds of older milestones.
-    // `?fairCopy=passage|30|60` (with `&passage=0..2`) opens Fair Copy straight away, for screenshots.
+    // `?fairCopy=passage|30|60` opens Fair Copy straight away, for screenshots: `&passage=` picks the
+    // first passage by its index or id (otherwise it's shuffled).
     const params = new URLSearchParams(location.search);
     const fairCopyLink = fairCopyMode(params.get('fairCopy'));
-    if (fairCopyLink !== undefined) startFairCopy(fairCopyLink, Number(params.get('passage') ?? 0) || 0);
+    const passageParam = params.get('passage');
+    const firstPassage = passageParam === null ? undefined : (PASSAGES.find((p) => p.id === passageParam) ?? PASSAGES[Number(passageParam)]);
+    if (fairCopyLink !== undefined) startFairCopy(fairCopyLink, firstPassage);
     (window as unknown as { inkling: unknown }).inkling = { world: game, loop, renderer, get pack() { return pack; }, store, menu, openKeys, openSaves, openSettings: openSettingsDialog, openVocab };
   }
 }
