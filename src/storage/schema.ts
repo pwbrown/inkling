@@ -8,6 +8,7 @@
 import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
 import { BOSS_KINDS, DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, GAME_CONFIG, type BossKind, type Difficulty } from '../core/config';
 import { isStickerId } from '../core/stickers';
+import { isPassageId } from '../core/fairCopy';
 import { isMechanic } from '../core/mechanics';
 import type { Grade } from '../core/grade';
 import { DEFAULT_NUDGES, type NudgeState } from '../core/nudges';
@@ -15,7 +16,7 @@ import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 import { DEFAULT_LAYOUT_ID, isLayoutId } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 
-export const SAVE_VERSION = 14;
+export const SAVE_VERSION = 15;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -127,6 +128,8 @@ export interface FairCopyProgress {
   tests: number;
   /** Best net speed for each kind of test: `passage`, or a timed test's seconds ("30", "60"). */
   best: Record<string, FairCopyBest>;
+  /** Passages (ids) copied out to the end at least once (added in version 15). */
+  copied: string[];
 }
 
 /** Which kinds of Fair Copy test have a best: a whole passage, or a timed length. */
@@ -219,7 +222,7 @@ export function defaultSave(): SaveData {
     daily: defaultDaily(),
     stickers: { earned: {}, unseen: [], bossesBeaten: [] },
     nudges: { ...DEFAULT_NUDGES },
-    fairCopy: { tests: 0, best: {} },
+    fairCopy: { tests: 0, best: {}, copied: [] },
   };
 }
 
@@ -360,7 +363,7 @@ function sanitize(v: Json): SaveData {
 }
 
 function sanitizeFairCopy(v: unknown): FairCopyProgress {
-  const out: FairCopyProgress = { tests: 0, best: {} };
+  const out: FairCopyProgress = { tests: 0, best: {}, copied: [] };
   if (!isObject(v)) return out;
   out.tests = count(v.tests);
   if (isObject(v.best)) {
@@ -372,6 +375,7 @@ function sanitizeFairCopy(v: unknown): FairCopyProgress {
       out.best[key] = { wpm, accuracy, at: b.at };
     }
   }
+  if (Array.isArray(v.copied)) out.copied = [...new Set(v.copied.filter(isPassageId))];
   return out;
 }
 
@@ -516,6 +520,8 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
   12: (save) => ({ ...save, version: 13, nudges: { ...DEFAULT_NUDGES } }),
   // v14 added Fair Copy results; nobody has a best yet.
   13: (save) => ({ ...save, version: 14, fairCopy: { tests: 0, best: {} } }),
+  // v15 remembers which Fair Copy passages were copied out; none so far, as nothing kept track before.
+  14: (save) => ({ ...save, version: 15, fairCopy: { ...(isObject(save.fairCopy) ? save.fairCopy : {}), copied: [] } }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

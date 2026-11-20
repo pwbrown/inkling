@@ -880,10 +880,10 @@ async function main(): Promise<void> {
         menu.show('fairCopy');
       },
       announce: (text) => (announcer.textContent = text),
-      onFinished: (r, mode) => {
+      onFinished: (r, mode, passageId) => {
         let record: { previous: number | null; isNew: boolean } = { previous: null, isNew: false };
         store.update((save) => {
-          const { previous, isNew } = recordFairCopy(save, mode, r);
+          const { previous, isNew } = recordFairCopy(save, mode, r, new Date(), passageId);
           record = { previous: previous?.wpm ?? null, isNew };
         });
         giveStickers({ fairCopy: { seconds: mode, netWpm: r.netWpm, typed: r.typed, errors: r.errors, mistakesLeft: r.mistakesLeft } });

@@ -7,6 +7,7 @@
  */
 import { APPRENTICE_CHAPTERS, chapterStars, type GameMode } from './campaign';
 import { BOSS_KINDS, GAME_CONFIG, type BossKind, type Difficulty } from './config';
+import { PASSAGES } from './fairCopy';
 import type { Grade } from './grade';
 import type { SeasonId } from './seasons';
 import { wpm, type Stats } from './stats';
@@ -58,6 +59,8 @@ export interface StickerFacts {
   apprentice: { unlocked: number; stars: Readonly<Record<string, number>>; completed: boolean };
   /** Boss kinds beaten so far (including on this page). */
   bossesBeaten: readonly BossKind[];
+  /** Fair Copy passages copied out to the end so far (including just now). */
+  passagesCopied: readonly string[];
   page?: PageFacts;
   daily?: DailyFacts;
   fairCopy?: FairCopyFacts;
@@ -139,6 +142,7 @@ export const STICKERS: readonly Sticker[] = [
   { id: 'copyist', group: 'fairCopy', emoji: '🖊️', earned: (f) => copyWpm(f.fairCopy) >= S.fairCopyWpm[0]! },
   { id: 'swiftQuill', group: 'fairCopy', emoji: '🕊️', earned: (f) => copyWpm(f.fairCopy) >= S.fairCopyWpm[1]! },
   { id: 'printingPress', group: 'fairCopy', emoji: '🗞️', earned: (f) => copyWpm(f.fairCopy) >= S.fairCopyWpm[2]! },
+  { id: 'bookworm', group: 'fairCopy', emoji: '📚', earned: (f) => PASSAGES.every((p) => f.passagesCopied.includes(p.id)) },
   {
     id: 'beatTheBell',
     group: 'fairCopy',

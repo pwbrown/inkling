@@ -151,7 +151,7 @@ describe('save schema', () => {
   });
 
   it('gives version 13 saves no Fair Copy results, and checks saved ones', () => {
-    expect(migrate({ version: 13 }).fairCopy).toEqual({ tests: 0, best: {} });
+    expect(migrate({ version: 13 }).fairCopy).toEqual({ tests: 0, best: {}, copied: [] });
     const good = { wpm: 61.5, accuracy: 0.97, at: '2026-11-20T10:00:00.000Z' };
     const save = migrate({
       ...defaultSave(),
@@ -160,8 +160,15 @@ describe('save schema', () => {
         best: { passage: good, '60': good, '45': good, '30': { ...good, wpm: -3 }, sprint: good },
       },
     });
-    expect(save.fairCopy).toEqual({ tests: 4, best: { passage: good, '60': good } });
+    expect(save.fairCopy).toEqual({ tests: 4, best: { passage: good, '60': good }, copied: [] });
     expect(migrate({ ...defaultSave(), fairCopy: { tests: 2, best: { passage: { ...good, accuracy: 2 } } } }).fairCopy.best).toEqual({});
+  });
+
+  it('gives version 14 saves no copied passages, keeping their bests, and checks saved ones', () => {
+    const best = { passage: { wpm: 50, accuracy: 1, at: '2026-11-20T10:00:00.000Z' } };
+    expect(migrate({ ...defaultSave(), version: 14, fairCopy: { tests: 3, best } }).fairCopy).toEqual({ tests: 3, best, copied: [] });
+    const save = migrate({ ...defaultSave(), fairCopy: { tests: 1, best: {}, copied: ['twain-huck', 'made-up', 'twain-huck', 7] } });
+    expect(save.fairCopy.copied).toEqual(['twain-huck']);
   });
 
   it('drops unknown tutorial ids and keeps the tips choice', () => {

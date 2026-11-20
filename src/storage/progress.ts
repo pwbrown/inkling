@@ -184,7 +184,10 @@ export function recordFairCopy(
   seconds: number | null,
   result: { netWpm: number; accuracy: number },
   now = new Date(),
+  /** The passage copied out to the end, for a whole-passage test. */
+  passageId: string | null = null,
 ): { previous: FairCopyBest | null; isNew: boolean } {
+  if (passageId !== null && !save.fairCopy.copied.includes(passageId)) save.fairCopy.copied.push(passageId);
   const key = fairCopyKey(seconds);
   const previous = save.fairCopy.best[key] ?? null;
   save.fairCopy.tests++;
@@ -199,6 +202,7 @@ export function stickerFacts(save: Readonly<SaveData>, extra: Pick<StickerFacts,
     level: levelForInk(save.profile.ink),
     apprentice: save.apprentice,
     bossesBeaten: save.stickers.bossesBeaten,
+    passagesCopied: save.fairCopy.copied,
     ...extra,
   };
 }

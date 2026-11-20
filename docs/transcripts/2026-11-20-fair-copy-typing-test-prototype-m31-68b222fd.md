@@ -1,6 +1,6 @@
 # Fair Copy typing-test prototype (M31)
 
-Claude Code session started 2026-11-20. 17 prompts.
+Claude Code session started 2026-11-20. 20 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1760,6 +1760,183 @@ Fair Copy now saves results. It's on branch `feat/fair-copy-bests` as release 2.
 **Tried in the browser:** the preview's existing save upgraded from version 13 to 14 on load. Three runs at 60, 80 and 46 WPM gave the first-best pill, a new best of 80, and "Your best: 80 WPM", in that order. A fourth run at 103 WPM showed "New best! (was 80 WPM)", and the picker then showed "Best: 103 WPM".
 
 **Left out:** there's no history of past results, only the bests. The "copy every passage" sticker could now be added on top of this save. Both are easy follow-ups if you want them.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  npm run transcript 2>&1 | tail -1; F=docs/transcripts/2026-11-20-fair-copy-typing-test-prototype-m31-68b222fd.md; grep -nE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $F | grep -v noreply@anthropic | grep -v "grep -nE" | head -3; grep -niE "/Users/[a-z]|ghp_|sk-[A-Za-z0-9]{8}|password|Bearer " $F | grep -v "\[removed\]\|grep -n" | head -5; git status --short; cd /Users/[removed]/projects/inky-keys && git status --short | head -3; git log --oneline -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The transcript is clean (only the old dummy path), and `main` hasn't moved. Committing and fast-forwarding.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git add -A src package.json package-lock.json docs/transcripts && git commit -q -F - <<'EOF'
+  Fair Copy saves your bests (2.25.0)
+
+  - Save version 14: save.fairCopy keeps a count of finished tests and
+    the best net WPM (with accuracy and date) for a passage, 30 seconds
+    and 60 seconds; the 13 -> 14 migration starts everyone empty, and
+    the sanitizer drops unknown test kinds and impossible numbers
+  - recordFairCopy in storage/progress.ts records each finished test
+  - Result card: a highlighter pill for a first or new best ("New best!
+    (was 80 WPM)"), otherwise the best to beat; the picker's cho
+  … (521 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Saved bests are on `main` as `3d6b545`, "Fair Copy saves your bests (2.25.0)". It isn't pushed or tagged.
+
+- **Commit:** save version 14 and its migration, recording results, the bests on the result card and picker, their tests, the 2.25.0 release note and version bump, and the updated session transcript. I checked the transcript for private details and found nothing.
+- **Merge:** `main` hadn't moved, so it was a plain fast-forward, and I deleted `feat/fair-copy-bests`.
+
+This release changes the save format. Once it's live, players' saves move up to version 14 the next time they open the game. Older versions of the game can't load a version 14 save, so this is effectively one-way, as with every earlier save-version bump.
+
+## 🧑 Prompt
+
+> Push and tag
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git fetch -q origin && git log --oneline origin/main..main && git push origin main 2>&1 | tail -1 && npm run release:tag 2>&1 | grep -i "tagged" && git push origin v2.25.0 2>&1 | tail -1 && git tag -n3 v2.25.0
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Inky Keys 2.25.0 is pushed and tagged:
+
+- **`main`:** pushed, `b9ba3e1..3d6b545`.
+- **Tag:** `v2.25.0` on `3d6b545`, pushed. Its note reads: "Fair Copy remembers your best speed for a passage, 30 seconds and 60 seconds."
+
+Pushing the tag should start the Release workflow. I haven't checked that it ran or that the live site has updated.
+
+The two follow-ups from last time are still open: a history of past results, and the "copy every passage" sticker that this new save makes possible.
+
+## 🧑 Prompt
+
+> add the copy every passage sticker
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git checkout -q -b feat/fair-copy-bookworm main && python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/storage/schema.ts',[
+  ("export const SAVE_VERSION = 14;","export const SAVE_VERSION = 15;"),
+  ("import { isStickerId } from '../core/stickers';","import { isStickerId } from '../core/stickers';\nimport { isPassageId } from '../core/fairCopy';"),
+  ("  best: Record<string, FairCopyBest>;\n}","  best: Record<string, FairCopyBest>;\n  /** Passages (ids) copied out to the end a
+  … (3819 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Wiring is in. Updating the sticker tests' fact helper and adding tests for Bookworm, the 14→15 migration and recording copied passages.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/core/stickers.test.ts',[
+  ("  return { level: 1, apprentice: { unlocked: 1, stars: {}, completed: false }, bossesBeaten: [], ...extra };",
+   "  return { level: 1, apprentice: { unlocked: 1, stars: {}, completed: false }, bossesBeaten: [], passagesCopied: [], ...extra };"),
+  ("  it('never gives a sticker twice', () => {","""  it('gives Bookworm once every Fair Copy passage is copied out', () => {
+      const ids = PASSAGES.ma
+  … (2194 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Tests pass (460). Adding release 2.26.0, then checking in the browser.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/core/releases.ts',[("export const RELEASES: readonly Release[] = [\n","export const RELEASES: readonly Release[] = [\n  {\n    version: '2.26.0',\n    date: '2026-11-20',\n    notes: ['release.2.26.0.bookworm'],\n  },\n")])
+  edit('src/i18n/en.ts',[("  'release.2.25.0.fairCopyBests':","  'release.2.26.0.bookworm': 'A new Fair Copy sticker, Bookworm: copy out every passage to earn it.',\n  'release.2.25.0.fairCopyBests':")
+  … (159 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"resize_window","input":{"width":960,"height":540}},{"name":"navigate","input":{"url":"http://localhost:5183/?fairCopy=passage&passage=0"}},{"name":"computer","input":{"action":"wait","duration":3}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const out=[
+… (475 more characters)`
+- **Shell:** Ran a command
+
+  ```bash
+  N="/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006"; cp "/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys--claude-worktrees-infallible-elgamal-cca286/68b222fd-ec99-4e3f-8667-ceb97a749a3e/tool-results/mcp-Claude_Browser-blob-1795153526000-dl50z3.jpg" "$N/fair-copy-screens/v5-bests/5-bookworm.jpg"; cat >> "$N/fair-copy-prototype.md" <<'EOF'
+
+  ## v6: Bookworm (branch feat/fair-copy-bookworm, uncommitted, 2.26.0, SAVE_VERSION 15)
+  - save.fairCopy.copied: passage ids finished in a whole-passage test (mistakes
+  … (253 more characters)
+  ```
+- **SendUserFile** `{"files":["/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006/fair-copy-screens/v5-bests/5-bookworm.jpg"],"caption":"Bookworm earned after copying out the third passage (the toast stays up as the next passage begins).","status":"normal
+… (21 more characters)`
+- **resize_window** `{"preset":"desktop"}`
+
+</details>
+
+### 🤖 Claude
+
+I've added the Bookworm sticker 📚 to the Fair Copy shelf: "Copy out every passage in Fair Copy." It's on branch `feat/fair-copy-bookworm` as release 2.26.0 and isn't committed. Checks (460 tests) and the production build pass.
+
+**What counts as copied**
+- A passage counts once you finish it in a whole-passage test, even with mistakes left in.
+- Timed tests don't count, because they stop at the bell rather than at the end of a passage.
+- The sticker checks against the current passage list. Once the bigger passage library lands, Bookworm will want all of those too. A player who already has the sticker keeps it.
+
+**How it's saved**
+- The save now also keeps a list of the passages you've copied out, so the save format goes up to version 15, with a migration.
+- That list starts empty for everyone, including players who copied passages before this release, because nothing kept track of them until now.
+- Imported saves keep only passage names the game knows, without repeats.
+- Tests cover the sticker rule, the upgrade from version 14 (bests are kept) and the import checks.
+
+**Tried in the browser:** the preview's save upgraded from version 14 to 15. After each of the three passages the list grew by one, and the "New sticker! Bookworm" toast appeared after the third. I've sent a screenshot of the toast.
 
 ## 🧑 Prompt
 

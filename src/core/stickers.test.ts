@@ -3,13 +3,14 @@ import { en } from '../i18n/en';
 import { apprenticePlan, starKey } from './campaign';
 import { BOSS_KINDS, GAME_CONFIG } from './config';
 import type { Grade } from './grade';
+import { PASSAGES } from './fairCopy';
 import { createStats, type Stats } from './stats';
 import { STICKERS, newStickers, type FairCopyFacts, type PageFacts, type StickerFacts } from './stickers';
 
 const S = GAME_CONFIG.stickers;
 
 function facts(extra: Partial<StickerFacts> = {}): StickerFacts {
-  return { level: 1, apprentice: { unlocked: 1, stars: {}, completed: false }, bossesBeaten: [], ...extra };
+  return { level: 1, apprentice: { unlocked: 1, stars: {}, completed: false }, bossesBeaten: [], passagesCopied: [], ...extra };
 }
 
 function page(stats: Partial<Stats> = {}, extra: Partial<PageFacts> = {}): PageFacts {
@@ -117,6 +118,12 @@ describe('stickers', () => {
     expect(earned(facts({ fairCopy: copy({ seconds: S.bellSeconds, mistakesLeft: 0 }) }))).toContain('beatTheBell');
     expect(earned(facts({ fairCopy: copy({ seconds: S.bellSeconds, mistakesLeft: 1 }) }))).not.toContain('beatTheBell');
     expect(earned(facts({ fairCopy: copy({ seconds: 30, mistakesLeft: 0 }) }))).not.toContain('beatTheBell');
+  });
+
+  it('gives Bookworm once every Fair Copy passage is copied out', () => {
+    const ids = PASSAGES.map((p) => p.id);
+    expect(earned(facts({ passagesCopied: ids.slice(1) }))).not.toContain('bookworm');
+    expect(earned(facts({ passagesCopied: ids }))).toContain('bookworm');
   });
 
   it('never gives a sticker twice', () => {

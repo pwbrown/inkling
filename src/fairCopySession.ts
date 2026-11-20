@@ -38,7 +38,7 @@ export interface FairCopyOptions {
   /** A result, for screen readers. */
   announce(text: string): void;
   /** The test ended: save its result (and give stickers). Returns how it compares with the best, for the card. */
-  onFinished?(result: FairCopyResult, seconds: number | null): FairCopyRecord | null;
+  onFinished?(result: FairCopyResult, seconds: number | null, passageId: string | null): FairCopyRecord | null;
   /** Sound hooks: a key went down right or wrong, or the test ended. */
   onEvents?(events: readonly FairCopyEvent[]): void;
 }
@@ -159,7 +159,9 @@ export class FairCopySession {
     this.options.onEvents?.(events);
     if (events.includes('finished')) {
       const r = fairCopyResult(this.test, performance.now());
-      this.view.setRecord(this.options.onFinished?.(r, this.options.mode) ?? null);
+      // A whole passage counts as copied out, mistakes and all; a timed test doesn't.
+      const copiedId = this.options.mode === null ? (PASSAGES[this.index]?.id ?? null) : null;
+      this.view.setRecord(this.options.onFinished?.(r, this.options.mode, copiedId) ?? null);
       this.options.announce(
         t(r.mistakesLeft === 1 ? 'fairCopy.announceOne' : 'fairCopy.announce', {
           wpm: formatNumber(Math.round(r.netWpm)),

@@ -223,6 +223,15 @@ describe('recordFairCopy', () => {
     expect(Object.fromEntries(Object.entries(save.fairCopy.best).map(([k, b]) => [k, b.wpm]))).toEqual({ passage: 55, '30': 40 });
   });
 
+  it('remembers each passage copied out, once', () => {
+    const save = defaultSave();
+    recordFairCopy(save, null, { netWpm: 40, accuracy: 1 }, new Date(), 'twain-huck');
+    recordFairCopy(save, null, { netWpm: 30, accuracy: 1 }, new Date(), 'twain-huck');
+    recordFairCopy(save, 30, { netWpm: 30, accuracy: 1 });
+    expect(save.fairCopy.copied).toEqual(['twain-huck']);
+    expect(stickerFacts(save).passagesCopied).toEqual(['twain-huck']);
+  });
+
   it("doesn't keep a zero as a best", () => {
     const save = defaultSave();
     expect(recordFairCopy(save, 60, { netWpm: 0, accuracy: 0 }).isNew).toBe(false);

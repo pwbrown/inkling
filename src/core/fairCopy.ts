@@ -50,6 +50,10 @@ export const PASSAGES: readonly Passage[] = [
   },
 ];
 
+export function isPassageId(value: unknown): value is string {
+  return typeof value === 'string' && PASSAGES.some((p) => p.id === value);
+}
+
 /** A passage's place in a test's text (a timed test strings several together). */
 export interface PassageSpan {
   passage: Passage;
