@@ -17,7 +17,7 @@ import {
 } from '../core/world';
 import { newStickers, type StickerFacts } from '../core/stickers';
 import { levelForInk } from '../core/rewards';
-import type { DailyProgress, DailyResult, KeyStat, SaveData, SavedNotebook } from './schema';
+import { fairCopyKey, type DailyProgress, type DailyResult, type FairCopyBest, type KeyStat, type SaveData, type SavedNotebook } from './schema';
 
 /** Add a page's (or notebook's) per-key hits and misses to the saved totals. */
 export function mergeKeyStats(save: SaveData, stats: Pick<Stats, 'hitKeys' | 'missedKeys'>): void {
@@ -173,6 +173,24 @@ export function recordDaily(save: SaveData, id: number, result: DailyResult): bo
   const ids = Object.keys(daily.results).map(Number).sort((a, b) => b - a);
   for (const old of ids.slice(GAME_CONFIG.daily.keepResults)) delete daily.results[old];
   return true;
+}
+
+/**
+ * Count a finished Fair Copy test and keep it if it's the best of its kind
+ * (net speed). Returns the best before it, if any, and whether this beat it.
+ */
+export function recordFairCopy(
+  save: SaveData,
+  seconds: number | null,
+  result: { netWpm: number; accuracy: number },
+  now = new Date(),
+): { previous: FairCopyBest | null; isNew: boolean } {
+  const key = fairCopyKey(seconds);
+  const previous = save.fairCopy.best[key] ?? null;
+  save.fairCopy.tests++;
+  const isNew = result.netWpm > 0 && (previous === null || result.netWpm > previous.wpm);
+  if (isNew) save.fairCopy.best[key] = { wpm: result.netWpm, accuracy: result.accuracy, at: now.toISOString() };
+  return { previous, isNew };
 }
 
 /** What the sticker rules need from the save, plus what just happened. */

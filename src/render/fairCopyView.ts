@@ -26,6 +26,12 @@ export interface FairCopyActions {
   onMenu(): void;
 }
 
+/** How a finished test compares with the player's best of its kind (net WPM). */
+export interface FairCopyRecord {
+  previous: number | null;
+  isNew: boolean;
+}
+
 /** What the view needs to know about a test before it starts. */
 export interface FairCopySetup {
   /** Where each passage starts in the test's text. */
@@ -177,6 +183,7 @@ export class FairCopyView {
   private card: Container | null = null;
   private stamp: Text | null = null;
   private sourceSpan: PassageSpan | null = null;
+  private record: FairCopyRecord | null = null;
 
   constructor(
     text: string,
@@ -225,6 +232,11 @@ export class FairCopyView {
     const [x, y] = this.scribeSpot(0);
     this.scribeX = x;
     this.scribeY = y;
+  }
+
+  /** How the finished test compares with the player's best, for the card. Call before the card is built (on finishing). */
+  setRecord(record: FairCopyRecord | null): void {
+    this.record = record;
   }
 
   /** React to what just happened: the scribe's moods (and later, sounds). */
@@ -404,6 +416,35 @@ export class FairCopyView {
             count: formatNumber(r.mistakesLeft),
           }),
           style: { fontFamily: TEXT_FONT, fontSize: 16, fontWeight: '700', fill: COLORS.margin },
+        }),
+        14,
+      );
+    }
+
+    // A new best gets a highlighter pill, like news on the game's cards; otherwise the best to beat, quietly.
+    const record = this.record;
+    if (record?.isNew) {
+      const label = new Text({
+        text:
+          record.previous === null
+            ? t('fairCopy.card.firstBest')
+            : t('fairCopy.card.newBest', { previous: formatNumber(Math.round(record.previous)) }),
+        style: { fontFamily: TEXT_FONT, fontSize: 15, fontWeight: '600', fill: COLORS.ink },
+      });
+      label.anchor.set(0.5);
+      const pw = label.width + 24;
+      const ph = 30;
+      const pill = new Container();
+      pill.addChild(new Graphics().roundRect(-pw / 2, 0, pw, ph, ph / 2).fill(COLORS.highlighter), label);
+      label.position.set(0, ph / 2);
+      pill.position.set(cx, y);
+      parts.push(pill);
+      y += ph + 14;
+    } else if (record?.previous != null) {
+      centred(
+        new Text({
+          text: t('fairCopy.card.best', { wpm: formatNumber(Math.round(record.previous)) }),
+          style: { fontFamily: TEXT_FONT, fontSize: 16, fill: COLORS.inkLight },
         }),
         14,
       );

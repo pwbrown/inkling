@@ -13,7 +13,7 @@ import { PASSAGES, backspace, chainPassages, createFairCopy, fairCopyResult, isF
 import { WORLD_HEIGHT, WORLD_WIDTH } from './core/world';
 import { formatNumber, t } from './i18n';
 import { bindKeyboard } from './input/keyboard';
-import { FairCopyView } from './render/fairCopyView';
+import { FairCopyView, type FairCopyRecord } from './render/fairCopyView';
 
 /** A timed test's length in seconds, or null for one passage. */
 export type FairCopyMode = number | null;
@@ -37,8 +37,8 @@ export interface FairCopyOptions {
   onExit(): void;
   /** A result, for screen readers. */
   announce(text: string): void;
-  /** The test ended: its result, for stickers. */
-  onFinished?(result: FairCopyResult, seconds: number | null): void;
+  /** The test ended: save its result (and give stickers). Returns how it compares with the best, for the card. */
+  onFinished?(result: FairCopyResult, seconds: number | null): FairCopyRecord | null;
   /** Sound hooks: a key went down right or wrong, or the test ended. */
   onEvents?(events: readonly FairCopyEvent[]): void;
 }
@@ -159,7 +159,7 @@ export class FairCopySession {
     this.options.onEvents?.(events);
     if (events.includes('finished')) {
       const r = fairCopyResult(this.test, performance.now());
-      this.options.onFinished?.(r, this.options.mode);
+      this.view.setRecord(this.options.onFinished?.(r, this.options.mode) ?? null);
       this.options.announce(
         t(r.mistakesLeft === 1 ? 'fairCopy.announceOne' : 'fairCopy.announce', {
           wpm: formatNumber(Math.round(r.netWpm)),

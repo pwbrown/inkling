@@ -14,6 +14,7 @@ import {
   recordBossBeaten,
   recordDaily,
   recordPageBest,
+  recordFairCopy,
   stickerFacts,
   recordApprenticePage,
   keyWeights,
@@ -206,5 +207,25 @@ describe('awardStickers', () => {
     recordBossBeaten(save, 'squid');
     expect(save.stickers.bossesBeaten).toEqual(['squid']);
     expect(awardStickers(save, stickerFacts(save))).toEqual(['firstBoss']);
+  });
+});
+
+describe('recordFairCopy', () => {
+  it('counts every test and keeps the fastest of each kind', () => {
+    const save = defaultSave();
+    const at = new Date('2026-11-20T10:00:00Z');
+    expect(recordFairCopy(save, null, { netWpm: 50, accuracy: 0.95 }, at)).toEqual({ previous: null, isNew: true });
+    expect(recordFairCopy(save, null, { netWpm: 45, accuracy: 1 }, at)).toEqual({ previous: { wpm: 50, accuracy: 0.95, at: at.toISOString() }, isNew: false });
+    // Timed tests have bests of their own.
+    expect(recordFairCopy(save, 30, { netWpm: 40, accuracy: 0.9 }, at).isNew).toBe(true);
+    expect(recordFairCopy(save, null, { netWpm: 55, accuracy: 0.9 }, at).isNew).toBe(true);
+    expect(save.fairCopy.tests).toBe(4);
+    expect(Object.fromEntries(Object.entries(save.fairCopy.best).map(([k, b]) => [k, b.wpm]))).toEqual({ passage: 55, '30': 40 });
+  });
+
+  it("doesn't keep a zero as a best", () => {
+    const save = defaultSave();
+    expect(recordFairCopy(save, 60, { netWpm: 0, accuracy: 0 }).isNew).toBe(false);
+    expect(save.fairCopy.best).toEqual({});
   });
 });

@@ -40,7 +40,7 @@ import { cleanChallengeName, decodeChallenge, encodeChallenge, type Challenge } 
 import { createWorld, isLastPageOfChapter, setContent, stepWorld, switchKeys, type GamePhase } from './core/world';
 import { formatNumber, getLocale, setLocale, t, type MessageKey } from './i18n';
 import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, rankForLevel, stickerUnlocks } from './core/rewards';
-import { SaveFormatError, defaultSave, migrate, type SaveData } from './storage/schema';
+import { SaveFormatError, defaultSave, fairCopyKey, migrate, type SaveData } from './storage/schema';
 import { MAX_TRANSFER_LENGTH, canTransfer, decodeTransfer, encodeTransfer, hasTransfer, type Transfer } from './storage/transfer';
 import { PlayerStore, cleanName, saveKeyFor, uniqueName, type Player } from './storage/profiles';
 import { bindKeyboard, type SpecialKey } from './input/keyboard';
@@ -68,6 +68,7 @@ import {
   nextPagePosition,
   recordApprenticePage,
   recordResult,
+  recordFairCopy,
   snapshotNotebook,
 } from './storage/progress';
 import { openBackend, SaveStore } from './storage/store';
@@ -879,8 +880,15 @@ async function main(): Promise<void> {
         menu.show('fairCopy');
       },
       announce: (text) => (announcer.textContent = text),
-      onFinished: (r, mode) =>
-        giveStickers({ fairCopy: { seconds: mode, netWpm: r.netWpm, typed: r.typed, errors: r.errors, mistakesLeft: r.mistakesLeft } }),
+      onFinished: (r, mode) => {
+        let record: { previous: number | null; isNew: boolean } = { previous: null, isNew: false };
+        store.update((save) => {
+          const { previous, isNew } = recordFairCopy(save, mode, r);
+          record = { previous: previous?.wpm ?? null, isNew };
+        });
+        giveStickers({ fairCopy: { seconds: mode, netWpm: r.netWpm, typed: r.typed, errors: r.errors, mistakesLeft: r.mistakesLeft } });
+        return record;
+      },
       onEvents: (events) => {
         if (events.includes('finished')) sfx.play('page');
         else if (events.includes('error')) sfx.play('error');
@@ -1013,6 +1021,10 @@ async function main(): Promise<void> {
     },
     onPlayDaily: () => after(() => playDaily()),
     onFairCopy: (seconds) => startFairCopy(seconds),
+    fairCopyBest: (seconds) => {
+      const best = store.data.fairCopy.best[fairCopyKey(seconds)];
+      return best ? t('fairCopyMenu.best', { wpm: formatNumber(Math.round(best.wpm)) }) : null;
+    },
     dailySigned: () => signDaily,
     signName: () => cleanChallengeName(players.active.name),
     onSignDaily: (on) => {

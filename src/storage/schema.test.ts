@@ -150,6 +150,20 @@ describe('save schema', () => {
     expect(save.stickers).toEqual({ earned: { goldStar: '2026-11-18T10:00:00.000Z' }, unseen: ['goldStar'], bossesBeaten: ['squid'] });
   });
 
+  it('gives version 13 saves no Fair Copy results, and checks saved ones', () => {
+    expect(migrate({ version: 13 }).fairCopy).toEqual({ tests: 0, best: {} });
+    const good = { wpm: 61.5, accuracy: 0.97, at: '2026-11-20T10:00:00.000Z' };
+    const save = migrate({
+      ...defaultSave(),
+      fairCopy: {
+        tests: 4.7,
+        best: { passage: good, '60': good, '45': good, '30': { ...good, wpm: -3 }, sprint: good },
+      },
+    });
+    expect(save.fairCopy).toEqual({ tests: 4, best: { passage: good, '60': good } });
+    expect(migrate({ ...defaultSave(), fairCopy: { tests: 2, best: { passage: { ...good, accuracy: 2 } } } }).fairCopy.best).toEqual({});
+  });
+
   it('drops unknown tutorial ids and keeps the tips choice', () => {
     const save = migrate({ version: 7, tutorials: { enabled: false, seen: ['basics', 'nonsense', 'basics', 4] } });
     expect(save.tutorials).toEqual({ enabled: false, seen: ['basics'] });

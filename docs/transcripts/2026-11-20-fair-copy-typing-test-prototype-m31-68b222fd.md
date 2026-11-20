@@ -1,6 +1,6 @@
 # Fair Copy typing-test prototype (M31)
 
-Claude Code session started 2026-11-20. 14 prompts.
+Claude Code session started 2026-11-20. 17 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1484,6 +1484,282 @@ Fair Copy now has its own shelf in the sticker book, with six stickers in a new 
 - **Left out:** a "copy every passage" sticker would need saved progress, and with only three passages it's thin. It's worth adding along with the bigger passage library.
 
 **Tried in the browser:** a clean 85 WPM passage earned five stickers at once, shown together in the usual toast, and the sticker book now reads "5 of 34 collected", with Beat the Bell still to earn. I've sent screenshots of the toast and the new shelf, and noted all this in the hand-over note.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  npm run transcript 2>&1 | tail -1; F=docs/transcripts/2026-11-20-fair-copy-typing-test-prototype-m31-68b222fd.md; grep -nE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $F | grep -v noreply@anthropic | grep -v "grep -nE" | head -3; grep -niE "/Users/[a-z]|ghp_|sk-[A-Za-z0-9]{8}|password|Bearer " $F | grep -v "\[removed\]\|grep -n" | head -5; git status --short; cd /Users/[removed]/projects/inky-keys && git status --short | head -3; git log --oneline -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The transcript is clean (the only hit is the dummy path from earlier), and `main` hasn't moved, so this will fast-forward. Committing and merging.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git add -A src package.json package-lock.json docs/transcripts && git commit -q -F - <<'EOF'
+  Fair Copy sticker shelf (2.24.0)
+
+  - New Fair Copy shelf in the sticker book (teal): First Draft, Neat as
+    Print (a whole passage with no wrong keys), Copyist, Swift Quill and
+    Printing Press (40/60/80 net WPM), and Beat the Bell (a 60-second test
+    with no mistakes left in)
+  - Awarded when a test ends, from the session's result through the
+    usual sticker check and toast; no save-format change
+  - Thresholds in GAME_CONFIG.stickers, tests in stickers.test.ts
+  - Release 2.24.0 note and version bump
+  - Tran
+  … (399 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The sticker shelf is on `main` as `b9ba3e1`, "Fair Copy sticker shelf (2.24.0)". It isn't pushed or tagged.
+
+- **Commit:** the stickers, their tests, the shelf colour, the 2.24.0 release note and version bump, and the updated session transcript. I checked the transcript for private details and found nothing.
+- **Merge:** `main` hadn't moved, so it was a plain fast-forward, and I deleted `feat/fair-copy-stickers`.
+
+Players will get the shelf once `main` is pushed and `v2.24.0` is tagged and pushed, the same way as 2.23.0.
+
+## 🧑 Prompt
+
+> Push and tag
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git fetch -q origin && git log --oneline origin/main..main && git push origin main 2>&1 | tail -1 && npm run release:tag 2>&1 | grep -i "tagged" && git push origin v2.24.0 2>&1 | tail -1 && git tag -n3 v2.24.0
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Inky Keys 2.24.0 is pushed and tagged:
+
+- **`main`:** pushed, `0731c88..b9ba3e1`.
+- **Tag:** `v2.24.0` on `b9ba3e1`, pushed. Its note reads: "Fair Copy has its own shelf in the sticker book, with six stickers to earn."
+
+Pushing the tag should start the Release workflow, as with 2.23.0. I haven't checked that it ran or that the live site has updated.
+
+## 🧑 Prompt
+
+> work on the results save feature
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git checkout -q -b feat/fair-copy-bests main && sed -n 1,60p src/storage/schema.ts; grep -n "^function \|^const \|^export function" src/storage/schema.ts; sed -n '/export function recordPageBest/,/^}/p;/export function recordDaily/,/^}/p' src/storage/progress.ts; grep -n "describe\|it('" src/storage/schema.test.ts | head -40
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now adding the save shape (version 14) with its migration and sanitizer.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  grep -rn "version: 13\|SAVE_VERSION" src --include=*.ts 2>/dev/null | grep -v "^src/storage/schema.ts" | head; grep -rn "version: 13" src | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/storage/schema.ts',[
+  ("export const SAVE_VERSION = 13;","export const SAVE_VERSION = 14;"),
+  ("import { BOSS_KINDS, DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type BossKind, type Difficulty } from '../core/config';",
+   "import { BOSS_KINDS, DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, GAME_CONFIG, type BossKind, type Difficulty } from '../core/config';"),
+  ("/** Daily Page history (added in version 9). */","""/** A
+  … (3400 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -i '' "s#^import type { DailyProgress, DailyResult, KeyStat, SaveData, SavedNotebook } from './schema';#import { fairCopyKey, type DailyProgress, type DailyResult, type FairCopyBest, type KeyStat, type SaveData, type SavedNotebook } from './schema';#" src/storage/progress.ts && npx tsc --noEmit 2>&1 | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Save shape and recording are in. Now showing bests on the result card and the picker.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "r.mistakesLeft > 0 ? 0 : 14\|if (r.mistakesLeft > 0) {\|private sourceSpan\|const tile = (key" src/render/fairCopyView.ts; sed -n '/    if (r.mistakesLeft > 0) {/,/^    }/p' src/render/fairCopyView.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/render/fairCopyView.ts',[
+  ("/** What the view needs to know about a test before it starts. */","""/** How a finished test compares with the player's best of its kind (net WPM). */
+  export interface FairCopyRecord {
+    previous: number | null;
+    isNew: boolean;
+  }
+
+  /** What the view needs to know about a test before it starts. */"""),
+  ("  private sourceSpan: PassageSpan | null = null;\n","  private sourceSpan: PassageSpan |
+  … (5062 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now tests for the migration, the sanitizer and `recordFairCopy`.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 1,30p src/storage/schema.test.ts; sed -n 140,153p src/storage/schema.test.ts; sed -n 1,20p src/storage/progress.test.ts; grep -n "recordPageBest" -A10 src/storage/progress.test.ts | head -14
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/storage/schema.test.ts',[
+  ("  it('drops unknown tutorial ids and keeps the tips choice', () => {","""  it('gives version 13 saves no Fair Copy results, and checks saved ones', () => {
+      expect(migrate({ version: 13 }).fairCopy).toEqual({ tests: 0, best: {} });
+      const good = { wpm: 61.5, accuracy: 0.97, at: '2026-11-20T10:00:00.000Z' };
+      const save = migrate({
+        ...defaultSave(),
+        fairCopy: {
+          tes
+  … (1838 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Tests pass (457). Adding release 2.25.0, then checking in the browser.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/core/releases.ts',[("export const RELEASES: readonly Release[] = [\n","export const RELEASES: readonly Release[] = [\n  {\n    version: '2.25.0',\n    date: '2026-11-20',\n    notes: ['release.2.25.0.fairCopyBests'],\n  },\n")])
+  edit('src/i18n/en.ts',[("  'release.2.24.0.fairCopyStickers':","  'release.2.25.0.fairCopyBests': 'Fair Copy remembers your best speed for a passage, 30 seconds and 60 seconds.',\n  'release.2.2
+  … (183 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"resize_window","input":{"width":960,"height":540}},{"name":"navigate","input":{"url":"http://localhost:5183/?fairCopy=passage&passage=1"}},{"name":"computer","input":{"action":"wait","duration":3}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"fairCopy.pl
+… (596 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Live migration from version 13 to 14 worked and "Your first best!" shows. R was ignored because the dev helper backdates key times; waiting a bit longer, then a faster and a slower run.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,2500)); window.dispatchEvent(new KeyboardEvent('keydown',{key:'r',bubbles:true,cancelable:true})); await new Promise(r=>setTimeout(r,100)); const started = fairCopy.test().buffer==='';
+… (592 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The saves are right (best went from 60 to 80, 3 tests counted), but the screenshot looks like a stale frame from the throttled hidden pane. Retaking it after a moment:
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":1}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"[fairCopy.test().finishedAt!==null, Math.round(inkling.store.data.fairCopy.best.passage.wpm)]"}},{"name":"computer","input":{"action":"screenshot"}}]}`
+
+</details>
+
+### 🤖 Claude
+
+A slower run shows "Your best: 80 WPM". One faster run for the "New best!" pill, then M to see bests on the picker:
+
+<details><summary>3 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"await new Promise(r=>setTimeout(r,1500)); window.dispatchEvent(new KeyboardEvent('keydown',{key:'r',bubbles:true,cancelable:true})); await new Promise(r=>setTimeout(r,100)); fairCopy.play(fairCopy.test().text, 120); fa
+… (576 more characters)`
+- **Shell:** Ran a command
+
+  ```bash
+  R="/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys--claude-worktrees-infallible-elgamal-cca286/68b222fd-ec99-4e3f-8667-ceb97a749a3e/tool-results"; N="/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006"; D="$N/fair-copy-screens/v5-bests"; mkdir -p "$D"; cp "$R/mcp-Claude_Browser-blob-1795153231096-v3ajaj.jpg" "$D/1-first-best.jpg"; cp "$R/mcp-Claude_Browser-blob-1795153266152-f0bkm0.jpg" "$D/2-new-best.jpg"; cp "$R/mcp-Claude_Browser-blob-1795153255244-046j2r.jpg" "$D/3-not-a-best.jpg"; cp "$R/mcp-Claude_
+  … (557 more characters)
+  ```
+- **SendUserFile** `{"files":["/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006/fair-copy-screens/v5-bests/1-first-best.jpg","/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006/fair-copy-s
+… (513 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Fair Copy now saves results. It's on branch `feat/fair-copy-bests` as release 2.25.0 and isn't committed. Checks (457 tests) and the production build pass, and I've sent four screenshots.
+
+**What players see**
+- **Result card**, under the big WPM number, one of three things:
+  - "Your first best!" or "New best! (was 80 WPM)" in a yellow highlighter pill, like the news on the game's own cards.
+  - "Your best: 80 WPM" in quiet text when the run didn't beat it.
+- **Picker:** each choice's detail line gets its best added, for example "Copy it out to the last full stop · Best: 103 WPM". Kinds of test you haven't done yet show nothing.
+
+**How it's saved**
+- The save keeps one best per kind of test (whole passage, 30 seconds, 60 seconds), plus a count of finished tests. Each best holds net WPM, accuracy and the date.
+- A best only counts if it's faster in net WPM. A zero never counts.
+- The save format goes up to version 14, as the project's rules ask. Older saves start with no bests. Imported saves are checked: unknown test kinds and impossible numbers are dropped.
+- Tests cover the version upgrade, the import checks and the best-keeping rule.
+
+**Tried in the browser:** the preview's existing save upgraded from version 13 to 14 on load. Three runs at 60, 80 and 46 WPM gave the first-best pill, a new best of 80, and "Your best: 80 WPM", in that order. A fourth run at 103 WPM showed "New best! (was 80 WPM)", and the picker then showed "Best: 103 WPM".
+
+**Left out:** there's no history of past results, only the bests. The "copy every passage" sticker could now be added on top of this save. Both are easy follow-ups if you want them.
 
 ## 🧑 Prompt
 

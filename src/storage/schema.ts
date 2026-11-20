@@ -6,7 +6,7 @@
  * changes, so older saves (and exported backups) keep loading.
  */
 import { APPRENTICE_CHAPTERS, type GameMode } from '../core/campaign';
-import { BOSS_KINDS, DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, type BossKind, type Difficulty } from '../core/config';
+import { BOSS_KINDS, DEFAULT_DIFFICULTY, DEFAULT_KEYS, DIFFICULTIES, GAME_CONFIG, type BossKind, type Difficulty } from '../core/config';
 import { isStickerId } from '../core/stickers';
 import { isMechanic } from '../core/mechanics';
 import type { Grade } from '../core/grade';
@@ -15,7 +15,7 @@ import { DEFAULT_COSMETICS, UNLOCKS, type Cosmetics } from '../core/rewards';
 import { DEFAULT_LAYOUT_ID, isLayoutId } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 
-export const SAVE_VERSION = 13;
+export const SAVE_VERSION = 14;
 
 export interface KeyStat {
   /** Times typed correctly. */
@@ -111,6 +111,31 @@ export interface StickerBook {
   bossesBeaten: BossKind[];
 }
 
+/** A best Fair Copy result. */
+export interface FairCopyBest {
+  /** Net words per minute. */
+  wpm: number;
+  /** 0..1. */
+  accuracy: number;
+  /** ISO timestamp. */
+  at: string;
+}
+
+/** Fair Copy results (core/fairCopy.ts; added in version 14). */
+export interface FairCopyProgress {
+  /** Tests finished. */
+  tests: number;
+  /** Best net speed for each kind of test: `passage`, or a timed test's seconds ("30", "60"). */
+  best: Record<string, FairCopyBest>;
+}
+
+/** Which kinds of Fair Copy test have a best: a whole passage, or a timed length. */
+export function fairCopyKey(seconds: number | null): string {
+  return seconds === null ? 'passage' : String(seconds);
+}
+
+const FAIR_COPY_KEYS: readonly string[] = [fairCopyKey(null), ...GAME_CONFIG.fairCopy.timedSeconds.map(fairCopyKey)];
+
 /** Daily Page history (added in version 9). */
 export interface DailyProgress {
   /** The last Daily Page played (its number), or null. */
@@ -147,6 +172,8 @@ export interface SaveData {
   stickers: StickerBook;
   /** "Ready for more?" suggestions (added in version 13). */
   nudges: NudgeState;
+  /** Added in version 14. */
+  fairCopy: FairCopyProgress;
 }
 
 export interface Tutorials {
@@ -192,6 +219,7 @@ export function defaultSave(): SaveData {
     daily: defaultDaily(),
     stickers: { earned: {}, unseen: [], bossesBeaten: [] },
     nudges: { ...DEFAULT_NUDGES },
+    fairCopy: { tests: 0, best: {} },
   };
 }
 
@@ -327,7 +355,24 @@ function sanitize(v: Json): SaveData {
     daily: sanitizeDaily(v.daily),
     stickers: sanitizeStickers(v.stickers),
     nudges: sanitizeNudges(v.nudges),
+    fairCopy: sanitizeFairCopy(v.fairCopy),
   };
+}
+
+function sanitizeFairCopy(v: unknown): FairCopyProgress {
+  const out: FairCopyProgress = { tests: 0, best: {} };
+  if (!isObject(v)) return out;
+  out.tests = count(v.tests);
+  if (isObject(v.best)) {
+    for (const [key, b] of Object.entries(v.best)) {
+      if (!FAIR_COPY_KEYS.includes(key) || !isObject(b) || typeof b.at !== 'string') continue;
+      const { wpm, accuracy } = b;
+      if (typeof wpm !== 'number' || !Number.isFinite(wpm) || wpm < 0 || wpm > 1000) continue;
+      if (typeof accuracy !== 'number' || !(accuracy >= 0 && accuracy <= 1)) continue;
+      out.best[key] = { wpm, accuracy, at: b.at };
+    }
+  }
+  return out;
 }
 
 function sanitizeNudges(v: unknown): NudgeState {
@@ -469,6 +514,8 @@ const MIGRATIONS: Record<number, (save: Json) => Json> = {
   }),
   // v13 added "Ready for more?" suggestions; nobody has answered one yet.
   12: (save) => ({ ...save, version: 13, nudges: { ...DEFAULT_NUDGES } }),
+  // v14 added Fair Copy results; nobody has a best yet.
+  13: (save) => ({ ...save, version: 14, fairCopy: { tests: 0, best: {} } }),
 };
 
 /** Load any supported save shape as the current version, or throw SaveFormatError. */

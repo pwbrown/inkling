@@ -189,6 +189,8 @@ export interface MenuHooks {
   onPlayDaily(): void;
   /** Start Fair Copy: one passage (null) or a timed test of that many seconds. */
   onFairCopy(seconds: number | null): void;
+  /** e.g. "Best: 64 WPM" for that kind of test, or null before the first. */
+  fairCopyBest(seconds: number | null): string | null;
   /** Whether challenge links are signed with the player's name. */
   dailySigned(): boolean;
   /** The name a signed link would carry, or null if the player's name has none to show. */
@@ -936,6 +938,12 @@ export class Menu {
   }
 
   /** Today's Daily Page: play it, or see and copy the result. */
+  /** A Fair Copy choice's detail line, with the best so far when there is one. */
+  private fairCopyDetail(detail: string, seconds: number | null): string {
+    const best = this.hooks.fairCopyBest(seconds);
+    return best ? `${detail} · ${best}` : detail;
+  }
+
   /** Fair Copy: pick one passage or a timed test. */
   private fairCopy(): HTMLElement[] {
     return [
@@ -943,14 +951,14 @@ export class Menu {
       h('p', { className: 'tc-intro' }, [t('fairCopyMenu.intro')]),
       h('nav', { className: 'menu-list' }, [
         this.button('fair-passage', t('fairCopyMenu.passage'), () => this.hooks.onFairCopy(null), {
-          detail: t('fairCopyMenu.passageDetail'),
+          detail: this.fairCopyDetail(t('fairCopyMenu.passageDetail'), null),
           key: 'p',
           primary: true,
           autofocus: true,
         }),
         ...(GAME_CONFIG.fairCopy.timedSeconds as readonly number[]).map((seconds) =>
           this.button(`fair-${seconds}`, t('fairCopyMenu.timed', { seconds }), () => this.hooks.onFairCopy(seconds), {
-            detail: t('fairCopyMenu.timedDetail'),
+            detail: this.fairCopyDetail(t('fairCopyMenu.timedDetail'), seconds),
             key: String(seconds).charAt(0),
           }),
         ),
