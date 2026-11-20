@@ -1,6 +1,6 @@
 # Free copy game mode polish
 
-Claude Code session started 2026-11-20. 3 prompts.
+Claude Code session started 2026-11-20. 4 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -461,3 +461,74 @@ Nothing is committed yet, and the changes are still on `main`. If you want me to
   ```
 
 </details>
+
+### 🤖 Claude
+
+Scanning the new and changed transcripts for private details, using generic patterns only.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Scan transcripts for emails, paths and tokens
+
+  ```bash
+  for f in docs/transcripts/2026-11-20-free-copy-game-mode-polish-45e7d1f9.md docs/transcripts/2026-11-20-free-copy-feature-visibility-d6fe3f60.md; do echo "== $f"; grep -nEo '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|/Users/[^ /]+|/private/tmp[^ ]*|(sk|ghp|gho|github_pat|xox[bp])[-_][A-Za-z0-9_]{10,}|eyJ[A-Za-z0-9_-]{20,}|[0-9]{6}\b' "$f" | sort | uniq -c | head -20; done; git diff --stat docs/transcripts/README.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Clean: only the scan patterns themselves and the noreply attribution show up. Committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit, fast-forward merge, delete branch, tag
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Fair Copy revisit: more passages, Enter between passages, the game's page (2.27.0)
+
+  - 27 public-domain passages (was 3), dealt from a shuffled deck: every one before any repeats, never the same twice in a row, none twice in one timed test
+  - Timed tests put Enter between passages, with a faint ↵ mark and a red-pen "Press Enter" note on the break's line; Space there is a mistake
+  - Drawn on the game's own page: the player's paper, season decor, splatter colour and the scribe's holiday hat; HUD sized like the game's
+  - Text on every ruled line instead of eve
+  … (487 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+It's committed and tagged as **v2.27.0**.
+
+- **Commit:** `0c864cc` on `main`. The `feat/fair-copy-revisit` branch was fast-forward merged and then deleted.
+- **Transcript:** this session's transcript is in the commit. I scanned it for private details and found nothing; the only matches were the search patterns themselves and the noreply attribution address.
+- **Tag:** made with `npm run release:tag`.
+
+Nothing has been pushed yet. To publish:
+
+```bash
+git push origin main
+```
+
+```bash
+git push origin v2.27.0
+```
+
+## 🧑 Prompt
+
+> Push both
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Push main and the release tag
+
+  ```bash
+  git push origin main 2>&1 | tail -2 && git push origin v2.27.0 2>&1 | tail -2
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I pushed both to GitHub: `main` is now at `0c864cc`, and the `v2.27.0` tag is up. The Fair Copy changes are published. I haven't checked the live site yet.

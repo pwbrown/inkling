@@ -295,11 +295,46 @@ Inky Keys is **open source** and will be **publicly hosted** as a static web app
 - **Challenge links (milestone 22):** everything after `#` stays in the browser. Links are checked field by field when opened, names are cut to letters, numbers and spaces and dropped if the word filter objects, and a name is only included when the player ticks the box.
 - **Transfer links (milestone 23):** a save moves between devices in a link's #fragment, which the host never sees. There's no merging: the receiving device adds the player alongside its own, or replaces one player's save after asking twice.
 
+## 13d. Round 4 milestones (languages)
+
+Milestone 31 was Fair Copy (2.23.0–2.27.0). French and Spanish come in three milestones: the keyboard groundwork ships first, on its own (a French child can learn English words on AZERTY), then French builds the language system and accent teaching, then Spanish adds a second language on top. The guidance follows David Bailly's *Typing games: how and why?* (the "Bringing the game to a larger audience" section): let players choose the menu language and the typing language separately, count accents by key presses, keep accents rather than letting `e` stand for `é` (except as an accessibility option), and never tie a mechanic to a key position that moves on other keyboards.
+
+| # | Milestone | Scope |
+|---|---|---|
+| 32 | **Keys beyond A–Z** | Typed characters come from a hidden text field (`beforeinput`/composition), so dead keys, AltGr and Mac Option keys work; `keydown` keeps Enter, Backspace, arrows, Escape and shortcuts. A dead key is never a miss and shows the waiting accent beside the nib. Text is NFC-normalized and matched by code point. The layout format gains AltGr levels, dead keys, a compose table and ISO keys (`IntlBackslash`); **AZERTY (France)** and **Spanish (Spain) ISO** layouts, each with a 27-chapter Apprentice course. The 1/2/3 power keys and the 1–4 difficulty picker read `event.code`, so they work without Shift. A device setting picks Mac or Windows/Chromebook key help (detected locally). English words only |
+| 33 | **Français** | A device-wide **Menu language** and a per-player **Words language** (save version 16). French UI strings (`src/i18n/fr.ts`, typed so missing keys fail), plurals through `Intl.PluralRules`, translatable menu shortcut letters. Content packs per language (`src/content/packs.ts`); a French word list (CC BY-SA), blocklist with accent folding, December words, Fair Copy passages, French Wikipedia for downloaded words. **Accent teaching**: a second "Accents" part of the Contents page (é · è à ù · ç · â ê î ô û · ë ï ü), just-in-time briefings and key-sequence tags, an accent help card and page, a "Letters + accents" preset, an Accents strip in the Type Case, and a **Forgiving accents** option. The Daily Page, challenge links and Fair Copy bests follow the words language. Pages in `site/fr/`. A native speaker reviews before release |
+| 34 | **Español** | Spanish UI strings and content pack (á é í ó ú ü ñ), Navidad words, Spanish Wikipedia, Fair Copy passages with `¿ ¡`, Spanish accent chapters (ñ · á é · í ó ú · ü · ¿ ¡), pages in `site/es/`. A native speaker reviews before release |
+
+### Typing accents (milestones 32–34)
+- **How each accent is typed** comes from `howToType(char, layout, platform)` in `src/core/accents.ts`, a list of key steps the hands guide, briefings and help card all draw from:
+  - **AZERTY:** `é è ç à ù` are their own keys; `^` and `¨` are dead keys (`^` then `e` = `ê`).
+  - **Spanish ISO:** `ñ` is its own key; `´` is a dead key (`´` then `a` = `á`), Shift+`´` gives `¨`; `¡` and `¿` are right of 0.
+  - **US keyboard on a Mac:** Option+e then a letter (acute), Option+\` (grave), Option+i (circumflex), Option+u (diaeresis), Option+n then n (`ñ`), Option+c (`ç`), Option+1 (`¡`), Option+Shift+/ (`¿`).
+  - **US keyboard on Windows or a Chromebook:** the US-International layout (`'` then a letter, `` ` ``, Shift+6, Shift+', AltGr+n, AltGr+, …). The help card explains how to turn it on, and a hint suggests it when an accent is tried and no dead key arrives.
+- **Taught, then required.** A word is only offered if every letter, accents included, is in the selected keys, so early chapters naturally avoid accents. Accented letters come in their own chapters, each opening with a numbered, animated key sequence (still steps with reduced motion). The first meeting with an untaught accent anywhere else gets a short briefing and a slowed guided try; a miss on an accented letter shows its key steps on that creature.
+- **Forgiving accents** (per player, off by default) lets `e` count for `é`; the word still shows its accent. Daily results note when it was on.
+- **Key presses count.** Word difficulty and creature pacing add the extra presses an accent needs on the player's setup (`GAME_CONFIG.accents`). Words with `œ`, `æ` or `ÿ` are left out, and an accented capital is never asked for where it can't be typed (e.g. `É` on Windows AZERTY).
+
+### Languages (milestones 33–34)
+- **Two settings.** Menu language is per device (defaults to the browser language, falls back to English). Words language is per player, saved like the layout. Menu language, words language and layout are all independent.
+- **Content packs** follow `src/content/en/` and load lazily. Word lists need word frequencies and a redistributable license; CC BY-SA is accepted for the word data (code stays MIT), credited in `CREDITS.md`. Blocklists come from LDNOOBW, and the check folds accents so accented spellings can't slip past.
+- **Fair Copy passages** are public-domain texts in the original language, with accents and plain punctuation (straight quotes, no guillemets, no non-breaking spaces before `; : ! ?`). Spanish passages keep `¿ ¡`. Bests are per language; Bookworm counts every passage in any one language.
+- **The Daily Page** seed adds the words language for languages other than English (English seeds don't change). French and Spanish Daily Pages include the common accents. Challenge links carry the language in an optional field; older links mean English.
+- **Holidays:** Thanksgiving looks and words stay English-only; December is in every language.
+- **Downloaded words** use the Wikipedia for the words language. Each new origin is added to the CSP's `connect-src`, `PRIVACY.md` and `CLAUDE.md`; the request still sends only the topic.
+- **Translations** are drafted by Claude and reviewed by a native speaker before each language is released. Menus are checked at phone width, since French and Spanish run about a quarter longer than English. The bundled fonts are checked for `ç`, `ñ`, `¿`, `¡`, `€` and accented capitals.
+- **Pages** are copied to `site/fr/` and `site/es/` (with Privacy and an accent help page), linked with `hreflang` and listed in `sitemap.xml`.
+
 ## 14. Open Questions / TODO
 
 - [x] **Theme, art direction and audio.** See [DESIGN.md](DESIGN.md) (Inkwell direction). Name: **Inky Keys**.
 - [ ] Health or lives? (DESIGN.md proposes an ink-reservoir health meter.) Does game-over restart the level or the campaign?
-- [ ] Which additional locales to add first, and which layouts after Dvorak and Colemak (§11)? AZERTY and QWERTZ need dead keys, accented letters and Shift for digits (which affects the 1/2/3 ability shortcuts).
+- [x] Which additional locales to add first? French (milestone 33, with AZERTY) and then Spanish (milestone 34, with Spanish ISO), after the keyboard groundwork in milestone 32. See §13d.
+- [ ] French and Spanish word lists: which sources have word frequencies and a redistributable license? CC BY-SA is acceptable. Candidates: Lexique (French), a Hunspell dictionary plus a subtitle frequency list (Spanish). Check each license before anything is added.
+- [ ] Text input: does a hidden text field (`beforeinput`/composition) behave the same in Chrome, Safari and Firefox on macOS and Windows? Spike at the start of milestone 32. Windows (AltGr, US-International) needs a Windows machine or a tester.
+- [ ] Who reviews the French and Spanish translations?
+- [ ] Spanish layout: Spain ISO first, or Latin American (more common in the Americas)? Canadian French (CSA) and Swiss layouts can come later as new layout files.
+- [ ] Later layouts: QWERTZ and UK.
 - [x] Word-list source: SCOWL levels 10–50 (via `wordlist-english`) plus the LDNOOBW blocklist. See CREDITS.md.
 - [x] Vocabulary API: Wikipedia (`en.wikipedia.org/w/api.php`, search + plain-text extract). No key, CORS via `origin=*`, sends only the topic; words are picked on the device. Replaced Datamuse in 2.15.0, which needs an API key from February 2027. See PRIVACY.md.
 - [ ] Confirm the code license (MIT vs GPL-3.0) and the art/audio license.
