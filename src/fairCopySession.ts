@@ -9,7 +9,7 @@
 import type { Application } from 'pixi.js';
 import { Container } from 'pixi.js';
 import { GAME_CONFIG } from './core/config';
-import { PASSAGES, backspace, chainPassages, createFairCopy, fairCopyResult, isFinished, tick, typeKey, type FairCopy, type FairCopyEvent } from './core/fairCopy';
+import { PASSAGES, backspace, chainPassages, createFairCopy, fairCopyResult, isFinished, tick, typeKey, type FairCopy, type FairCopyEvent, type FairCopyResult } from './core/fairCopy';
 import { WORLD_HEIGHT, WORLD_WIDTH } from './core/world';
 import { formatNumber, t } from './i18n';
 import { bindKeyboard } from './input/keyboard';
@@ -37,6 +37,8 @@ export interface FairCopyOptions {
   onExit(): void;
   /** A result, for screen readers. */
   announce(text: string): void;
+  /** The test ended: its result, for stickers. */
+  onFinished?(result: FairCopyResult, seconds: number | null): void;
   /** Sound hooks: a key went down right or wrong, or the test ended. */
   onEvents?(events: readonly FairCopyEvent[]): void;
 }
@@ -157,6 +159,7 @@ export class FairCopySession {
     this.options.onEvents?.(events);
     if (events.includes('finished')) {
       const r = fairCopyResult(this.test, performance.now());
+      this.options.onFinished?.(r, this.options.mode);
       this.options.announce(
         t(r.mistakesLeft === 1 ? 'fairCopy.announceOne' : 'fairCopy.announce', {
           wpm: formatNumber(Math.round(r.netWpm)),

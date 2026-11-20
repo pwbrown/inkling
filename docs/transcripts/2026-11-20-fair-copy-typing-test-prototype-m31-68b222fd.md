@@ -1,6 +1,6 @@
 # Fair Copy typing-test prototype (M31)
 
-Claude Code session started 2026-11-20. 11 prompts.
+Claude Code session started 2026-11-20. 14 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -1250,6 +1250,251 @@ Both need a save-format change, so they'd be a follow-up.
 
   ```bash
   npm run transcript 2>&1 | tail -1; git status --short docs/; F=$(git status --short docs/transcripts | grep -o 'docs/transcripts/2026[^ ]*68b222fd.md' | head -1); echo $F; grep -nE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $F | grep -v noreply@anthropic | head -3; grep -niE "/Users/[a-z]|ghp_|sk-|token|password|Bearer" $F | grep -v "\[removed\]" | head -5
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The scan only matches its own commands and the throwaway placeholder path from my mistaken write, so there's nothing private. Checking the README change, then committing.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git diff docs/transcripts/README.md | grep "^[+-]" ; git log --oneline -1 main; git merge-base --is-ancestor main HEAD && echo "main is ancestor"
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  git add -A src package.json package-lock.json docs/transcripts && git status --short && git commit -q -F - <<'EOF'
+  Fair Copy on the main menu (2.23.0)
+
+  - Main-menu tile (O) beside Apprentice, with a new icon, opening a
+    picker: one passage (P), 30 seconds (3) or 60 seconds (6)
+  - Runs on the game's own canvas through src/fairCopySession.ts, which
+    owns the keyboard while open; the separate prototype app is gone
+  - Esc or M returns to the picker, R tries the passage again, Enter
+    brings the next one; card links are clickable, shortcuts wait a
+    moment after the end, and the result is announced
+  … (588 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Fair Copy's main-menu entry is now on `main` as `0731c88`, "Fair Copy on the main menu (2.23.0)". It isn't pushed or tagged.
+
+- **Commit:** I exported this session's transcript first, included it, and checked it for private details. The only hits were the check's own commands and a dummy path from a write of mine that failed, so nothing private.
+- **Merge:** a plain fast-forward this time, since `main` hadn't moved, then I deleted `feat/m31-fair-copy-menu`.
+
+Players won't get Fair Copy until `main` is pushed. After that, the project's release steps add the `v2.23.0` tag with `npm run release:tag` and push it.
+
+## 🧑 Prompt
+
+> Push and tag
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && sed -n 1,80p docs/RELEASING.md | grep -n -i "tag\|push" | head -20; grep -n '"release:tag"' package.json
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git fetch -q origin && git log --oneline origin/main..main && git push origin main 2>&1 | tail -1 && npm run release:tag 2>&1 | tail -3 && git push origin v2.23.0 2>&1 | tail -1 && git tag -n3 v2.23.0
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Inky Keys 2.23.0 is pushed and tagged:
+
+- **`main`:** pushed, `7e7c145..0731c88`.
+- **Tag:** `npm run release:tag` created `v2.23.0` on `0731c88`, and I pushed it. Its note reads: "New: Fair Copy, a typing-speed test. Copy out a passage from a classic book, or type for 30 or 60 seconds."
+
+Pushing the tag should start the repo's Release workflow, which turns it into a GitHub Release with the same note. I haven't checked that the workflow ran or that the live site has updated.
+
+## 🧑 Prompt
+
+> add the Fair Copy sticker shelf
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git checkout -q -b feat/fair-copy-stickers main && wc -l src/core/stickers.ts src/storage/schema.ts src/storage/progress.ts && sed -n 1,200p src/core/stickers.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "sticker\|Sticker" src/storage/progress.ts | head -20; sed -n '/export function stickerFacts/,/^}/p;/export function awardStickers/,/^}/p' src/storage/progress.ts; grep -n "SAVE_VERSION\|stickers\|daily:" src/storage/schema.ts | head -40; grep -n "group\|daily\|seasons" src/ui/stickers.css | head -20; grep -n "stickers:" -A6 src/core/config.ts | head -12
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 100,200p src/storage/schema.ts; sed -n 280,340p src/storage/schema.ts; sed -n 440,505p src/storage/schema.ts; sed -n 1,30p src/ui/stickers.css; grep -n "sanitizeStickers" -A20 src/storage/schema.ts | head -25
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n '/const giveStickers = /,/^  };/p' src/main.ts; grep -n "'stickers.group\.\|'sticker\.goldStar\|'sticker.globetrotter.how'" src/i18n/en.ts; grep -rn "StickerGroup\b" src --include=*.ts | grep -v "^src/core/stickers.ts" | head; grep -n "describe\|it(" src/core/stickers.test.ts | head -30
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 1,45p src/core/stickers.test.ts; grep -rn "StickerGroup\|'secret'\]" src | grep -v "src/core/stickers.ts" | head; grep -rn "sticker-\${\|sticker-\$" src/ui | head -5
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Writing the stickers, config, strings, shelf colour and tests.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+
+  edit('src/core/stickers.ts',[
+  ("export type StickerGroup = 'pages' | 'speed' | 'bosses' | 'course' | 'daily' | 'seasons' | 'secret';",
+   "export type StickerGroup = 'pages' | 'speed' | 'bosses' | 'course' | 'daily' | 'fairCopy' | 'seasons' | 'secret';"),
+  ("/** Everything the rules look at. `page` and `daily` are only set right after those happen. */",
+   """/** A Fair Copy test just finished (core/fairCopy.ts). */
+  export interface 
+  … (3931 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "sticker.quickPen.how\|sticker.onFire.how" src/i18n/en.ts; grep -n "quickPen\|S.wpm" src/core/stickers.test.ts | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Matching the existing speed stickers' wording, then adding tests.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  p='src/i18n/en.ts'
+  s=open(p).read()
+  for n in ('40','60','80'):
+      a=f"'Reach {n} WPM in Fair Copy.'"
+      assert a in s
+      s=s.replace(a,f"'Type {n} words a minute in Fair Copy.'")
+  open(p,'w').write(s)
+  p='src/core/stickers.test.ts'
+  s=open(p).read()
+  a="  it('never gives a sticker twice', () => {"
+  assert a in s
+  s=s.replace(a,"""  it('fills the Fair Copy shelf: a first test, a clean passage, speed and the bell', () => {
+      const copy = (extra: Partial<FairCopyFacts> = {}): FairCopyFacts => ({ seconds: null, netWpm: 35, typed: 300, errors: 2, mistakesLeft: 1, ...extra });
+      e
+  … (2596 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Tests pass (454). Adding release 2.24.0, then trying it in the browser.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'EOF'
+  def edit(p, pairs):
+      s=open(p).read()
+      for a,b in pairs:
+          assert s.count(a)==1, (p,a)
+          s=s.replace(a,b)
+      open(p,'w').write(s)
+  edit('src/core/releases.ts',[("export const RELEASES: readonly Release[] = [\n","export const RELEASES: readonly Release[] = [\n  {\n    version: '2.24.0',\n    date: '2026-11-20',\n    notes: ['release.2.24.0.fairCopyStickers'],\n  },\n")])
+  edit('src/i18n/en.ts',[("  'release.2.23.0.fairCopy':","  'release.2.24.0.fairCopyStickers': 'Fair Copy has its own shelf in the sticker book, with six stickers to earn.',\n  'release.2.23.0.
+  … (207 more characters)
+  ```
+- **browser_batch** `{"actions":[{"name":"resize_window","input":{"width":960,"height":540}},{"name":"navigate","input":{"url":"http://localhost:5183/?fairCopy=passage&passage=1"}},{"name":"computer","input":{"action":"wait","duration":3}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"fairCopy.pl
+… (250 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The toast shows five stickers, in the shelf's teal. Now the sticker book itself:
+
+<details><summary>5 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"window.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true,cancelable:true})); await new Promise(r=>setTimeout(r,600)); document.querySelector('[data-id=back]').click(); await new Promise(r=>setTimeout(r,60
+… (338 more characters)`
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const el=[...document.querySelectorAll('.menu *')].find(e=>e.children.length===0 && e.textContent.trim().toLowerCase()==='fair copy'); el?.scrollIntoView({block:'start'}); el?.tagName"}},{"name":"computer","input":{"ac
+… (22 more characters)`
+- **Shell:** Ran a command
+
+  ```bash
+  R="/Users/[removed]/.claude/projects/-Users-[removed]-projects-inky-keys--claude-worktrees-infallible-elgamal-cca286/68b222fd-ec99-4e3f-8667-ceb97a749a3e/tool-results"; N="/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006"; D="$N/fair-copy-screens/v4-stickers"; mkdir -p "$D"; cp "$R/mcp-Claude_Browser-blob-1795152893340-4g3yln.jpg" "$D/1-toast.jpg"; cp "$R/mcp-Claude_Browser-blob-1795152903892-kphgul.jpg" "$D/2-shelf.jpg"; cat >> "$N/fair-copy-prototype.md" <<'EOF'
+
+  ## v4: sticker shelf (branch feat/fair-copy-stickers, uncom
+  … (425 more characters)
+  ```
+- **SendUserFile** `{"files":["/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006/fair-copy-screens/v4-stickers/1-toast.jpg","/Users/[removed]/Library/Application Support/Claude/side-session-notes/local_6019587e-e06f-4654-a79f-15e860e2c006/fair-copy-scr
+… (207 more characters)`
+- **resize_window** `{"preset":"desktop"}`
+
+</details>
+
+### 🤖 Claude
+
+Fair Copy now has its own shelf in the sticker book, with six stickers in a new teal. It's on branch `feat/fair-copy-stickers` as release 2.24.0 and isn't committed. Checks (454 tests) and the production build pass.
+
+| Sticker | How to earn it |
+|---|---|
+| 📝 First Draft | Finish any Fair Copy test |
+| ✒️ Neat as Print | Copy out a whole passage without a single wrong key (fixed mistakes count too) |
+| 🖊️ Copyist | Type 40 words a minute |
+| 🕊️ Swift Quill | Type 60 words a minute |
+| 🗞️ Printing Press | Type 80 words a minute |
+| ⏰ Beat the Bell | Finish a 60-second test with no mistakes left in |
+
+**Choices I made:**
+- **Speeds:** the speed stickers use net speed, so mistakes left in count against you. They're set higher than the game's own speed stickers (30/50/70) because a test is nothing but typing. A test also has to have at least 60 characters typed for its speed to count, the same minimum the game's speed stickers use.
+- **Stickers only:** they're awarded when a test ends, through the same system as the game's stickers. So the save format doesn't change and there's no migration.
+- **Left out:** a "copy every passage" sticker would need saved progress, and with only three passages it's thin. It's worth adding along with the bigger passage library.
+
+**Tried in the browser:** a clean 85 WPM passage earned five stickers at once, shown together in the usual toast, and the sticker book now reads "5 of 34 collected", with Beat the Bell still to earn. I've sent screenshots of the toast and the new shelf, and noted all this in the hand-over note.
+
+## 🧑 Prompt
+
+> Commit and merge
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  npm run transcript 2>&1 | tail -1; F=docs/transcripts/2026-11-20-fair-copy-typing-test-prototype-m31-68b222fd.md; grep -nE "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $F | grep -v noreply@anthropic | grep -v "grep -nE" | head -3; grep -niE "/Users/[a-z]|ghp_|sk-[A-Za-z0-9]{8}|password|Bearer " $F | grep -v "\[removed\]\|grep -n" | head -5; git status --short; cd /Users/[removed]/projects/inky-keys && git status --short | head -3; git log --oneline -1
   ```
 
 </details>

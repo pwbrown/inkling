@@ -424,6 +424,10 @@ export const GAME_CONFIG = {
     combo: [50, 100, 200],
     wpm: [30, 50, 70],
     minKeys: 60,
+    /** Net speed for the Fair Copy stickers: higher than the pages', as a test is all typing. */
+    fairCopyWpm: [40, 60, 80],
+    /** Beat the Bell: a timed test this long with no mistakes left in. */
+    bellSeconds: 60,
     bigScore: 10_000,
     streak: [3, 7, 30],
     /** Levels for the rank stickers: Scribe, Calligrapher, Master. */

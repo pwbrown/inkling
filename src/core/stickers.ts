@@ -12,7 +12,7 @@ import type { SeasonId } from './seasons';
 import { wpm, type Stats } from './stats';
 
 /** Which shelf of the sticker book a sticker sits on, and its color. */
-export type StickerGroup = 'pages' | 'speed' | 'bosses' | 'course' | 'daily' | 'seasons' | 'secret';
+export type StickerGroup = 'pages' | 'speed' | 'bosses' | 'course' | 'daily' | 'fairCopy' | 'seasons' | 'secret';
 
 /** A page just cleared. */
 export interface PageFacts {
@@ -40,7 +40,19 @@ export interface DailyFacts {
   streak: number;
 }
 
-/** Everything the rules look at. `page` and `daily` are only set right after those happen. */
+/** A Fair Copy test just finished (core/fairCopy.ts). */
+export interface FairCopyFacts {
+  /** A timed test's length, or null for one passage. */
+  seconds: number | null;
+  netWpm: number;
+  /** Characters on the page at the end. */
+  typed: number;
+  /** Wrong keys, fixed or not. */
+  errors: number;
+  mistakesLeft: number;
+}
+
+/** Everything the rules look at. `page`, `daily` and `fairCopy` are only set right after those happen. */
 export interface StickerFacts {
   level: number;
   apprentice: { unlocked: number; stars: Readonly<Record<string, number>>; completed: boolean };
@@ -48,6 +60,7 @@ export interface StickerFacts {
   bossesBeaten: readonly BossKind[];
   page?: PageFacts;
   daily?: DailyFacts;
+  fairCopy?: FairCopyFacts;
 }
 
 export interface Sticker {
@@ -63,6 +76,8 @@ export interface Sticker {
 const S = GAME_CONFIG.stickers;
 const isA = (grade: Grade) => grade === 'A+' || grade === 'A';
 const pageWpm = (p: PageFacts | undefined) => (p && p.stats.correct >= S.minKeys ? wpm(p.stats) : 0);
+/** Net speed of a Fair Copy with enough typed to count. */
+const copyWpm = (c: FairCopyFacts | undefined) => (c && c.typed >= S.minKeys ? c.netWpm : 0);
 
 /** Every sticker, in the order the book shows them. */
 export const STICKERS: readonly Sticker[] = [
@@ -118,6 +133,18 @@ export const STICKERS: readonly Sticker[] = [
   { id: 'onFire', group: 'daily', emoji: '🔥', earned: (f) => (f.daily?.streak ?? 0) >= S.streak[0]! },
   { id: 'weekOfInk', group: 'daily', emoji: '🗓️', earned: (f) => (f.daily?.streak ?? 0) >= S.streak[1]! },
   { id: 'inkHabit', group: 'daily', emoji: '💎', earned: (f) => (f.daily?.streak ?? 0) >= S.streak[2]! },
+  // Fair Copy, the typing-speed test (M31)
+  { id: 'firstCopy', group: 'fairCopy', emoji: '📝', earned: (f) => f.fairCopy !== undefined },
+  { id: 'neatAsPrint', group: 'fairCopy', emoji: '✒️', earned: (f) => f.fairCopy?.seconds === null && f.fairCopy.errors === 0 },
+  { id: 'copyist', group: 'fairCopy', emoji: '🖊️', earned: (f) => copyWpm(f.fairCopy) >= S.fairCopyWpm[0]! },
+  { id: 'swiftQuill', group: 'fairCopy', emoji: '🕊️', earned: (f) => copyWpm(f.fairCopy) >= S.fairCopyWpm[1]! },
+  { id: 'printingPress', group: 'fairCopy', emoji: '🗞️', earned: (f) => copyWpm(f.fairCopy) >= S.fairCopyWpm[2]! },
+  {
+    id: 'beatTheBell',
+    group: 'fairCopy',
+    emoji: '⏰',
+    earned: (f) => f.fairCopy?.seconds === S.bellSeconds && f.fairCopy.mistakesLeft === 0 && f.fairCopy.typed >= S.minKeys,
+  },
   // Holidays (M26): a page finished in season; each unlocks keepsakes for the Desk (rewards.ts).
   { id: 'harvestHelper', group: 'seasons', emoji: '🦃', earned: (f) => f.page?.season === 'thanksgiving' },
   { id: 'snowScribe', group: 'seasons', emoji: '⛄', earned: (f) => f.page?.season === 'christmas' },

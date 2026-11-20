@@ -4,7 +4,7 @@ import { apprenticePlan, starKey } from './campaign';
 import { BOSS_KINDS, GAME_CONFIG } from './config';
 import type { Grade } from './grade';
 import { createStats, type Stats } from './stats';
-import { STICKERS, newStickers, type PageFacts, type StickerFacts } from './stickers';
+import { STICKERS, newStickers, type FairCopyFacts, type PageFacts, type StickerFacts } from './stickers';
 
 const S = GAME_CONFIG.stickers;
 
@@ -101,6 +101,22 @@ describe('stickers', () => {
     expect(summer).not.toContain('harvestHelper');
     expect(summer).not.toContain('snowScribe');
     expect(earned(facts())).not.toContain('snowScribe');
+  });
+
+  it('fills the Fair Copy shelf: a first test, a clean passage, speed and the bell', () => {
+    const copy = (extra: Partial<FairCopyFacts> = {}): FairCopyFacts => ({ seconds: null, netWpm: 35, typed: 300, errors: 2, mistakesLeft: 1, ...extra });
+    expect(earned(facts({ fairCopy: copy() }))).toEqual(['firstCopy']);
+    expect(earned(facts({ fairCopy: copy({ errors: 0, mistakesLeft: 0 }) }))).toContain('neatAsPrint');
+    // A clean timed test isn't a whole passage.
+    expect(earned(facts({ fairCopy: copy({ seconds: 30, errors: 0, mistakesLeft: 0 }) }))).not.toContain('neatAsPrint');
+    const [slow, mid, fast] = S.fairCopyWpm;
+    expect(earned(facts({ fairCopy: copy({ netWpm: mid! }) }))).toEqual(expect.arrayContaining(['copyist', 'swiftQuill']));
+    expect(earned(facts({ fairCopy: copy({ netWpm: fast! }) }))).toContain('printingPress');
+    // Too little typed to count for speed.
+    expect(earned(facts({ fairCopy: copy({ netWpm: slow!, typed: S.minKeys - 1 }) }))).not.toContain('copyist');
+    expect(earned(facts({ fairCopy: copy({ seconds: S.bellSeconds, mistakesLeft: 0 }) }))).toContain('beatTheBell');
+    expect(earned(facts({ fairCopy: copy({ seconds: S.bellSeconds, mistakesLeft: 1 }) }))).not.toContain('beatTheBell');
+    expect(earned(facts({ fairCopy: copy({ seconds: 30, mistakesLeft: 0 }) }))).not.toContain('beatTheBell');
   });
 
   it('never gives a sticker twice', () => {

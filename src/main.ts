@@ -879,6 +879,8 @@ async function main(): Promise<void> {
         menu.show('fairCopy');
       },
       announce: (text) => (announcer.textContent = text),
+      onFinished: (r, mode) =>
+        giveStickers({ fairCopy: { seconds: mode, netWpm: r.netWpm, typed: r.typed, errors: r.errors, mistakesLeft: r.mistakesLeft } }),
       onEvents: (events) => {
         if (events.includes('finished')) sfx.play('page');
         else if (events.includes('error')) sfx.play('error');
@@ -1078,7 +1080,7 @@ async function main(): Promise<void> {
     stickerBook: () => {
       const { earned, unseen } = store.data.stickers;
       const date = new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium' });
-      const groups: StickerGroup[] = ['pages', 'speed', 'bosses', 'course', 'daily', 'seasons', 'secret'];
+      const groups: StickerGroup[] = ['pages', 'speed', 'bosses', 'course', 'daily', 'fairCopy', 'seasons', 'secret'];
       return {
         earned: Object.keys(earned).length,
         total: STICKERS.length,
@@ -1155,7 +1157,7 @@ async function main(): Promise<void> {
    * Give whatever stickers the save (plus what just happened) has earned.
    * New ones go on the card and, with `toast`, pop up in the corner.
    */
-  const giveStickers = (extra: Pick<StickerFacts, 'page' | 'daily'> = {}, toast = true) => {
+  const giveStickers = (extra: Pick<StickerFacts, 'page' | 'daily' | 'fairCopy'> = {}, toast = true) => {
     let fresh: string[] = [];
     store.update((save) => {
       fresh = awardStickers(save, stickerFacts(save, extra));

@@ -176,7 +176,7 @@ export function recordDaily(save: SaveData, id: number, result: DailyResult): bo
 }
 
 /** What the sticker rules need from the save, plus what just happened. */
-export function stickerFacts(save: Readonly<SaveData>, extra: Pick<StickerFacts, 'page' | 'daily'> = {}): StickerFacts {
+export function stickerFacts(save: Readonly<SaveData>, extra: Pick<StickerFacts, 'page' | 'daily' | 'fairCopy'> = {}): StickerFacts {
   return {
     level: levelForInk(save.profile.ink),
     apprentice: save.apprentice,
