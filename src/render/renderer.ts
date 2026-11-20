@@ -496,12 +496,10 @@ export async function createRenderer(
         const target = world.targets.find((t) => t.id === event.targetId);
         const view = target && views.get(target.id);
         if (target && view) {
-          const id = target.id;
           const char = glyph([...target.text][target.typed - 1] ?? '');
           shoot(target, view, target.typed - 1, (at) => {
             effects.splatter(at.x, at.y, 3);
             effects.letterPop(at.x, at.y, char, 26 * textScale * sizeScale(target));
-            reactionFor(id).punch.hit();
           });
         }
         break;

@@ -2,7 +2,7 @@
  * Drip (DESIGN §5): a plump ink droplet carrying one character, with big eyes.
  * It bobs and squashes as it travels, its tail trailing behind.
  */
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { SeasonId } from '../../core/seasons';
 import type { Target } from '../../core/world';
 import { HOLIDAY, accessoryFor, drawHeadAccessory } from '../holidayArt';
@@ -16,7 +16,9 @@ import {
   drawHem,
   drawHorns,
   drawPips,
+  drawCapTicks,
   labelStyle,
+  measure,
   variantOf,
   wave,
   type CreatureView,
@@ -35,16 +37,25 @@ export function createDrip(target: Target, scale: number, season: SeasonId | nul
   const pips = new Graphics();
   const trim = new Graphics();
   const leafColor = HOLIDAY.leaves[Math.abs(target.id) % HOLIDAY.leaves.length]!;
-  const label = new Text({ text: glyph(target.text), style: labelStyle(COLORS.label, 24 * scale) });
+  const labelTextStyle = new TextStyle(labelStyle(COLORS.label, 24 * scale));
+  const label = new Text({ text: glyph(target.text), style: labelTextStyle });
+  const caps = new Graphics();
   label.anchor.set(0.5);
   label.position.set(r, r * 0.08);
-  bob.addChild(body, face, trim, label);
+  bob.addChild(body, face, trim, label, caps);
   root.addChild(highlight, bob, pips);
   highlight.visible = false;
 
   const mood = new MoodTracker();
   const phase = Math.random() * Math.PI * 2;
   let shown = target.text;
+  const drawDripTicks = () => {
+    const text = glyph(shown);
+    caps.clear();
+    drawCapTicks(caps, text, r - measure(text, labelTextStyle) / 2, labelTextStyle, COLORS.label);
+  };
+  caps.position.set(0, r * 0.08);
+  drawDripTicks();
   let drawnLives = 0;
 
   const view: CreatureView = {
@@ -54,16 +65,17 @@ export function createDrip(target: Target, scale: number, season: SeasonId | nul
     height,
     letterX: () => r,
     update(t: Target, ctx: FrameContext) {
-      const { mood: m, blink, hurtMs } = mood.update(t, ctx);
+      const { mood: m, blink } = mood.update(t, ctx);
       if (t.text !== shown) {
         shown = t.text;
         label.text = glyph(t.text);
+        drawDripTicks();
       }
 
-      // Squash and stretch as it bobs along; a shiver when it loses a life.
+      // Squash and stretch as it bobs along.
       const squash = 0.05 * wave(ctx, 0.009, phase);
       bob.pivot.set(r, 0);
-      bob.position.set(r + (hurtMs > 0 ? Math.sin(hurtMs / 20) * 3 : 0), 3 * wave(ctx, 0.006, phase));
+      bob.position.set(r, 3 * wave(ctx, 0.006, phase));
       bob.scale.set(1 + squash, 1 - squash);
 
       const color = bodyColor(t.lives);
@@ -109,7 +121,8 @@ export function createDrip(target: Target, scale: number, season: SeasonId | nul
       }
       highlight.visible = ctx.locked;
       label.alpha = ctx.defeated ? 0.55 : 1;
-      applyGhost(t, root, [label], ctx.timeMs, ctx.reducedMotion);
+      caps.alpha = label.alpha;
+      caps.visible = !applyGhost(t, root, [label], ctx.timeMs, ctx.reducedMotion);
     },
   };
   view.update(target, { timeMs: 0, dtMs: 0, locked: false, lookX: -500, lookY: 0, reducedMotion: true });

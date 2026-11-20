@@ -6,7 +6,7 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { Target } from '../../core/world';
 import { COLORS, glyph } from '../theme';
-import { MoodTracker, drawFace, labelStyle, letterCenter, measure, wave, WORD_LETTER_SPACING, type CreatureView, type FrameContext } from './common';
+import { MoodTracker, drawCapTicks, drawFace, labelStyle, letterCenter, measure, wave, WORD_LETTER_SPACING, type CreatureView, type FrameContext } from './common';
 
 export function createBottle(target: Target, scale: number): CreatureView {
   const height = 54 * scale;
@@ -21,10 +21,11 @@ export function createBottle(target: Target, scale: number): CreatureView {
   const bob = new Container();
   const body = new Graphics();
   const face = new Graphics();
+  const caps = new Graphics();
   const typedLabel = new Text({ text: '', style: typedStyle });
   const restLabel = new Text({ text: shown(target.text), style: restStyle });
   for (const label of [typedLabel, restLabel]) label.anchor.set(0, 0.5);
-  bob.addChild(body, typedLabel, restLabel, face);
+  bob.addChild(body, typedLabel, restLabel, caps, face);
   root.addChild(highlight, bob);
   highlight.visible = false;
 
@@ -64,11 +65,15 @@ export function createBottle(target: Target, scale: number): CreatureView {
         shownTyped = t.typed;
         const chars = [...t.text];
         const typed = chars.slice(0, t.typed).map(glyph).join('');
+        const rest = chars.slice(t.typed).map(glyph).join('');
         typedLabel.text = typed;
-        restLabel.text = chars.slice(t.typed).map(glyph).join('');
+        restLabel.text = rest;
         const total = measure(shown(t.text), restStyle);
         typedLabel.x = (width - total) / 2;
         restLabel.x = typedLabel.x + (typed ? measure(typed, typedStyle) : 0);
+        caps.clear();
+        drawCapTicks(caps, typed, typedLabel.x, typedStyle, COLORS.inkFaded);
+        drawCapTicks(caps, rest, restLabel.x, restStyle, COLORS.ink);
       }
       // It rocks from side to side as it rolls along, sloshing.
       bob.pivot.set(width / 2, height / 2);

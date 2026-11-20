@@ -66,6 +66,10 @@ This is where the Spellbook mechanic comes in. The key-selection screen is a **l
 
 **Personality:** every creature has a face. Eyes follow the Nib, and they blink. A creature looks worried near the margin, wide-eyed when you lock onto it, and happy for a moment with each correct key. Drips bob and squash, Scrawlers wobble and scurry on little legs, Run-ons ripple like centipedes, and Misprints hop like stamps. Reduced motion stops the movement but keeps the faces.
 
+**Hits:** a correct letter flicks ink at it (a splatter and the letter popping off), but the creature itself doesn't flinch, since a jolt on every key read like a mistake on long words. It squashes only when it's beaten. A crimson or violet creature that loses a life shows a hurt face without shaking (milestone 30).
+
+**Capitals:** a short bar sits under every capital letter on a creature, in the label's own color, so c/C, s/S, o/O, w/W and the like can't be mixed up, even on a lone Drip. Digits and symbols get no mark. Bold and tinted capitals were tried and dropped: bold was too close to the labels' semibold, and a tint shows the difference by color alone (`GAME_CONFIG.capitalTick`).
+
 **Tougher ink** (Typer Shark style): crimson creatures need two completions in a row and violet ones three, with dots showing what's left. Ghosts in invisible ink are faint and blurred until they're a quarter to half of the way in from the right edge (a random point per ghost). Chances grow by chapter and difficulty (`GAME_CONFIG.variants`).
 
 **Errors:** a wrong key leaves a small smudge on the page. A messy page is a gentle, visible record of your accuracy. You'll also see it on the graded page.

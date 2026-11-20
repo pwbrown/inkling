@@ -509,6 +509,20 @@ export const GAME_CONFIG = {
      */
     shortcutDelayMs: 400,
   },
+  /**
+   * The bar under capital letters on creatures (src/render/creatures/common.ts),
+   * so c/C, s/S, o/O and friends can't be mixed up. Sizes are shares of the font size
+   * or of the letter's width.
+   */
+  capitalTick: {
+    /** How far below the text's middle the bar sits, in font sizes. */
+    offset: 0.5,
+    /** Bar thickness, in font sizes. */
+    thickness: 0.09,
+    /** Bar length as a share of the letter's width. */
+    widthShare: 0.55,
+    minWidthPx: 6,
+  },
   /** The faint manuscript the scribe writes as a page goes on (src/render/manuscript.ts). */
   manuscript: {
     /** How strong the scribbles are, 0..1. Faint, so they never compete with targets. */

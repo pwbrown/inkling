@@ -3781,7 +3781,7 @@ Typecheck passes. Now checking the night faces in headless Chrome.
 
 Night eyes look friendly now, and classic is unchanged. Quick check for DOM/SVG faces with their own night colours, then ship.
 
-<details><summary>5 tool calls</summary>
+<details><summary>6 tool calls</summary>
 
 - **Shell:** Check DOM eye styles and release entry format
 
@@ -3824,5 +3824,60 @@ Night eyes look friendly now, and classic is unchanged. Quick check for DOM/SVG 
   ```bash
   npm run build >/dev/null 2>&1 && npm run transcript 2>&1 | tail -2 && git status --short && git diff --name-only -- docs/transcripts | head -3
   ```
+- **Shell:** Scan transcript diff for private details
+
+  ```bash
+  git diff -U0 docs/transcripts | grep '^+' | grep -nEi '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}|gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|BEGIN [A-Z ]*PRIVATE|/Users/[a-z]+/(Desktop|Documents|Downloads)|password *[:=] *[^ ]{6,}|verification=[A-Za-z0-9_-]{10,}' | grep -v "noreply@anthropic.com" | head
+  ```
 
 </details>
+
+### 🤖 Claude
+
+The transcript scan came back clean. Now I'm committing, tagging and pushing 2.21.2.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Commit, merge, tag, delete branch, push
+
+  ```bash
+  git add -A && git commit -q -F - <<'EOF'
+  Light eye whites for every face in night mode (2.21.2)
+
+  - Themes set the open-eye white, and optionally the pupil and a ring colour
+  - Night mode: cream eye whites with dark pupils and a thin dark ring, so the eyes stand out on the pale bodies
+  - Classic and contrast look the same as before
+  - Release 2.21.2 with a player note, and an updated transcript
+
+  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+  EOF
+  git checkout -q main && git merge --ff-only fix/night-eye-whites -q && npm run release:tag 2>&1 | tail -2 && git branch -d fix/night-eye-whites &
+  … (79 more characters)
+  ```
+- **Shell:** Wait for workflows and compare live build
+
+  ```bash
+  for i in $(seq 1 30); do s=$(gh run list --commit 810d0ff --json name,status,conclusion -q '.[] | "\(.name)=\(.status)/\(.conclusion)"' | tr '\n' ' '); echo "$s" | grep -q "in_progress\|queued\|^$" || break; sleep 15; done; echo "$s"; local=$(ls dist/assets | grep -E '^index-.*\.js$'); curl -s https://inkykeys.com/ | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1; echo "local $local"
+  ```
+- **Shell:** List recent workflow runs
+
+  ```bash
+  gh run list --limit 4 --json name,headSha,status,conclusion -q '.[] | "\(.name) \(.headSha[0:7]) \(.status)/\(.conclusion)"'
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Every face now has light eye whites in night mode, and the change is live on inkykeys.com as release 2.21.2. That covers the scribe, the Nib, the drips, the scrawlers, the run-ons and the pictures on the tip cards.
+
+**What changed:** each theme now sets its own colours for open eyes.
+- **Night:** cream eye whites, dark pupils and a thin dark ring. The ring is needed because night-mode bodies are pale, and plain light whites disappeared against them.
+- **Classic and contrast:** they look exactly as before.
+- **Closed or squinting eyes and mouths:** the ^ ^, > <, x x, blinks, brows and mouths keep their old colour, so they still show up on the bodies.
+
+The code changes are in `src/render/theme.ts` and the shared `drawFace` in `src/render/creatures/common.ts`.
+
+**Checked:** I took headless Chrome screenshots of a night page and of the scribe in all three themes. Tests and the build passed, and the transcript scan was clean. The Deploy, CI and Release workflows all passed, and the live page is serving the same build I tested.
+
+The release note reads "Night mode faces now have light, friendly eyes." The commit is `810d0ff`, tagged `v2.21.2`, and the branch is deleted.

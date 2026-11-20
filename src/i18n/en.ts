@@ -480,6 +480,8 @@ export const en = {
   'whatsNew.fixes': 'Bug fixes and small improvements.',
   'whatsNew.earlier': 'Earlier versions',
   'whatsNew.ok': 'Got it',
+  'release.2.22.0.capitals': 'Capital letters have a little line under them, so C and c are easy to tell apart.',
+  'release.2.22.0.steady': 'Creatures hold still while you type their word, and only squash when they’re beaten.',
   'release.2.21.2.nightEyes': 'Night mode faces now have light, friendly eyes.',
   'release.2.21.0.nudgeSetting': 'Turn “Ready for more?” suggestions on or off in Settings.',
   'release.2.20.0.letters': 'New players start Free Write on all letters, without numbers and symbols.',

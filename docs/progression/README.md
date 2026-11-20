@@ -406,15 +406,29 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 **Changed:**
 - New players start Free Write on **All letters** (letters, capitals and space) instead of Everything.
 
+### M30: Readable hits (2.22.0)
+
+| Capitals |
+|---|
+| <img src="m30/capitals.png" width="420" alt="Creatures on the page: Drips C, c, S and s, and Scrawlers Oxford, WoW and Vivid, and a Run-on reading Pick up Kim, with a short bar under every capital letter, including the already-typed V of Vivid in faded ink"> |
+| A short bar under every capital, so C and c can't be mixed up. |
+
+**New:**
+- **Capital marks:** every capital letter on a creature (Drips, Scrawlers, bottles and Run-ons) has a short bar underneath, in the label's own color, so look-alike pairs like c/C, s/S, o/O and w/W are easy to tell apart. Digits and symbols get none. Bold and tinted capitals were tried and dropped.
+- The snapshot tour has a `capitals` shot: the lineup again with capitals beside their lowercase twins.
+
+**Changed (from playtest feedback):**
+- Creatures no longer squash on each correct letter, which on long words made it look like a wrong key. They squash only when they're beaten, and a crimson or violet creature that loses a life shows a hurt face without shaking.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m29
+npm run snapshots -- m30
 ```
 
-That writes a standard set of shots to `docs/progression/m29/` (keyboard-notice, splash, menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m29 holidays` takes only the holiday shots. Then:
+That writes a standard set of shots to `docs/progression/m30/` (keyboard-notice, splash, menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, capitals, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m30 holidays` takes only the holiday shots. Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

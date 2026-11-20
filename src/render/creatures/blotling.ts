@@ -19,6 +19,7 @@ import {
   drawSpikes,
   variantOf,
   drawPips,
+  drawCapTicks,
   labelStyle,
   letterCenter,
   measure,
@@ -46,11 +47,13 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
   /** Holiday trimmings: a tail behind the body, a hat or sprig on top. */
   const behind = new Graphics();
   const trim = new Graphics();
+  /** Bars under capital letters, so they can't be mistaken for lowercase. */
+  const caps = new Graphics();
   const leafColor = HOLIDAY.leaves[Math.abs(target.id) % HOLIDAY.leaves.length]!;
   const typedLabel = new Text({ text: '', style: typedStyle });
   const restLabel = new Text({ text: target.text, style: restStyle });
   for (const label of [typedLabel, restLabel]) label.anchor.set(0, 0.5);
-  root.addChild(highlight, behind, legs, body, extras, typedLabel, restLabel, face, trim, pips);
+  root.addChild(highlight, behind, legs, body, extras, typedLabel, restLabel, caps, face, trim, pips);
   highlight.visible = false;
 
   const mood = new MoodTracker();
@@ -60,11 +63,11 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
   let shownTyped = -1;
 
   /** What makes each boss look like itself (see bosses.ts for what they do). */
-  const drawBossExtras = (t: Target, ctx: FrameContext, shake: number, color: number, eyeX: number, eyeY: number, eyeR: number) => {
+  const drawBossExtras = (t: Target, ctx: FrameContext, color: number, eyeX: number, eyeY: number, eyeR: number) => {
     switch (t.bossKind) {
       case 'shuffler': {
         // Two curved arrows chasing each other over its back.
-        const cx = shake + width - 14 * scale;
+        const cx = width - 14 * scale;
         const cy = -height / 2 - 18 * scale;
         const r = 12 * scale;
         const spin = ctx.reducedMotion ? 0 : ctx.timeMs * 0.002;
@@ -88,10 +91,10 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
         } else {
           // A neck joining it to the segment in front.
           const neck = GAME_CONFIG.entry.gapPx + 8;
-          extras.roundRect(shake - neck, -height * 0.22, neck + 8, height * 0.44, height * 0.22).fill(color);
+          extras.roundRect(-neck, -height * 0.22, neck + 8, height * 0.44, height * 0.22).fill(color);
         }
         // Stripes, like a caterpillar.
-        for (let x = shake + width * 0.25; x < shake + width - 6 * scale; x += 22 * scale) {
+        for (let x = width * 0.25; x < width - 6 * scale; x += 22 * scale) {
           body.roundRect(x, -height / 2 + 6 * scale, 5 * scale, height - 12 * scale, 2.5 * scale).fill({ color: COLORS.inkLight, alpha: 0.5 });
         }
         break;
@@ -99,7 +102,7 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
         if (t.partOf === undefined) {
           // Tentacles curling out underneath.
           for (let i = 0; i < 4; i++) {
-            const x = shake + width * (0.2 + i * 0.2);
+            const x = width * (0.2 + i * 0.2);
             const sway = ctx.reducedMotion ? 0 : Math.sin(ctx.timeMs * 0.004 + i) * 5 * scale;
             extras
               .moveTo(x, height / 2 - 4 * scale)
@@ -113,14 +116,14 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
           const pulse = ctx.warning ? (ctx.reducedMotion ? 1 : 0.5 + 0.5 * Math.sin(ctx.timeMs * 0.03)) : 0;
           const curl = 9 * scale * (1 + 0.6 * pulse);
           extras
-            .moveTo(shake + width - 4 * scale, 0)
-            .bezierCurveTo(shake + width + 22 * scale, -6 * scale + sway, shake + width + 26 * scale, 18 * scale, shake + width + 10 * scale, 14 * scale)
+            .moveTo(width - 4 * scale, 0)
+            .bezierCurveTo(width + 22 * scale, -6 * scale + sway, width + 26 * scale, 18 * scale, width + 10 * scale, 14 * scale)
             .stroke({ width: curl, color, cap: 'round' });
           if (ctx.warning) {
             extras
-              .roundRect(shake - 6 * scale, -height / 2 - 6 * scale, width + 12 * scale, height + 12 * scale, height / 2 + 6 * scale)
+              .roundRect(-6 * scale, -height / 2 - 6 * scale, width + 12 * scale, height + 12 * scale, height / 2 + 6 * scale)
               .stroke({ width: (2 + 2 * pulse) * scale, color: COLORS.margin });
-            const bx = shake + width - 6 * scale;
+            const bx = width - 6 * scale;
             const by = -height / 2 - 14 * scale;
             extras
               .moveTo(bx, by - 12 * scale)
@@ -129,7 +132,7 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
               .circle(bx, by + 4 * scale, 2.4 * scale)
               .fill(COLORS.margin);
           }
-          for (let x = shake + 14 * scale; x < shake + width - 8 * scale; x += 16 * scale) {
+          for (let x = 14 * scale; x < width - 8 * scale; x += 16 * scale) {
             extras.circle(x, height / 2 - 2 * scale, 3.5 * scale).fill(COLORS.inkLight);
           }
         }
@@ -165,7 +168,7 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
     height,
     letterX: (index) => letterCenter(shownText, index, padX, restStyle),
     update(t: Target, ctx: FrameContext) {
-      const { mood: m, blink, hurtMs } = mood.update(t, ctx);
+      const { mood: m, blink } = mood.update(t, ctx);
 
       if (t.text !== shownText || t.typed !== shownTyped) {
         if (t.text !== shownText) {
@@ -179,10 +182,14 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
         }
         shownTyped = t.typed;
         const typed = t.text.slice(0, t.typed);
+        const rest = t.text.slice(t.typed);
         typedLabel.text = typed;
-        restLabel.text = t.text.slice(t.typed);
+        restLabel.text = rest;
         typedLabel.x = padX;
         restLabel.x = padX + (typed ? measure(typed, typedStyle) : 0);
+        caps.clear();
+        drawCapTicks(caps, typed, typedLabel.x, typedStyle, COLORS.inkFaded);
+        drawCapTicks(caps, rest, restLabel.x, restStyle, COLORS.label);
         pips.clear();
         drawPips(pips, width - 8 * scale * t.lives, -height / 2 - 10 * scale, t.lives, scale);
       }
@@ -191,32 +198,31 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
       // ones bristle with spikes; violet ones are lumpier, with a wavy hem.
       const color = bodyColor(t.lives);
       const variant = variantOf(t.lives);
-      const shake = hurtMs > 0 ? Math.sin(hurtMs / 18) * 3 : 0;
-      body.clear().roundRect(shake, -height / 2, width, height, height / 2).fill(color);
+      body.clear().roundRect(0, -height / 2, width, height, height / 2).fill(color);
       const bumps = Math.max(2, Math.round(width / (36 * scale)));
       if (variant === 'crimson') {
         const lift = 2 * scale * wave(ctx, 0.008, phase);
-        drawSpikes(body, shake + height * 0.35, shake + width - height * 0.35, -height / 2 + 2 * scale, bumps * 2, 9 * scale + lift, -1, color);
-        drawSpikes(body, shake + height * 0.45, shake + width - height * 0.45, height / 2 - 2 * scale, bumps + 1, 6 * scale, 1, color);
+        drawSpikes(body, height * 0.35, width - height * 0.35, -height / 2 + 2 * scale, bumps * 2, 9 * scale + lift, -1, color);
+        drawSpikes(body, height * 0.45, width - height * 0.45, height / 2 - 2 * scale, bumps + 1, 6 * scale, 1, color);
       } else {
         const lumpy = variant === 'violet' ? 1.3 : 1;
         for (let i = 0; i < bumps; i++) {
-          const bx = shake + ((i + 0.5) / bumps) * width;
+          const bx = ((i + 0.5) / bumps) * width;
           const lift = 2 * scale * lumpy * wave(ctx, 0.005, phase + i * 1.7);
           body.circle(bx, -height / 2 + 4 * scale + lift, height * 0.24 * lumpy).fill(color);
           if (i % 2 === 0 && variant === 'plain') body.circle(bx + 9 * scale, height / 2 - 4 * scale - lift, height * 0.18).fill(color);
         }
       }
-      if (variant === 'violet') drawHem(body, shake + height * 0.3, shake + width - height * 0.3, height / 2 - 2 * scale, 7 * scale, color, wave(ctx, 0.006, phase));
+      if (variant === 'violet') drawHem(body, height * 0.3, width - height * 0.3, height / 2 - 2 * scale, 7 * scale, color, wave(ctx, 0.006, phase));
       // A drip hanging off the back.
-      body.circle(width + shake - 2 * scale, height * 0.15, 5 * scale).fill(color);
+      body.circle(width + -2 * scale, height * 0.15, 5 * scale).fill(color);
 
       // Legs scurry: alternate pairs lift in turn. (Violet ones glide on their hem.)
       legs.clear();
       if (variant !== 'violet') {
         const legCount = Math.max(3, Math.round(width / (28 * scale)));
         for (let i = 0; i < legCount; i++) {
-          const lx = shake + ((i + 0.5) / legCount) * width;
+          const lx = ((i + 0.5) / legCount) * width;
           const step = ctx.defeated ? 0 : 3 * scale * wave(ctx, 0.016, i * Math.PI);
           legs.ellipse(lx + step, height / 2 + 3 * scale - Math.abs(step) * 0.6, 4.5 * scale, 3.2 * scale).fill(COLORS.inkLight);
         }
@@ -226,7 +232,7 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
       face.clear();
       extras.clear();
       const eyeR = 7 * scale;
-      const eyeX = shake + padX + eyeR * (variant === 'violet' ? 1.6 : 0.6);
+      const eyeX = padX + eyeR * (variant === 'violet' ? 1.6 : 0.6);
       const eyeY = -height / 2 - 3 * scale;
       // Bookworm segments behind the head and Squid tentacles have no face of their own.
       const faceless = (t.bossKind === 'bookworm' && !t.head) || (t.bossKind === 'squid' && t.partOf !== undefined);
@@ -242,15 +248,15 @@ export function createBlotling(target: Target, scale: number, season: SeasonId |
       if (accessory) {
         // Bosses wear theirs bigger. Hats sit on the eyes; a crown gets its sprig on top.
         const size = eyeR * 2 * (t.boss ? 1.5 : 1);
-        if (accessory === 'turkeyTail') drawTurkeyTail(behind, shake + width - 6 * scale, -height * 0.1, height * (t.boss ? 1.15 : 0.95));
+        if (accessory === 'turkeyTail') drawTurkeyTail(behind, width - 6 * scale, -height * 0.1, height * (t.boss ? 1.15 : 0.95));
         else {
           const top = variant === 'violet' ? eyeY - eyeR * 2.8 : variant === 'crimson' ? eyeY - eyeR * 0.9 : eyeY - eyeR * 0.75;
           drawHeadAccessory(trim, accessory, eyeX, top, size, leafColor);
         }
       }
-      drawBossExtras(t, ctx, shake, color, eyeX, eyeY, eyeR);
+      drawBossExtras(t, ctx, color, eyeX, eyeY, eyeR);
       highlight.visible = ctx.locked;
-      applyGhost(t, root, [typedLabel, restLabel], ctx.timeMs, ctx.reducedMotion);
+      caps.visible = !applyGhost(t, root, [typedLabel, restLabel], ctx.timeMs, ctx.reducedMotion);
       restLabel.alpha = ctx.guarded ? 0.45 : 1;
     },
   };

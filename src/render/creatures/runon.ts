@@ -9,7 +9,7 @@ import type { SeasonId } from '../../core/seasons';
 import type { Target } from '../../core/world';
 import { accessoryFor, drawHeadAccessory } from '../holidayArt';
 import { COLORS } from '../theme';
-import { MoodTracker, drawFace, labelStyle, letterCenter, measure, wave, type CreatureView, type FrameContext } from './common';
+import { MoodTracker, drawCapTicks, drawFace, labelStyle, letterCenter, measure, wave, type CreatureView, type FrameContext } from './common';
 
 export function createRunon(target: Target, scale: number, season: SeasonId | null = null): CreatureView {
   const height = 46 * scale;
@@ -74,6 +74,9 @@ export function createRunon(target: Target, scale: number, season: SeasonId | nu
 
         // Strike through mistakes (a shape, not just color) and draw the caret.
         marks.clear();
+        drawCapTicks(marks, okText, ok.x, styles.ok, COLORS.inkFaded);
+        drawCapTicks(marks, badText, bad.x, styles.bad, COLORS.margin);
+        drawCapTicks(marks, restText, rest.x, styles.rest, COLORS.label);
         if (badText) {
           marks.moveTo(bad.x, 1).lineTo(bad.x + measure(badText, styles.bad), 1).stroke({ width: 2.5 * scale, color: COLORS.margin });
         }

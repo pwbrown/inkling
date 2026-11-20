@@ -5,6 +5,7 @@
 import { BlurFilter, CanvasTextMetrics, type Container, type Graphics, type Text, type TextStyle } from 'pixi.js';
 import { MARGIN_X, isRevealed, revealXOf, type Target } from '../../core/world';
 import { COLORS, TEXT_FONT } from '../theme';
+import { GAME_CONFIG } from '../../core/config';
 
 /** Per-frame information every creature needs. */
 export interface FrameContext {
@@ -55,7 +56,37 @@ export function letterCenter(text: string, index: number, left: number, style: T
 
 export type Mood = 'calm' | 'worried' | 'scared' | 'happy' | 'hurt' | 'angry' | 'defeated';
 
+const isCapital = (ch: string) => /\p{Lu}/u.test(ch);
+
 export const measure = (text: string, style: TextStyle) => CanvasTextMetrics.measureText(text, style).width;
+
+/**
+ * Where each capital letter in `text` sits, drawn from x = `left`, given each
+ * character's width. Lowercase, digits and symbols are skipped.
+ */
+export function capitalSpans(text: string, left: number, widthOf: (ch: string) => number): { x: number; width: number }[] {
+  const spans: { x: number; width: number }[] = [];
+  let x = left;
+  for (const ch of text) {
+    const width = widthOf(ch);
+    if (isCapital(ch)) spans.push({ x, width });
+    x += width;
+  }
+  return spans;
+}
+
+/**
+ * A short bar under each capital in `text` (drawn from x = `left`, vertically
+ * centred on 0), so capitals can't be mistaken for lowercase (c/C, s/S, o/O…).
+ */
+export function drawCapTicks(g: Graphics, text: string, left: number, style: TextStyle, color: number): void {
+  const size = Number(style.fontSize);
+  const c = GAME_CONFIG.capitalTick;
+  for (const { x, width } of capitalSpans(text, left, (ch) => measure(ch, style))) {
+    const bar = Math.max(c.minWidthPx, width * c.widthShare);
+    g.roundRect(x + (width - bar) / 2, size * c.offset, bar, Math.max(2, size * c.thickness), size * c.thickness / 2).fill(color);
+  }
+}
 
 /** Extra space between letters on word creatures, as a fraction of the font size, for easier reading. */
 export const WORD_LETTER_SPACING = 0.08;
@@ -147,9 +178,9 @@ export class MoodTracker {
   private nextBlink = 1500 + Math.random() * 3000;
   private blinkUntil = 0;
 
-  update(target: Target, ctx: FrameContext): { mood: Mood; blink: boolean; hurtMs: number } {
+  update(target: Target, ctx: FrameContext): { mood: Mood; blink: boolean } {
     const t = ctx.timeMs;
-    if (ctx.defeated) return { mood: 'defeated', blink: false, hurtMs: 0 };
+    if (ctx.defeated) return { mood: 'defeated', blink: false };
     if (this.lastLives && target.lives < this.lastLives) this.hurtUntil = t + 350;
     else if (target.typed > this.lastTyped || (target.text !== this.lastText && this.lastText && target.lives === this.lastLives))
       this.happyUntil = t + 180;
@@ -174,7 +205,7 @@ export class MoodTracker {
               : target.x < MARGIN_X + 240
                 ? 'worried'
                 : 'calm';
-    return { mood, blink: t < this.blinkUntil && mood !== 'hurt', hurtMs: Math.max(0, this.hurtUntil - t) };
+    return { mood, blink: t < this.blinkUntil && mood !== 'hurt' };
   }
 }
 

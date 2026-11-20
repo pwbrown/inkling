@@ -19,3 +19,4 @@ Each file is exported from the session log with `npm run transcript` (see `scrip
 - [2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2](2026-11-18-datamuse-alternatives-and-targets-page-atmosphere-6951a5d2.md)
 - [2026-11-18-menu-redesign-and-content-streamlining-9713fb8f](2026-11-18-menu-redesign-and-content-streamlining-9713fb8f.md)
 - [2026-11-19-game-seo-and-holiday-skins-25c4469a](2026-11-19-game-seo-and-holiday-skins-25c4469a.md)
+- [2026-11-20-milestone-feedback-and-typing-mode-8be8c18f](2026-11-20-milestone-feedback-and-typing-mode-8be8c18f.md)

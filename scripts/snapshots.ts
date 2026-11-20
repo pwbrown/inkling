@@ -76,6 +76,32 @@ const LINEUP = `(() => {
   return 'ok';
 })()`;
 
+/**
+ * The lineup again with capitals beside their lowercase twins (M30: capitals
+ * get a bar underneath), one word part typed.
+ */
+const CAPITALS = `(() => {
+  const w = window.inkling.world;
+  const base = w.targets[0];
+  if (!base) return 'no targets yet';
+  const make = (o) => ({ ...base, typed: 0, buffer: undefined, cursor: undefined, lives: 1, maxLives: undefined,
+    ghost: false, boss: false, speed: 4, ...o, y: 120 + o.lane * 48, prevX: o.x, id: w.nextId++ });
+  const items = [
+    { kind: 'drip', text: 'C', x: 520, lane: 0 },
+    { kind: 'drip', text: 'c', x: 640, lane: 0 },
+    { kind: 'drip', text: 'S', x: 760, lane: 0 },
+    { kind: 'drip', text: 's', x: 880, lane: 0 },
+    { kind: 'blotling', text: 'Oxford', x: 760, lane: 2 },
+    { kind: 'blotling', text: 'WoW', x: 1000, lane: 4, lives: 2, maxLives: 2 },
+    { kind: 'blotling', text: 'Vivid', typed: 2, x: 640, lane: 6 },
+    { kind: 'runon', text: 'Pick up Kim', buffer: '', cursor: 0, x: 860, lane: 8 },
+  ];
+  w.page.spawned += items.length - w.targets.length;
+  w.targets = items.map(make);
+  w.lockedId = null;
+  return 'ok';
+})()`;
+
 /** Scrolls Settings to the keyboard layout choice, if there is one. */
 const SHOW_LAYOUT = `(() => {
   const legend = [...document.querySelectorAll('.settings legend')].find((l) => /layout/i.test(l.textContent));
@@ -252,6 +278,7 @@ const MAIN_TOUR: Step[] = [
   // A fresh player gets the "New on this page" briefing before their first page.
   { click: 'Start writing' }, { wait: 800 }, { shot: 'briefing' }, { key: 'Enter' },
   { wait: 4000 }, { eval: LINEUP }, { wait: 700 }, { shot: 'lineup' },
+  { eval: CAPITALS }, { wait: 700 }, { shot: 'capitals' },
   { key: 'Escape' }, { click: 'Quit to menu' },
   { click: 'Apprentice' }, { shot: 'contents' },
   { click: 'Chapter 1' }, { shot: 'chapter-intro' }, { key: 'Enter' },
