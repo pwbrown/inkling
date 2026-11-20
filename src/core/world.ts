@@ -275,6 +275,8 @@ export interface World {
   eraserRun: number;
   /** Time left after the Eraser was used in which wrong keys are quietly ignored (ms). */
   eraserGraceMs: number;
+  /** A dead key's accent waiting for its letter (`^` before `e`), shown by the Nib; null when none. */
+  pendingAccent: string | null;
   /**
    * Lanes a Squid has squirted ink over: their words are hidden for `ms`
    * more. The ink landed at `x`, squirted from (`fromX`, `fromY`).
@@ -442,6 +444,7 @@ export function createWorld(options: WorldOptions = {}): World {
     eraser: false,
     eraserRun: 0,
     eraserGraceMs: 0,
+    pendingAccent: null,
     smudges: [],
     shield: false,
     shieldEarned: false,

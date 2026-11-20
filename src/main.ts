@@ -6,7 +6,7 @@ import { Blocklist } from './content/blocklist';
 import { loadEnglishPack, type ContentPack } from './content/en';
 import { HOLIDAY_WORDS } from './content/en/holidays';
 import type { Dictionary } from './content/vocabApi';
-import { isLayoutId, layoutById } from './content/layouts';
+import { deadKeyMark, isLayoutId, layoutById, setLayoutPlatform } from './content/layouts';
 import type { LayoutId } from './content/layouts/types';
 import {
   autoPause,
@@ -24,6 +24,7 @@ import {
   useAbility,
   useBlotter,
   togglePause,
+  pressDeadKey,
   typeChar,
   type EditKey,
 } from './core/input';
@@ -43,7 +44,7 @@ import { NOTEBOOK_BONUS, inkForPage, levelForInk, levelProgress, newUnlocks, ran
 import { SaveFormatError, defaultSave, fairCopyKey, migrate, type SaveData } from './storage/schema';
 import { MAX_TRANSFER_LENGTH, canTransfer, decodeTransfer, encodeTransfer, hasTransfer, type Transfer } from './storage/transfer';
 import { PlayerStore, cleanName, saveKeyFor, uniqueName, type Player } from './storage/profiles';
-import { bindKeyboard, type SpecialKey } from './input/keyboard';
+import { bindKeyboard, setKeyboardPlatform, setTypingFieldLabel, type SpecialKey } from './input/keyboard';
 import { PASSAGES, PassageDeck, type Passage } from './core/fairCopy';
 import { FairCopySession, fairCopyMode } from './fairCopySession';
 import { loadFonts } from './fonts';
@@ -95,6 +96,7 @@ async function main(): Promise<void> {
   if (!host) throw new Error('#app element missing');
 
   setLocale(navigator.language);
+  setTypingFieldLabel(t('a11y.typingField'));
   registerOffline();
 
   /** The active player's keyboard layout (it lives in their save). */
@@ -107,6 +109,12 @@ async function main(): Promise<void> {
 
   // Comfort settings (REQUIREMENTS §10), applied before anything is drawn.
   let settings: Settings = loadSettings();
+  // Mac or PC keys: what Alt means, and which variant of the layout to show.
+  const applyKeyboardKind = () => {
+    setKeyboardPlatform(settings.keyboardKind);
+    setLayoutPlatform(settings.keyboardKind);
+  };
+  applyKeyboardKind();
   const sfx = new Sfx();
   /**
    * The holiday season by today's date (core/seasons.ts). In development,
@@ -657,8 +665,10 @@ async function main(): Promise<void> {
       settings,
       onChange: (next) => {
         const redraw = next.theme !== settings.theme || next.textSize !== settings.textSize || next.motion !== settings.motion || next.screenEffects !== settings.screenEffects || next.pageWriting !== settings.pageWriting || next.holidayLooks !== settings.holidayLooks;
+        const kindChanged = next.keyboardKind !== settings.keyboardKind;
         settings = next;
         saveSettings(settings);
+        if (kindChanged) applyKeyboardKind();
         applyColors();
         applyLayout();
         if (redraw) renderer.rebuild();
@@ -1447,7 +1457,17 @@ async function main(): Promise<void> {
     refreshAbilities();
   };
 
-  const ABILITY_DIGITS: Partial<Record<string, ActiveAbility>> = { '1': 'paperweight', '2': 'highlighter', '3': 'blotter' };
+  /** 1, 2 and 3 by physical key, so they work without Shift on AZERTY (where the digits are on Shift). */
+  const ABILITY_KEYS: Partial<Record<string, ActiveAbility>> = {
+    Digit1: 'paperweight',
+    Digit2: 'highlighter',
+    Digit3: 'blotter',
+    Numpad1: 'paperweight',
+    Numpad2: 'highlighter',
+    Numpad3: 'blotter',
+  };
+  /** The digit on a number key (Digit4 or Numpad4 → '4'), whatever the layout types there. */
+  const digitOf = (code: string | undefined): string | null => /^(?:Digit|Numpad)(\d)$/.exec(code ?? '')?.[1] ?? null;
 
   const EDIT_KEYS: Partial<Record<SpecialKey, EditKey>> = {
     Backspace: 'backspace',
@@ -1479,7 +1499,13 @@ async function main(): Promise<void> {
   bindKeyboard(
     window,
     {
-      onChar: (char) => {
+      onChar: (char, code) => {
+        // Number keys pick a difficulty on the new-notebook screen, with or without Shift.
+        const digit = digitOf(code);
+        if (game.phase === 'ready' && digit) {
+          typeChar(game, digit);
+          return;
+        }
         // Shortcuts on the game-over card: R retries the chapter, M goes to the menu.
         if (game.phase === 'gameOver') {
           const lower = char.toLowerCase();
@@ -1491,8 +1517,9 @@ async function main(): Promise<void> {
           if (char.toLowerCase() === 'm') actions.onLink('mainMenu');
           return;
         }
-        // 1, 2 and 3 also fire abilities, unless the player is practicing number keys.
-        const shortcut = ABILITY_DIGITS[char];
+        // 1, 2 and 3 also fire abilities, unless what that key types is one of the keys in play
+        // (practicing numbers, or é on AZERTY's 2).
+        const shortcut = code ? ABILITY_KEYS[code] : undefined;
         if (shortcut && game.phase === 'playing' && !game.keys.includes(char)) {
           useAbility(game, shortcut);
           return;
@@ -1501,6 +1528,7 @@ async function main(): Promise<void> {
       },
       onConfirm: () => after(actions.start),
       onSpecial: (key) => handleSpecial(key),
+      onDeadKey: (press) => pressDeadKey(game, deadKeyMark(layout(), press.code, press.shift, press.altGr)),
       onPause: () =>
         after(() => {
           // On a chapter's new-keys card, Esc backs out to the menu instead.

@@ -10,6 +10,7 @@
  * CSS variables for the DOM, hex strings for the canvas.
  */
 import type { Finger, KeyboardLayout, LayoutKey } from '../content/layouts/types';
+import { ISO_ROW_OFFSETS } from '../content/layouts/iso';
 import { FINGERS, NAILS, OUTLINE, ROTATE, SKIN, TIPS } from './handDrawing';
 
 export interface HandsColors {
@@ -45,7 +46,7 @@ interface Point {
 /** One key pitch in SVG units. */
 const U = 40;
 /** How far each row is shifted right, in key pitches (like a real keyboard's stagger). */
-const ROW_OFFSET = [0, 0.5, 0.75, 1.25];
+const ANSI_ROW_OFFSET = [0, 0.5, 0.75, 1.25];
 const DIGITS: Digit[] = ['pinky', 'ring', 'middle', 'index'];
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
@@ -122,6 +123,7 @@ export interface HandsOptions {
 
 export function handsArt(layout: KeyboardLayout, keys: readonly string[], colors: HandsColors, options: HandsOptions = {}): HandsArt {
   const redPen = options.redPen ?? true;
+  const ROW_OFFSET: readonly number[] = layout.physical === 'iso' ? ISO_ROW_OFFSETS : ANSI_ROW_OFFSET;
   const showHands = options.hands ?? true;
   const all = layout.rows.flat();
   const targets = keys

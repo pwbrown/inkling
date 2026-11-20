@@ -8,7 +8,7 @@
 import './dialog.css';
 import type { KeyboardLayout, LayoutKey } from '../content/layouts/types';
 import {
-  REGIONS,
+  regionsFor,
   matchingPreset,
   orderedSelection,
   regionChars,
@@ -133,7 +133,7 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
 
   const keyboard = h(
     'div',
-    { className: 'tc-keyboard', role: 'group', 'aria-label': t('typeCase.keyboard', { layout: t(`layout.${layout.id}` as MessageKey) }) },
+    { className: `tc-keyboard tc-${layout.physical}`, role: 'group', 'aria-label': t('typeCase.keyboard', { layout: t(`layout.${layout.id}` as MessageKey) }) },
     layout.rows.map((row, i) => h('div', { className: `tc-row tc-row-${i}` }, row.map(keyCap))),
   );
 
@@ -142,7 +142,7 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
   const regions = h(
     'div',
     { className: 'tc-chips', role: 'group', 'aria-label': t('typeCase.groups') },
-    REGIONS.map((region) => {
+    regionsFor(layout).map((region) => {
       const chars = regionChars(layout, region);
       const button = h(
         'button',
@@ -236,7 +236,7 @@ export function openTypeCase(host: HTMLElement, options: TypeCaseOptions): TypeC
     for (const [ch, buttons] of charButtons) {
       for (const button of buttons) button.setAttribute('aria-pressed', String(selection.has(ch)));
     }
-    for (const region of REGIONS) {
+    for (const region of regionsFor(layout)) {
       const state = regionState(selection, regionChars(layout, region));
       regionButtons.get(region)?.setAttribute('aria-pressed', state === 'all' ? 'true' : state === 'some' ? 'mixed' : 'false');
     }

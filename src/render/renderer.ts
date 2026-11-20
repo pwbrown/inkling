@@ -44,7 +44,7 @@ import { HOLIDAY, drawLeaf, drawPilgrimHat, drawSantaHat, drawSnowflake } from '
 import type { SeasonId } from '../core/seasons';
 import { bodyColor, drawFace, type Mood } from './creatures/common';
 import { InkShots, SHOT_SPEED } from './shots';
-import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, glyph, prefersReducedMotion } from './theme';
+import { COLORS, DISPLAY_FONT, DISPLAY_PADDING, TEXT_FONT, glyph, prefersReducedMotion } from './theme';
 import { Punch, approach, mix, outCubic } from './tween';
 
 const NIB_LENGTH = 56;
@@ -292,6 +292,8 @@ export async function createRenderer(
   let nib!: Container;
   let nibFace!: Graphics;
   let nibStyle: Cosmetics['nib'] = DEFAULT_COSMETICS.nib;
+  /** A dead key's accent waiting for its letter, beside the Nib. */
+  let accentMark!: Text;
   let hud!: Hud;
   /** The faint writing that fills the page as targets are cleared, and the scribe writing it. */
   let manuscript!: Manuscript;
@@ -346,6 +348,9 @@ export async function createRenderer(
     nibFace = new Graphics();
     nib.addChild(drawNib(nibStyle), nibFace, drawNibHat(nibStyle, cosmetics.hat ?? 'none'));
     nib.position.set(NIB_HOME.x, NIB_HOME.y);
+    accentMark = new Text({ text: '', style: { fontFamily: TEXT_FONT, fontSize: 40, fontWeight: '700', fill: COLORS.ink } });
+    accentMark.anchor.set(0.5);
+    accentMark.visible = false;
     hud = new Hud();
     if (kept) {
       ({ overlay, manuscript, scribe } = kept);
@@ -373,7 +378,7 @@ export async function createRenderer(
     calloutId = null;
     slowWash = wash(COLORS.inkFaded);
     glowWash = wash(COLORS.highlighter);
-    scene.addChild(drawPage(cosmetics.paper), decor.root, manuscript.root, scribe.root, glowWash, slowWash, effects.stainLayer, guide, targetLayer, smudgeLayer, nib, shots.layer, effects.particleLayer, callout);
+    scene.addChild(drawPage(cosmetics.paper), decor.root, manuscript.root, scribe.root, glowWash, slowWash, effects.stainLayer, guide, targetLayer, smudgeLayer, nib, accentMark, shots.layer, effects.particleLayer, callout);
     vignette = new Graphics();
     const bands = 7;
     for (let i = 0; i < bands; i++) {
@@ -1000,6 +1005,13 @@ export async function createRenderer(
       }
       world.events.length = 0;
       drawSmudges(world);
+
+      // The accent a dead key is holding, until its letter comes.
+      accentMark.visible = world.pendingAccent !== null;
+      if (world.pendingAccent !== null) {
+        if (accentMark.text !== world.pendingAccent) accentMark.text = world.pendingAccent;
+        accentMark.position.set(nib.x + 46, nib.y - 44);
+      }
 
       // Creatures. Animation time only runs while playing, so they freeze when paused.
       const playing = world.phase === 'playing';

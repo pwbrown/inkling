@@ -261,6 +261,11 @@ const MAIN_TOUR: Step[] = [
   { click: 'Settings' }, { click: 'Dvorak' }, { eval: SHOW_LAYOUT }, { shot: 'settings-layout' }, { key: 'Escape' },
   { click: FREE_WRITE }, { click: 'Change keys' }, { shot: 'type-case-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
   { click: 'Apprentice' }, { click: 'Chapter 1' }, { shot: 'chapter-intro-dvorak' }, { key: 'Escape' }, { key: 'Escape' },
+  // ISO keyboards (M32): AZERTY, with digits on Shift and the extra key left of W, and Spanish with ñ.
+  { click: 'Settings' }, { click: 'French AZERTY' }, { key: 'Escape' },
+  { click: FREE_WRITE }, { click: 'Change keys' }, { shot: 'type-case-azerty' }, { key: 'Escape' }, { key: 'Escape' },
+  { click: 'Settings' }, { click: 'Spanish (Spain)' }, { key: 'Escape' },
+  { click: FREE_WRITE }, { click: 'Change keys' }, { shot: 'type-case-spanish' }, { key: 'Escape' }, { key: 'Escape' },
   { click: 'Settings' }, { click: 'US QWERTY' }, { key: 'Escape' },
   { click: 'How to play' }, { eval: SCROLL_TOP }, { shot: 'how-to-play' },
   { eval: SHOW_BOSSES }, { wait: 300 }, { shot: 'how-to-play-bosses' }, { key: 'Escape' },

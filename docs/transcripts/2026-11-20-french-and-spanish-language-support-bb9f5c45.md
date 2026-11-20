@@ -1,6 +1,6 @@
 # French and Spanish language support
 
-Claude Code session started 2026-11-20. 3 prompts.
+Claude Code session started 2026-11-20. 10 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -464,12 +464,993 @@ The plan is written into §13d of [REQUIREMENTS.md](docs/REQUIREMENTS.md), with 
 
 > commit this
 
-<details><summary>1 tool call</summary>
+<details><summary>4 tool calls</summary>
 
 - **Shell:** Ran a command
 
   ```bash
   npm run transcript 2>&1 | tail -5 && git status --short
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  F="docs/transcripts/2026-11-20-french-and-spanish-language-support-bb9f5c45.md docs/transcripts/2026-11-20-free-copy-game-mode-polish-45e7d1f9.md docs/transcripts/README.md"; grep -nEo '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' $F | grep -v noreply | head; grep -nE '/Users/|/private/tmp|sk-[A-Za-z0-9]{10}|gh[pousr]_[A-Za-z0-9]{10}|AKIA[0-9A-Z]{12}|eyJ[A-Za-z0-9_-]{20}' $F | cut -c1-160 | head -20
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys/docs/transcripts && for f in 2026-11-20-french-and-spanish-language-support-bb9f5c45.md 2026-11-20-free-copy-game-mode-polish-45e7d1f9.md README.md; do echo "== $f"; grep -nEo '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' "$f" | grep -v noreply | head; grep -nE '/Users/|/private/tmp|sk-[A-Za-z0-9]{10}|gh[pousr]_[A-Za-z0-9]{10}|AKIA[0-9A-Z]{12}|eyJ[A-Za-z0-9_-]{20}' "$f" | cut -c1-160 | head; done
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -noE '/(Users|private)/[^ `)]*' 2026-11-20-french-and-spanish-language-support-bb9f5c45.md | sort -u -t: -k3 | head; grep -ci '[removed]\|[removed]' 2026-11-20-french-and-spanish-language-support-bb9f5c45.md
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Scan is clean (personal paths are already redacted, no emails or tokens). Committing.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git add docs/REQUIREMENTS.md docs/transcripts && git commit -q -F - <<'EOF'
+  Plan French and Spanish with accent teaching (milestones 32-34)
+
+  - REQUIREMENTS §13d: three milestones, keyboard groundwork (dead keys,
+    AltGr/Option, AZERTY and Spanish ISO), Français, Español
+  - How each accent is typed on AZERTY, Spanish ISO and US keyboards (Mac
+    Option keys, Windows/Chromebook US-International), and how the game
+    teaches it: accent chapters, just-in-time hints, help card, practice
+    preset, Forgiving accents option
+  - Separate menu and words languages, 
+  … (297 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+I committed the plan on `chore/fr-es-milestones` as `46d890a`. It isn't merged into `main` yet, and nothing is pushed.
+
+The commit includes:
+- **The plan:** §13d of [REQUIREMENTS.md](docs/REQUIREMENTS.md), and the updated open questions in §14.
+- **Transcripts:** the new export for this session, plus updates to `docs/transcripts/README.md` and one earlier transcript.
+
+I scanned the transcripts before committing and found no emails or tokens. Your username in file paths is already shown as `[removed]`.
+
+If you merge, I'll fast-forward `main` and then delete the branch, as `CLAUDE.md` asks.
+
+## 🧑 Prompt
+
+> Leave the branch
+
+### 🤖 Claude
+
+OK, I'll leave it as is. The plan stays committed on `chore/fr-es-milestones` (`46d890a`), not merged into `main` and not pushed.
+
+## 🧑 Prompt
+
+> start milestone 32
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git switch -c feat/m32-keys-beyond-az && cat src/input/keyboard.ts src/content/layouts/types.ts src/content/layouts/ansi.ts src/content/layouts/us-qwerty.ts src/content/layouts/index.ts && wc -l src/content/layouts/*.ts src/core/input.ts src/core/keySelection.ts src/render/handsArt.ts src/ui/typeCase.ts src/settings.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  cat src/content/layouts/layouts.test.ts src/core/keySelection.ts src/settings.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 50,80p src/core/input.ts && sed -n 220,340p src/core/input.ts && grep -n "bindKeyboard\|ABILITY_DIGITS\|onChar\|game.keys.includes" src/main.ts src/fairCopySession.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 1440,1520p src/main.ts && sed -n 70,110p src/fairCopySession.ts && grep -n "Number(key)\|'1'\|1–4\|Digit" src/ui/menu.ts | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 1270,1330p src/ui/menu.ts && sed -n 1,60p src/render/handsArt.ts && sed -n 95,273p src/render/handsArt.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Status: I've read the input, layout, key-selection and hands-guide code. Next I'm writing the new layout format with the AZERTY and Spanish layouts, and then the input changes.
+
+<details><summary>13 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "dvorak\|colemak\|holidayLooks\|layout\." src/i18n/en.ts | head -30; grep -n "holidayLooks\|'dvorak'\|LAYOUT_IDS\|layoutName" src/ui/*.ts src/main.ts | head -20; grep -n "shift" src/ui/typeCase.ts | head -20; cat src/content/layouts/dvorak.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  import re
+  p='src/content/layouts/types.ts'
+  s=open(p).read()
+  s=s.replace("""  /** Character produced with Shift, if any. */
+    shift?: string;
+  ""","""  /** Character produced with Shift, if any. */
+    shift?: string;
+    /** Character produced with AltGr (Ctrl+Alt on Windows), if any (ISO layouts). */
+    altGr?: string;
+    /** Character produced with Shift+AltGr, if any. */
+    altGrShift?: string;
+    /**
+     * Levels that are dead keys: pressing them types nothing until the next
+     * key, which they combine with (`^` then `e` = `ê`; `^` then space = `^`).
+     */
+    dead?: readonly KeyLeve
+  … (3833 more characters)
+  ```
+- **Wrote** `src/content/layouts/iso.ts`
+- **Shell:** Ran a command
+
+  ```bash
+  cat > src/content/layouts/fr-azerty.ts <<'EOF'
+  import { lessonPlan } from './ansi';
+  import { isoLayout, marked } from './iso';
+
+  /**
+   * French AZERTY (France), on an ISO keyboard. Digits are on Shift; é è ç à ù
+   * have their own keys; ^ and ¨ are dead keys (^ then e = ê). The PC layout
+   * is the default; a Mac moves a few symbols (`mac`).
+   */
+  export const FR_AZERTY = isoLayout(
+    'fr-azerty',
+    [
+      { base: '²&é"\'(-è_çà)=', shift: ' 1234567890°+' },
+      { base: 'azertyuiop^$', shift: 'AZERTYUIOP¨£' },
+      { base: 'qsdfghjklmù*', shift: 'QSDFGHJKLM%µ' },
+      { base: '<wxcvbn,;:!', shift: '>WXC
+  … (2408 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  cat > src/content/layouts/index.ts <<'EOF'
+  /** Every keyboard layout Inky Keys knows (REQUIREMENTS §11). */
+  import { COLEMAK } from './colemak';
+  import { DVORAK } from './dvorak';
+  import { ES_ISO } from './es-iso';
+  import { FR_AZERTY } from './fr-azerty';
+  import type { KeyboardLayout, LayoutId, LayoutKey, Platform } from './types';
+  import { US_QWERTY } from './us-qwerty';
+
+  export { charAt, findDeadKey, findKey, findKeyLevel, isDeadLevel } from './ansi';
+
+  export const LAYOUTS: readonly KeyboardLayout[] = [US_QWERTY, DVORAK, COLEMAK, FR_AZERTY, ES_ISO];
+
+  export const LAYOUT_IDS: readonly LayoutI
+  … (1977 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 80,140p src/ui/typeCase.ts; grep -rn "row-\|data-row\|indent" src/ui/typeCase.ts src/ui/*.css | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 160,215p src/ui/dialog.css; sed -n 450,465p src/ui/dialog.css
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/core/keySelection.ts'
+  s=open(p).read()
+  old=s[s.index("/** Characters in a region, in keyboard order. */"):s.index("export interface Preset")]
+  new='''/**
+   * A letter key: a letter plain and its capital on Shift (`a`/`A`, `ñ`/`Ñ`).
+   * AZERTY's `é` key isn't one (Shift gives `2`).
+   */
+  function isLetterKey(key: LayoutKey): boolean {
+    return isLetter(key.base) && key.shift !== undefined && key.shift !== key.base && key.shift === key.base.toUpperCase();
+  }
+
+  /** A character a key types without a dead key (dead keys are learned with accents). */
+  function typed(key: LayoutKey, l
+  … (2383 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/render/handsArt.ts'
+  s=open(p).read()
+  s=s.replace("""/** How far each row is shifted right, in key pitches (like a real keyboard's stagger). */
+  const ROW_OFFSET = [0, 0.5, 0.75, 1.25];""","""/** How far each row is shifted right, in key pitches (like a real keyboard's stagger). */
+  const ANSI_ROW_OFFSET = [0, 0.5, 0.75, 1.25];""")
+  s=s.replace("""  const redPen = options.redPen ?? true;""","""  const redPen = options.redPen ?? true;
+    const ROW_OFFSET: readonly number[] = layout.physical === 'iso' ? ISO_ROW_OFFSETS : ANSI_ROW_OFFSET;""")
+  s=s.replace("""import { FINGERS, NA
+  … (609 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  ls src/input; grep -n "environment\|jsdom\|happy" vite.config.ts vitest.config.* package.json 2>/dev/null; grep -n "a11y\." src/i18n/en.ts | head -5
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  cat src/input/keyboard.test.ts | head -60; grep -n "test" vite.config.ts package.json | head
+  ```
+- **Wrote** `src/input/keyboard.ts`
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/input/keyboard.ts'
+  s=open(p).read()
+  s=s.replace("""  if (active && active !== document.body && active !== document.documentElement && !(active instanceof HTMLCanvasElement)) return;""","""  // Leave the focus where the player put it (a button, a text box), unless that's hidden or gone.
+    const elsewhere = active instanceof HTMLElement && active !== document.body && !(active instanceof HTMLCanvasElement);
+    if (elsewhere && active.isConnected && active.offsetParent !== null) return;""")
+  open(p,'w').write(s)
+  PY
+  ls src/*.test.ts; grep -n "DEFAULT_SETTINGS" -r src --include
+  … (83 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Status: the new input listener (hidden typing field, dead keys, AltGr/Option) is written. Now I'm adding the Mac/PC setting and wiring the power keys to the physical key.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/settings.ts'
+  s=open(p).read()
+  s=s.replace("""import { THEMES, type ThemeId } from './render/theme';""","""import type { Platform } from './content/layouts/types';
+  import { detectPlatform } from './input/keyboard';
+  import { THEMES, type ThemeId } from './render/theme';""")
+  s=s.replace("""export const TEXT_SIZES""","""/** Which kind of computer: Macs have Option instead of AltGr and move a few keys (content/layouts). */
+  export const KEYBOARD_KINDS: readonly Platform[] = ['mac', 'pc'];
+
+  export const TEXT_SIZES""")
+  s=s.replace("""  holidayLooks: HolidayLooks;
+    /** Sound"""
+  … (1283 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/ui/settingsDialog.ts'
+  s=open(p).read()
+  s=s.replace("import { HOLIDAY_LOOKS, MOTION_SETTINGS,","import { HOLIDAY_LOOKS, KEYBOARD_KINDS, MOTION_SETTINGS,")
+  open(p,'w').write(s)
+  p='src/i18n/en.ts'
+  s=open(p).read()
+  s=s.replace("""  'layout.colemak': 'Colemak',
+  ""","""  'layout.colemak': 'Colemak',
+    'layout.fr-azerty': 'French AZERTY',
+    'layout.es-iso': 'Spanish (Spain)',
+    'settings.keyboardKind': 'Computer',
+    'settings.keyboardKind.mac': 'Mac',
+    'settings.keyboardKind.pc': 'Windows or Chromebook',
+    'settings.keyboardKind.help': 'A few keys sit in different places on a
+  … (223 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "layoutById(\|const applyLayout\|playerLayout\|currentLayout" src/main.ts | head -20; grep -rn "=== US_QWERTY\|=== DVORAK\|layout ===\|=== layout" src --include='*.ts' | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "nib\b\|Nib\|nibX\|scribe" src/render/renderer.ts | head -20; grep -n "missShot\|isPrintable\|\[...key\]" src/render/renderer.ts | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 280,300p src/render/renderer.ts; sed -n 340,360p src/render/renderer.ts; grep -n "^  return {\|^    update(\|^    render(\|^    rebuild\|  return {$" src/render/renderer.ts | head; grep -n "export interface Renderer\|export function createRenderer" -A3 src/render/renderer.ts | head -20; grep -n "new Text(" src/render/renderer.ts | head -5; grep -n "TextStyle\|fontFamily" src/render/renderer.ts | head -5
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "nib\.\(position\|x\|y\|rotation\|visible\)" src/render/renderer.ts | head; grep -n "^export interface World" -A5 src/core/world.ts; grep -n "eraserGraceMs: 0\|eraserGraceMs:" src/core/world.ts | head -3
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Status: the settings and translations are in. Now I'm adding the waiting-accent mark beside the nib and wiring everything into `main.ts`.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "    sync(world" -A12 src/render/renderer.ts | head -30; sed -n 270,280p src/core/world.ts; sed -n 440,447p src/core/world.ts; sed -n 360,372p src/render/renderer.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "scene.addChild" src/render/renderer.ts | head -3; grep -n "TARGET_FONT\|const .*FONT =" src/render/*.ts | head -5
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/core/world.ts'
+  s=open(p).read()
+  s=s.replace("""  /** Time left after the Eraser was used in which wrong keys are quietly ignored (ms). */
+    eraserGraceMs: number;
+  ""","""  /** Time left after the Eraser was used in which wrong keys are quietly ignored (ms). */
+    eraserGraceMs: number;
+    /** A dead key's accent waiting for its letter (`^` before `e`), shown by the Nib; null when none. */
+    pendingAccent: string | null;
+  """,1)
+  s=s.replace("""    eraserGraceMs: 0,
+      smudges: [],""","""    eraserGraceMs: 0,
+      pendingAccent: null,
+      smudges: [],""",1)
+  open(p,'w').write
+  … (1939 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "  ink:\|  ink " src/render/theme.ts | head -3; sed -i '' "47s/DISPLAY_PADDING, glyph/DISPLAY_PADDING, TEXT_FONT, glyph/" src/render/renderer.ts && sed -n 47p src/render/renderer.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/content/layouts/ansi.ts'
+  s=open(p).read()
+  s+='''
+  /**
+   * The accent a dead key holds (`^`), from the physical key and modifiers
+   * pressed. Null if this layout has no dead key there (the player's computer
+   * may use another layout): the game then just waits for the letter.
+   */
+  export function deadKeyMark(layout: KeyboardLayout, code: string, shift: boolean, altGr: boolean): string | null {
+    const key = layout.rows.flat().find((k) => k.code === code);
+    if (!key) return null;
+    const level: KeyLevel = altGr ? (shift ? 'altGrShift' : 'altGr') : shift ? 'shift' : 'base';
+   
+  … (3408 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/main.ts'
+  s=open(p).read()
+  s=s.replace(""" && !game.keys.includes(char) && !(digit && game.keys.includes(digit) && char === digit)) {""",""" && !game.keys.includes(char)) {""")
+  s=s.replace("import { isLayoutId, layoutById } from './content/layouts';","import { deadKeyMark, isLayoutId, layoutById, setLayoutPlatform } from './content/layouts';")
+  s=s.replace("  typeChar,\n","  pressDeadKey,\n  typeChar,\n",1)
+  open(p,'w').write(s)
+  PY
+  sed -n 20,32p src/main.ts; npx tsc --noEmit -p . 2>&1 | head -30
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Status: everything typechecks. Now fixing the menu's 1–4 difficulty keys for AZERTY, then the tests.
+
+<details><summary>5 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/ui/menu.ts'
+  s=open(p).read()
+  old="""      const match = this.panel.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(event.key.toLowerCase())}"]`);"""
+  new="""      // Number keys by position too, so 1–4 work without Shift on AZERTY.
+        const digit = /^(?:Digit|Numpad)(\\d)$/.exec(event.code)?.[1];
+        const find = (key: string) => this.panel.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(key)}"]`);
+        const match = find(event.key.toLowerCase()) ?? (digit ? find(digit) : null);"""
+  assert old in s
+  s=s.replace(old,new)
+  open(p,'w').write(s)
+  PY
+  npm
+  … (25 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/settings.ts'
+  s=open(p).read()
+  s=s.replace("  keyboardKind: 'pc',\n","  keyboardKind: detectPlatform(),\n")
+  s=s.replace("keyboardKind: pick(s.keyboardKind, KEYBOARD_KINDS, detectPlatform()),","keyboardKind: pick(s.keyboardKind, KEYBOARD_KINDS, DEFAULT_SETTINGS.keyboardKind),")
+  s=s.replace("return { ...DEFAULT_SETTINGS, keyboardKind: detectPlatform() };","return { ...DEFAULT_SETTINGS };")
+  open(p,'w').write(s)
+  PY
+  npm run test 2>&1 | grep -E "FAIL|Error" | sort | uniq | head -20
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 -c "
+  import re
+  for f in ['src/content/layouts/es-iso.ts','src/content/layouts/fr-azerty.ts']:
+    s=open(f).read()
+    for m in re.findall(r\"(?:base|shift): '((?:[^'\\\\]|\\\\.)*)'\",s): print(f[-12:],len(m),[hex(ord(c)) for c in m if ord(c)>127])
+  "
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/content/layouts/es-iso.ts'
+  s=open(p).read()
+  s=s.replace("shift: 'ASDFGHJKLѨÇ'","shift: 'ASDFGHJKLÑ¨Ç'")
+  open(p,'w').write(s)
+  PY
+  grep -n "ASDFGHJKL" src/content/layouts/es-iso.ts | od -c | sed -n 1,4p >/dev/null; npm run test 2>&1 | grep -E "FAIL|✗|×|AssertionError|Error:" | head -30
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "ANSI layouts" -A25 src/core/keySelection.test.ts | head -40; grep -n "^import\|^describe" src/core/keySelection.test.ts
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Now updating the tests: the ANSI-only checks get limited to ANSI layouts, and I'm adding tests for the ISO layouts, regions, dead keys and the input classifier.
+
+<details><summary>3 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/core/keySelection.test.ts'
+  s=open(p).read()
+  s=s.replace("""describe('ANSI layouts', () => {
+    for (const each of LAYOUTS) {""","""describe('ANSI layouts', () => {
+    for (const each of LAYOUTS.filter((l) => l.physical === 'ansi')) {""")
+  s=s.replace("import { COLEMAK, DVORAK, LAYOUTS, US_QWERTY } from '../content/layouts';","import { COLEMAK, DVORAK, ES_ISO, FR_AZERTY, LAYOUTS, US_QWERTY } from '../content/layouts';")
+  s=s.replace("""describe('regions', () => {""","""describe('ISO layouts', () => {
+    it('keep AZERTY digits out of the capitals, and its accent keys out of th
+  … (10161 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/input/keyboard.ts'
+  s=open(p).read()
+  s=s.replace("""  if (isPrintable(event.key)) return { type: 'char', char: event.key.normalize('NFC'), code: event.code };""","""  const char = event.key.normalize('NFC');
+    if (isPrintable(char)) return { type: 'char', char, code: event.code };""")
+  open(p,'w').write(s)
+  p='src/input/keyboard.test.ts'
+  s=open(p).read()
+  s=s.replace("expect(detectPlatform(undefined)).toBe('pc');","expect(detectPlatform({})).toBe('pc');")
+  open(p,'w').write(s)
+  PY
+  npm run check 2>&1 | tail -25
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/content/layouts/index.ts'
+  s=open(p).read()
+  s=s.replace("""    const { altGr: _altGr, altGrShift: _altGrShift, dead, ...rest } = key;
+      const plainDead""","""    const { dead, ...rest } = key;
+      delete rest.altGr;
+      delete rest.altGrShift;
+      const plainDead""")
+  open(p,'w').write(s)
+  PY
+  npm run check 2>&1 | tail -6
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Check passes. Now the build and a browser check.
+
+<details><summary>6 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  npm run build 2>&1 | tail -5; cat .claude/launch.json 2>/dev/null
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  import json
+  p='.claude/launch.json'
+  d=json.load(open(p))
+  d['configurations'].append({"name":"inky-keys-m32","runtimeExecutable":"npm","runtimeArgs":["run","dev","--","--port","5193","--strictPort"],"port":5193})
+  open(p,'w').write(json.dumps(d,indent=2)+"\n")
+  PY
+  git status --short .claude
+  ```
+- **preview_start** `{"name":"inky-keys-m32"}`
+- **computer** `{"action":"screenshot","scale":0.5}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"s","action_summary":"Opens Settings with its shortcut"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"find","input":{"query":"French AZERTY"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_120","action_summary":"Picks the French AZERTY layout"}},{"name":"computer","input":{"action":"scroll_to","ref":"ref_120"}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+
+</details>
+
+### 🤖 Claude
+
+Status: in the browser, the Settings screen shows the new "Computer" choice (it correctly detected Mac) and the AZERTY and Spanish layouts. Next I'm checking the Type Case and a game page on AZERTY.
+
+<details><summary>6 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Escape","action_summary":"Closes Settings"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"find","input":{"query":"Free Write"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_156","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"screenshot","scale":0.6}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","coordinate":[410,433],"action_summary":"Opens the Type Case to change keys"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"computer","input":{"action":"screenshot"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Escape","action_summary":"Closes the Type Case"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"find","input":{"query":"Start writing"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_202","action_summary":"Starts a Free Write page"}},{"name":"computer","input":{"action":"wait","duration":3}},{"name":"computer","input":{"action":"screenshot","scale":0.6}},{"name":"javascript_tool","input":{"action":"javascri
+… (105 more characters)`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"Return","action_summary":"Dismisses the tips card"}},{"name":"computer","input":{"action":"wait","duration":2}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"window.dispatchEvent(new KeyboardEvent('keydown', {key:
+… (194 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+Status: a test dead-key press shows the waiting `^` beside the nib, and the typing field holds the focus. Next I'm checking that composed text gets typed and clears the mark.
+
+<details><summary>1 tool call</summary>
+
+- **browser_batch** `{"actions":[{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const f = document.querySelector('.typing-field'); f.dispatchEvent(new CompositionEvent('compositionstart', {data: ''})); f.dispatchEvent(new CompositionEvent('compositionend', {data: 'ê'})); await new Promise(r => set
+… (290 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+The composed `ê` arrived and cleared the mark, the spacebar popped the drip, and there were no console errors. Now the release entry and the milestone docs.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "release.2.27.0" src/i18n/en.ts; sed -n 1,40p docs/RELEASING.md | head -40; sed -n '/^## Keeping this up to date/,$p' docs/progression/README.md
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "dvorak" scripts/snapshots.ts | head; grep -n "^### M30" -A14 docs/progression/README.md
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 250,270p scripts/snapshots.ts; grep -n "M31\|Fair Copy" docs/progression/README.md | head -5
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='scripts/snapshots.ts'
+  s=open(p).read()
+  old="""  { click: 'Settings' }, { click: 'US QWERTY' }, { key: 'Escape' },
+    { click: 'How to play' }"""
+  new="""  // ISO keyboards (M32): AZERTY, with digits on Shift and the extra key left of W, and Spanish with ñ.
+    { click: 'Settings' }, { click: 'French AZERTY' }, { key: 'Escape' },
+    { click: FREE_WRITE }, { click: 'Change keys' }, { shot: 'type-case-azerty' }, { key: 'Escape' }, { key: 'Escape' },
+    { click: 'Settings' }, { click: 'Spanish (Spain)' }, { key: 'Escape' },
+    { click: FREE_WRITE }, { click: 'Change keys' }, { shot: '
+  … (1204 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Check passes with 500 tests. Now taking the milestone snapshots.
+
+<details><summary>7 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  (npm run snapshots -- m32 && npm run snapshots -- latest) > <temp file> 2>&1; echo exit $?; tail -8 <temp file>
+  ```
+- **Read** `docs/progression/m32/type-case-spanish.png`
+- **Shell:** Ran a command
+
+  ```bash
+  cd docs/progression/m32 && ls | grep -v -E '^type-case-(azerty|spanish)\.png$' | xargs rm && ls && cd .. && git status --short . | head; git ls-files latest | head -3
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && python3 - <<'PY'
+  p='docs/progression/README.md'
+  s=open(p).read()
+  sec='''### M32: Keys beyond A–Z (2.28.0)
+
+  | French AZERTY | Spanish (Spain) |
+  |---|---|
+  | <img src="m32/type-case-azerty.png" width="420" alt="The Type Case on French AZERTY: digits on the Shift half of the number row above & é \\" ' ( and the others, A Z E R T Y on the top row, Q S D F G H J K L M ù on the home row, and an extra < > key left of W on the bottom row"> | <img src="m32/type-case-spanish.png" width="420" alt="The Type Case on Spanish (Spain): º and ¡ ¿ on the number row, ñ 
+  … (1949 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && python3 - <<'PY'
+  p='docs/REQUIREMENTS.md'
+  s=open(p).read()
+  old="Text is NFC-normalized and matched by code point."
+  assert old in s
+  s=s.replace(old,"Typed text is NFC-normalized, so every French and Spanish letter is a single character.")
+  old="**AZERTY (France)** and **Spanish (Spain) ISO** layouts, each with a 27-chapter Apprentice course."
+  assert old in s
+  s=s.replace(old,"**AZERTY (France)** and **Spanish (Spain) ISO** layouts, each with a 27-chapter Apprentice course (AZERTY teaches the comma where QWERTY teaches the semicolon; Spanish teaches ñ th
+  … (195 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  npm run check 2>&1 | grep -E "Tests |error" ; npm run build 2>&1 | grep -iE "error|built in" | head -3
+  ```
+- **preview_stop** `{"serverId":"c5019c53-91c7-4207-8ae5-963f6e1e8fc0"}`
+
+</details>
+
+### 🤖 Claude
+
+Milestone 32 is built on `feat/m32-keys-beyond-az`, and nothing is committed. `npm run check` passes (500 tests) and so does `npm run build`. I also checked it in the browser. The one thing still untested is typing on a real French or Spanish keyboard, because my browser checks used simulated key presses.
+
+**What's in it (version 2.28.0):**
+- **New keyboards:** French AZERTY and Spanish (Spain), in [fr-azerty.ts](src/content/layouts/fr-azerty.ts), [es-iso.ts](src/content/layouts/es-iso.ts) and a new [iso.ts](src/content/layouts/iso.ts) for the European key shape with the extra key left of Z. Each has a 27-chapter Apprentice course. AZERTY teaches the comma where QWERTY teaches the semicolon, and Spanish teaches `ñ` there. A Mac version of AZERTY moves a few symbols.
+- **Accent keys:** typed characters now go through a hidden text field ([keyboard.ts](src/input/keyboard.ts)), so `^` then `e` gives `ê`, and AltGr and Mac Option characters arrive. Pressing an accent key is never a mistake, and its accent waits beside the nib until the letter comes.
+- **New "Computer" setting:** Mac or Windows/Chromebook, detected the first time. It decides which version of a layout is shown, and whether Alt types characters (Mac) or is left for shortcuts (Windows).
+- **Power keys:** 1/2/3, and 1–4 for difficulty, now go by the physical key, so they work without Shift on AZERTY.
+- **Key groups fixed:** Capitals no longer picks up AZERTY's digits, and Digits and Number-row symbols now follow the layout.
+
+**In the browser:** Settings showed "Computer: Mac" and the new layouts. The Type Case showed the Mac AZERTY keys, and the Spanish layout with `ñ`. A test accent-key press showed `^` by the nib, a composed `ê` cleared it, and the spacebar popped a drip. There were no console errors.
+
+**Two changes from the plan:**
+- I didn't rewrite target matching to count by code point. I normalize typed text instead, so every French and Spanish letter is already a single character.
+- The AltGr symbols aren't selectable in the Type Case yet. They type fine, and the data is ready for the accent help in M33.
+
+**Docs:** the release notes, the snapshot tour (two new Type Case shots), the [progression page](docs/progression/README.md) section, and §13d of the requirements are updated. I added a port-5193 dev-server entry to `.claude/launch.json` because another session was using the usual port. Leave it out of the commit if you'd rather not keep it.
+
+**What I'd like you to test:** add the French and Spanish input sources in System Settings → Keyboard → Text Input. Then try `^` + `e` and Option keys in Chrome, Safari and Firefox. Windows (AltGr, US-International) still needs a Windows machine or a tester.
+
+## 🧑 Prompt
+
+> I'll test first
+
+### 🤖 Claude
+
+Sounds good. Start the dev server from the branch:
+
+```bash
+npm run dev -- --port 5193 --strictPort
+```
+
+Then open http://localhost:5193 in Chrome, Safari and Firefox in turn.
+
+**Set up your Mac:** in System Settings → Keyboard → Text Input → Edit, add **French** and **Spanish – ISO**. You can then switch between them from the menu bar.
+
+**What to try in each browser:**
+
+1. **French input source.** In the game's Settings, pick **French AZERTY**.
+   - Pick the **All symbols** preset in the Type Case, or add `^` and `¨` there by hand, and start a page. Press the `^` key (right of P). The `^` should appear beside the nib and not count as a mistake. Then press space, and it should type `^`.
+   - Press `^` then `e`. That should arrive as `ê`. It counts as a miss for now, because no targets have accents until M33, but it should count once, not twice.
+   - Press the `2` key without Shift while playing (later chapters, once the Highlighter power is unlocked). It should fire the power rather than type `é`.
+2. **Spanish – ISO input source.** Pick **Spanish (Spain)**. Check that `ñ` (right of L) types, and that `´` then `a` gives `á`.
+3. **Your usual US input source,** layout back to US QWERTY. Press Option+e then e (`é`) and Option+c (`ç`). Cmd shortcuts like Cmd+R should still reload the page.
+
+**Things that would be bugs:**
+- an accent that never arrives
+- a character counted twice
+- the `^` mark staying stuck beside the nib
+- a key that stops working after you click on the page
+
+Tell me what you see and which browser you saw it in. I'll fix anything that's off, then commit.
+
+## 🧑 Prompt
+
+> before I continue testing, when I click everything in the type case for french, it leaves some keys out. Can you double check the type case presets for french and spanish and then reprint this testing plan when you're done
+
+<details><summary>9 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  cat > <temp file> <<'EOF'
+  import { it } from 'vitest';
+  import { ES_ISO, FR_AZERTY, forPlatform } from '../../../../../../Users/[removed]/projects/inky-keys/src/content/layouts';
+  import { builtInPresets } from '../../../../../../Users/[removed]/projects/inky-keys/src/core/keySelection';
+  it('missing', () => {
+    for (const l of [FR_AZERTY, forPlatform(FR_AZERTY, 'mac'), ES_ISO]) {
+      const shown = l.rows.flat().flatMap((k) => [k.base, k.shift].filter(Boolean) as string[]
+  … (298 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -e "s#../../../../../../Users/[removed]/projects/inky-keys/src/#../#" <temp file> > src/core/zz-missing.test.ts && npx vitest run src/core/zz-missing.test.ts 2>&1 | grep -E "^(fr|es)-"; rm src/core/zz-missing.test.ts; sed -n 140,160p src/ui/typeCase.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -e "s#../../../../../../Users/[removed]/projects/inky-keys/src/#../#" <temp file> > src/core/zz-missing.test.ts && npx vitest run src/core/zz-missing.test.ts 2>&1 | grep -iE "azerty|iso" ; rm src/core/zz-missing.test.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  sed -e "s#../../../../../../Users/[removed]/projects/inky-keys/src/#../#" <temp file> > src/core/zz-missing.test.ts && npx vitest run src/core/zz-missing.test.ts --silent=false --reporter=verbose 2>&1 | tail -15 ; rm src/core/zz-missing.test.ts
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/core/keySelection.ts'
+  s=open(p).read()
+  s=s.replace("""export type RegionId = 'lowercase' | 'uppercase' | 'digits' | 'symbols' | 'space';
+
+  export const REGIONS: readonly RegionId[] = ['lowercase', 'uppercase', 'digits', 'symbols', 'space'];""","""export type RegionId = 'lowercase' | 'uppercase' | 'accents' | 'digits' | 'symbols' | 'space';
+
+  /** Every group a layout can have; `accents` is empty on layouts without accent keys (regionsFor leaves it out). */
+  export const REGIONS: readonly RegionId[] = ['lowercase', 'uppercase', 'accents', 'digits', 'symbols', 'space'];
+
+  /** 
+  … (2531 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/core/keySelection.ts'
+  s=open(p).read()
+  s=s.replace("""  const chars = keyChars(layout).filter((c) => c.region === region);
+    // Digits read in key order whichever level they're on (Shift on AZERTY).
+    if (region === 'digits') return chars.map((c) => c.ch);
+    return [...chars.filter((c) => !c.shifted), ...chars.filter((c) => c.shifted)].map((c) => c.ch);""","""  return keyChars(layout)
+      .filter((c) => c.region === region)
+      .map((c) => c.ch);""")
+  s=s.replace("const unique = (chars: string[]) => [...new Set(chars)];\n\n","")
+  s=s.replace("{ ch: string; region: RegionI
+  … (1624 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  grep -n "empty region" -A8 src/core/keySelection.test.ts; npm run test 2>&1 | grep -E "×|AssertionError|Tests " | head
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/core/keySelection.test.ts'
+  s=open(p).read()
+  s=s.replace("""  it('never returns an empty region', () => {
+      for (const id of REGIONS) expect(region(id).length).toBeGreaterThan(0);
+    });""","""  it('never returns an empty region, and US QWERTY has no accents group', () => {
+      expect(regionsFor(layout)).toEqual(REGIONS.filter((id) => id !== 'accents'));
+      for (const id of regionsFor(layout)) expect(region(id).length).toBeGreaterThan(0);
+    });""")
+  s=s.replace("""    for (const ch of 'éèçàù^¨') expect(REGIONS.flatMap((id) => regionChars(FR_AZERTY, id))).not.toContain(c
+  … (1418 more characters)
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  python3 - <<'PY'
+  p='src/core/keySelection.test.ts'
+  s=open(p).read()
+  s=s.replace("  regionChars,\n","  regionChars,\n  regionsFor,\n",1)
+  s=s.replace("""  for (const each of [...LAYOUTS, forPlatform(FR_AZERTY, 'mac')]) {
+      it(`${each.id}${each === FR_AZERTY ? '' : ''} puts every key in one group, and Everything has them all`, () => {""","""  for (const [name, each] of [...LAYOUTS.map((l) => [l.id, l] as const), ['fr-azerty (Mac)', forPlatform(FR_AZERTY, 'mac')] as const]) {
+      it(`${name} puts every key in one group, and Everything has them all`, () => {""")
+  open(p,'w').write(s)
+  PY
+  npm run ch
+  … (57 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+All 507 tests pass. Now checking it in the browser.
+
+<details><summary>6 tool calls</summary>
+
+- **preview_start** `{"name":"inky-keys-m32"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":2}},{"name":"find","input":{"query":"Free Write","tabId":"tab-1"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"key","text":"s","action_summary":"Opens Settings"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"find","input":{"query":"French AZERTY"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_120","action_summary":"Picks the French AZERTY layout"}},{"name":"computer","input":{"action":"key","text":"Escape","action_summary":"Closes Settings"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"comput
+… (196 more characters)`
+- **find** `{"query":"Free Write"}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_156","action_summary":"Opens Free Write"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"find","input":{"query":"Change keys"}}]}`
+
+</details>
+
+### 🤖 Claude
+
+Status: the fix passes its tests. I'm in the browser now, opening the AZERTY Type Case to check that "Everything" selects every key.
+
+<details><summary>4 tool calls</summary>
+
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_199","action_summary":"Opens the Type Case"}},{"name":"computer","input":{"action":"wait","duration":1}},{"name":"find","input":{"query":"Everything"}}]}`
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"left_click","ref":"ref_219","action_summary":"Selects the Everything preset"}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"const all=[...document.querySelectorAll('.tc-char')]; ({total: all.length, off: all.filter(b=>b.getAt
+… (114 more characters)`
+- **Shell:** Ran a command
+
+  ```bash
+  sed -n 232,262p src/ui/typeCase.ts; grep -n "tc-chip\[" src/ui/dialog.css
+  ```
+- **browser_batch** `{"actions":[{"name":"computer","input":{"action":"wait","duration":1}},{"name":"javascript_tool","input":{"action":"javascript_exec","text":"[...document.querySelectorAll('.tc-chip')].map(b=>b.textContent+':'+b.getAttribute('aria-pressed')).join(' | ')"}},{"name":"computer","input":{"action":"zoom",
+… (42 more characters)`
+
+</details>
+
+### 🤖 Claude
+
+On AZERTY, Everything now selects all 97 keys, with the new Accents group alongside the others. Retaking the milestone's Type Case snapshots so they show the new group.
+
+<details><summary>4 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  (npm run snapshots -- m32 && npm run snapshots -- latest) > <temp file> 2>&1; echo exit $?; cd docs/progression/m32 && ls | grep -v -E '^type-case-(azerty|spanish)\.png$' | xargs rm; ls
+  ```
+- **preview_stop** `{"serverId":"db66fe6f-dab6-4d7f-a016-42532caef0af"}`
+- **Read** `docs/progression/m32/type-case-azerty.png`
+- **Shell:** Ran a command
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && python3 - <<'PY'
+  p='docs/progression/README.md'
+  s=open(p).read()
+  old="- Key groups are built from the layout: Capitals only takes real letter keys (not AZERTY's digits), Digits finds digits on Shift, and Number-row symbols follow the layout."
+  assert old in s
+  s=s.replace(old,"- Key groups are built from the layout, and every key is in exactly one: Capitals only takes real letter keys (not AZERTY's digits), Digits finds digits on Shift, a new **Accents** group (on layouts that have them) holds AZERTY's é è ç à ù and the dead accent keys (^ ¨, and Spani
+  … (191 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Fixed. On both layouts, "Everything" now selects every key. In the browser it selected all 97 AZERTY keys, and a new test checks every layout, the Mac version of AZERTY included.
+
+**What it was leaving out:**
+- **French:** `é è ç à ù`, the `^ ¨` accent keys, and `µ`
+- **Spanish:** `º ª` and the `` ` ^ ´ ¨ `` accent keys
+
+None of these fit a key group, and "Everything" was built from the groups.
+
+**The fix:** every key now belongs to exactly one group.
+- A new **Accents** group holds AZERTY's `é è ç à ù` and the accent keys. It only appears on layouts that have them, so US QWERTY looks the same as before.
+- `µ`, `º`, `ª` and `²` go in **Symbols**.
+- "All letters" still means a–z and their capitals (plus `ñ` and `ç` on Spanish). Accented letters stay in their own group until M33 teaches them.
+
+All 507 tests pass, the snapshots are retaken, and nothing is committed yet.
+
+## Testing plan
+
+Start the dev server from the branch:
+
+```bash
+npm run dev -- --port 5193 --strictPort
+```
+
+Then open http://localhost:5193 in Chrome, Safari and Firefox in turn.
+
+**Set up your Mac:** in System Settings → Keyboard → Text Input → Edit, add **French** and **Spanish – ISO**. You can then switch between them from the menu bar.
+
+**What to try in each browser:**
+
+1. **French input source.** In the game's Settings, pick **French AZERTY**.
+   - In the Type Case, check that **Everything** lights every key, and that **Accents** holds `é è ç à ù ^ ¨`.
+   - Pick the **Accents** group and start a page.
+     - Press the `^` key (right of P). The `^` should appear beside the nib and not count as a mistake. Then press space, and it should type `^`.
+     - Press `é` (the 2 key, no Shift). It should type `é` and not fire a power, because `é` is one of the keys in play.
+   - Press `^` then `e`. That should arrive as `ê`. It counts as a miss for now, because no targets have accents until M33, but it should count once, not twice.
+   - On a page without accents, from a chapter where the Highlighter power is unlocked, press the 2 key without Shift. It should fire the power.
+2. **Spanish – ISO input source.** Pick **Spanish (Spain)**.
+   - Check that `ñ` (right of L) types.
+   - Check that `´` then `a` gives `á`.
+   - Check that Everything includes `º ª ¡ ¿`.
+3. **Your usual US input source,** layout back to US QWERTY.
+   - Press Option+e then e (`é`) and Option+c (`ç`).
+   - Cmd shortcuts like Cmd+R should still reload the page.
+   - The Type Case shouldn't have an Accents group.
+
+**Things that would be bugs:**
+- an accent that never arrives
+- a character counted twice
+- the `^` mark staying stuck beside the nib
+- a key that stops working after you click on the page
+- a key that "Everything" doesn't light
+
+Tell me what you see and which browser you saw it in. I'll fix anything that's off, then commit.
+
+## 🧑 Prompt
+
+> <bash-input>npm run dev -- --port 5193 --strictPort</bash-input><bash-stdout>&gt; inky-keys@2.28.0 dev
+> &gt; vite --port 5193 --strictPort
+>
+> 1:22:10 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+>
+>   VITE v8.3.8  ready in 141 ms
+>
+>   ➜  Local:   http://localhost:5193/
+>   ➜  Network: use --host to expose
+>   ➜  press h + enter to show help
+> 1:25:06 PM [vite] (client) page reload src/core/keySelection.ts
+> 1:25:19 PM [vite] (client) page reload src/core/keySelection.ts (x2)
+> 1:25:19 PM [vite] (client) page reload src/ui/typeCase.ts
+> 1:25:19 PM [vite] (client) page reload src/i18n/en.ts
+> [This command was still running in the terminal pane (tab 0) when its output was captured; it keeps running there, where the user can see and interact with it. Use read_terminal with tab_id "0" to check on it.]</bash-stdout><bash-stderr></bash-stderr>
+
+### 🤖 Claude
+
+Your dev server is running at http://localhost:5193, in [the terminal tab](#terminal/0). It has already reloaded with the Type Case fix, so the plan above applies as written. Refresh any tab you opened before the reload. Send me what you find when you've been through it.
+
+## 🧑 Prompt
+
+> when will the e with caret accent mark ever show up. It doesn't show up if I select just the caret symbol and e
+
+### 🤖 Claude
+
+It won't show up yet. `ê` isn't a key of its own: you make it by pressing two keys, `^` and then `e`. The game builds targets only from the keys you select, so selecting `^` and `e` gives you separate `^` creatures and `e` creatures, never an `ê`. Nothing in milestone 32 asks for an `ê`; this milestone only makes sure the game can receive one when you type it.
+
+`ê` arrives in milestone 33 in three ways:
+- **French words.** A French word list puts `ê` in words like *fête* and *tête*, once you've selected `^` and `e`.
+- **Accent chapters.** The circumflex chapter teaches `â ê î ô û`, showing "press ^, then e" on the keyboard picture.
+- **An Accents strip in the Type Case.** It lists letters made from two keys, like `ê`, `ë` and `á`, so you can select `ê` directly.
+
+If you want to test `ê` before that, I can bring the Accents strip forward into this milestone. You'd then be able to select `ê` and get `ê` creatures. It's a modest change, because the layouts already know what each accent key makes with each letter. Otherwise, for now you can only check that `^` then `e` arrives as one `ê` (counted as one miss, not two) and clears the mark beside the nib.
+
+## 🧑 Prompt
+
+> ok you can ship this milestone
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Ran a command
+
+  ```bash
+  git checkout .claude/launch.json && git status --short | grep '^??' 
+  ```
+- **Shell:** Ran a command
+
+  ```bash
+  git ls-files --others --exclude-standard docs/progression/latest | xargs rm && npm run transcript 2>&1 | grep "french-and-spanish" ; git status --short docs/transcripts
   ```
 
 </details>

@@ -4,7 +4,7 @@ import { t, type MessageKey } from '../i18n';
 import { LAYOUT_IDS } from '../content/layouts';
 import type { LayoutId } from '../content/layouts/types';
 import { THEMES } from '../render/theme';
-import { HOLIDAY_LOOKS, MOTION_SETTINGS, PAGE_WRITING, SCREEN_EFFECTS, TEXT_SIZES, type Settings } from '../settings';
+import { HOLIDAY_LOOKS, KEYBOARD_KINDS, MOTION_SETTINGS, PAGE_WRITING, SCREEN_EFFECTS, TEXT_SIZES, type Settings } from '../settings';
 import { h, trapFocus } from './dom';
 
 export interface SettingsDialogOptions {
@@ -157,6 +157,14 @@ export function openSettings(host: HTMLElement, options: SettingsDialogOptions):
       settings.holidayLooks,
       (v) => t(`settings.holidayLooks.${v}` as MessageKey),
       (holidayLooks) => change({ holidayLooks }),
+    ),
+    radioGroup(
+      t('settings.keyboardKind'),
+      t('settings.keyboardKind.help'),
+      KEYBOARD_KINDS,
+      settings.keyboardKind,
+      (v) => t(`settings.keyboardKind.${v}` as MessageKey),
+      (keyboardKind) => change({ keyboardKind }),
     ),
     options.layout
       ? radioGroup(

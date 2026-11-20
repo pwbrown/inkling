@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COLEMAK, DVORAK, LAYOUTS, US_QWERTY } from '../content/layouts';
+import { COLEMAK, DVORAK, ES_ISO, FR_AZERTY, LAYOUTS, US_QWERTY, forPlatform } from '../content/layouts';
 import { DEFAULT_KEYS } from './config';
 import {
   REGIONS,
@@ -10,6 +10,7 @@ import {
   matchingPreset,
   orderedSelection,
   regionChars,
+  regionsFor,
   regionState,
   remapSelection,
   toggleRegion,
@@ -19,13 +20,51 @@ const layout = US_QWERTY;
 const region = (id: Parameters<typeof regionChars>[1]) => regionChars(layout, id);
 
 describe('ANSI layouts', () => {
-  for (const each of LAYOUTS) {
+  for (const each of LAYOUTS.filter((l) => l.physical === 'ansi')) {
     it(`${each.id} produces all 95 printable ASCII characters exactly once`, () => {
       const chars = [...layoutChars(each)];
       expect(chars).toHaveLength(95);
       for (let code = 32; code <= 126; code++) expect(chars).toContain(String.fromCharCode(code));
     });
   }
+});
+
+describe('ISO layouts', () => {
+  it('keep AZERTY digits out of the capitals, and its accent keys out of the letters', () => {
+    expect(regionChars(FR_AZERTY, 'uppercase')).toHaveLength(26);
+    expect(regionChars(FR_AZERTY, 'lowercase').join('')).toBe('azertyuiopqsdfghjklmwxcvbn');
+    expect(regionChars(FR_AZERTY, 'digits').join('')).toBe('1234567890');
+    expect(regionChars(FR_AZERTY, 'accents').join('')).toBe('éèçà^ù¨');
+    expect(regionChars(FR_AZERTY, 'symbols')).toEqual(expect.arrayContaining(['²', 'µ', '<', '>', '§']));
+  });
+
+  it('put Spanish accent keys in Accents and º ª in Symbols', () => {
+    expect(regionChars(ES_ISO, 'accents').join('')).toBe('`´^¨');
+    expect(regionChars(ES_ISO, 'symbols')).toEqual(expect.arrayContaining(['º', 'ª']));
+  });
+
+  for (const [name, each] of [...LAYOUTS.map((l) => [l.id, l] as const), ['fr-azerty (Mac)', forPlatform(FR_AZERTY, 'mac')] as const]) {
+    it(`${name} puts every key in one group, and Everything has them all`, () => {
+      const all = regionsFor(each).flatMap((id) => regionChars(each, id));
+      expect(new Set(all).size).toBe(all.length);
+      expect(new Set(all)).toEqual(layoutChars(each));
+      const everything = builtInPresets(each).find((p) => p.id === 'everything')!.chars;
+      expect(new Set(everything)).toEqual(layoutChars(each));
+    });
+  }
+
+  it('count ñ and ç as Spanish letters, and leave dead keys out', () => {
+    expect(regionChars(ES_ISO, 'lowercase')).toEqual(expect.arrayContaining(['ñ', 'ç']));
+    expect(regionChars(ES_ISO, 'uppercase')).toEqual(expect.arrayContaining(['Ñ', 'Ç']));
+    expect(regionChars(ES_ISO, 'symbols')).toEqual(expect.arrayContaining(['¡', '¿', '<', '>']));
+  });
+
+  it('build number-row symbol presets from the layout', () => {
+    const numberSymbols = (l: typeof US_QWERTY) => builtInPresets(l).find((p) => p.id === 'numberSymbols')!.chars;
+    expect(numberSymbols(US_QWERTY).join('')).toBe('!@#$%^&*() ');
+    expect(numberSymbols(FR_AZERTY).join('')).toBe('&"\'(-_ ');
+    expect(numberSymbols(ES_ISO).join('')).toBe('!"·$%&/()= ');
+  });
 });
 
 describe('regions', () => {
@@ -43,8 +82,9 @@ describe('regions', () => {
     expect(all).toHaveLength(layoutChars(layout).size);
   });
 
-  it('never returns an empty region', () => {
-    for (const id of REGIONS) expect(region(id).length).toBeGreaterThan(0);
+  it('never returns an empty region, and US QWERTY has no accents group', () => {
+    expect(regionsFor(layout)).toEqual(REGIONS.filter((id) => id !== 'accents'));
+    for (const id of regionsFor(layout)) expect(region(id).length).toBeGreaterThan(0);
   });
 });
 

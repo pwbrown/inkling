@@ -289,8 +289,17 @@ function editTarget(world: World): Target | undefined {
   return locked && isBufferKind(locked.kind) ? locked : undefined;
 }
 
+/**
+ * A dead key was pressed: its accent waits for the next key (which the
+ * browser combines it with). Nothing is typed yet, so it's never a mistake.
+ */
+export function pressDeadKey(world: World, mark: string | null): void {
+  world.pendingAccent = world.phase === 'playing' ? mark : null;
+}
+
 /** Handle one typed character. */
 export function typeChar(world: World, key: string): void {
+  world.pendingAccent = null;
   if (world.phase === 'ready') {
     // Number keys pick a difficulty on the new-notebook screen.
     const choice = DIFFICULTIES[Number(key) - 1];

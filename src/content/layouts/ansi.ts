@@ -3,11 +3,11 @@
  * standard touch-typing fingering. Layouts that use these keys (US QWERTY,
  * Dvorak, Colemak) only say which characters each key types.
  */
-import type { Finger, Hand, KeyboardLayout, LayoutId, LayoutKey } from './types';
+import { KEY_LEVELS, type Finger, type Hand, type KeyLevel, type KeyboardLayout, type LayoutId, type LayoutKey } from './types';
 
 const FINGERS: Record<string, Finger> = { p: 'pinky', r: 'ring', m: 'middle', i: 'index' };
 
-interface Position {
+export interface Position {
   code: string;
   hand: Hand;
   finger: Finger;
@@ -15,7 +15,7 @@ interface Position {
 }
 
 /** Physical keys per row: codes, hands (L/R) and fingers (p/r/m/i). */
-function positions(codes: string[], hands: string, fingers: string, home = ''): Position[] {
+export function positions(codes: string[], hands: string, fingers: string, home = ''): Position[] {
   return codes.map((code, i) => ({
     code,
     hand: hands[i] === 'L' ? 'left' : 'right',
@@ -24,7 +24,7 @@ function positions(codes: string[], hands: string, fingers: string, home = ''): 
   }));
 }
 
-const letterCodes = (letters: string) => [...letters].map((ch) => `Key${ch.toUpperCase()}`);
+export const letterCodes = (letters: string) => [...letters].map((ch) => `Key${ch.toUpperCase()}`);
 
 /** The four typing rows, named by the US QWERTY characters on them. */
 const ROWS: Position[][] = [
@@ -38,7 +38,7 @@ const ROWS: Position[][] = [
   positions([...letterCodes('zxcvbnm'), 'Comma', 'Period', 'Slash'], 'LLLLLRRRRR', 'prmiiiimrp'),
 ];
 
-const SPACE: LayoutKey = { code: 'Space', base: ' ', hand: 'both', finger: 'thumb', width: 6 };
+export const SPACE: LayoutKey = { code: 'Space', base: ' ', hand: 'both', finger: 'thumb', width: 6 };
 
 /** One row's characters: what each key types plain and with Shift. */
 export interface RowChars {
@@ -66,6 +66,8 @@ export function ansiLayout(id: LayoutId, rows: readonly RowChars[], lessons: Key
       [SPACE],
     ],
     lessons,
+    physical: 'ansi',
+    compose: {},
   };
 }
 
@@ -80,4 +82,48 @@ export function lessonPlan(first: string, home: string, rest: string): string[][
 /** The layout key that types `char` (plain or shifted), if any. */
 export function findKey(layout: KeyboardLayout, char: string): LayoutKey | undefined {
   return layout.rows.flat().find((k) => k.base === char || k.shift === char);
+}
+
+/** The character a key types at one level, if any. */
+export function charAt(key: LayoutKey, level: KeyLevel): string | undefined {
+  return key[level];
+}
+
+/** True if that level of the key is a dead key. */
+export function isDeadLevel(key: LayoutKey, level: KeyLevel): boolean {
+  return key.dead?.includes(level) ?? false;
+}
+
+/**
+ * Where `char` is typed directly: its key and the modifiers it needs. Dead
+ * keys don't count (they type nothing on their own). Plain and Shift come
+ * before AltGr, so a character on two keys gets the easier one.
+ */
+export function findKeyLevel(layout: KeyboardLayout, char: string): { key: LayoutKey; level: KeyLevel } | undefined {
+  const keys = layout.rows.flat();
+  for (const level of KEY_LEVELS) {
+    const key = keys.find((k) => k[level] === char && !isDeadLevel(k, level));
+    if (key) return { key, level };
+  }
+  return undefined;
+}
+
+/** The dead key at a level that types this accent mark, if the layout has one. */
+export function findDeadKey(layout: KeyboardLayout, mark: string): { key: LayoutKey; level: KeyLevel } | undefined {
+  for (const key of layout.rows.flat()) {
+    for (const level of key.dead ?? []) if (key[level] === mark) return { key, level };
+  }
+  return undefined;
+}
+
+/**
+ * The accent a dead key holds (`^`), from the physical key and modifiers
+ * pressed. Null if this layout has no dead key there (the player's computer
+ * may use another layout): the game then just waits for the letter.
+ */
+export function deadKeyMark(layout: KeyboardLayout, code: string, shift: boolean, altGr: boolean): string | null {
+  const key = layout.rows.flat().find((k) => k.code === code);
+  if (!key) return null;
+  const level: KeyLevel = altGr ? (shift ? 'altGrShift' : 'altGr') : shift ? 'shift' : 'base';
+  return isDeadLevel(key, level) ? (key[level] ?? null) : null;
 }

@@ -2,6 +2,8 @@
  * Player settings: comfort and accessibility options (REQUIREMENTS §10).
  * Small, so they live in localStorage (REQUIREMENTS §8) rather than the save.
  */
+import type { Platform } from './content/layouts/types';
+import { detectPlatform } from './input/keyboard';
 import { THEMES, type ThemeId } from './render/theme';
 
 export type TextSize = 'normal' | 'large' | 'larger';
@@ -19,6 +21,9 @@ export const PAGE_WRITING: readonly PageWriting[] = ['on', 'off'];
 export type HolidayLooks = 'on' | 'off';
 export const HOLIDAY_LOOKS: readonly HolidayLooks[] = ['on', 'off'];
 
+/** Which kind of computer: Macs have Option instead of AltGr and move a few keys (content/layouts). */
+export const KEYBOARD_KINDS: readonly Platform[] = ['mac', 'pc'];
+
 export const TEXT_SIZES: readonly TextSize[] = ['normal', 'large', 'larger'];
 export const MOTION_SETTINGS: readonly MotionSetting[] = ['system', 'reduced', 'full'];
 
@@ -32,6 +37,8 @@ export interface Settings {
   screenEffects: ScreenEffects;
   pageWriting: PageWriting;
   holidayLooks: HolidayLooks;
+  /** Mac or PC keys, for the keyboard picture and key help; detected the first time. */
+  keyboardKind: Platform;
   /** Sound effects volume, 0..1. */
   volume: number;
   muted: boolean;
@@ -44,6 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
   screenEffects: 'full',
   pageWriting: 'on',
   holidayLooks: 'on',
+  keyboardKind: detectPlatform(),
   volume: 0.6,
   muted: false,
 };
@@ -64,6 +72,7 @@ export function parseSettings(raw: unknown): Settings {
     screenEffects: pick(s.screenEffects, SCREEN_EFFECTS, DEFAULT_SETTINGS.screenEffects),
     pageWriting: pick(s.pageWriting, PAGE_WRITING, DEFAULT_SETTINGS.pageWriting),
     holidayLooks: pick(s.holidayLooks, HOLIDAY_LOOKS, DEFAULT_SETTINGS.holidayLooks),
+    keyboardKind: pick(s.keyboardKind, KEYBOARD_KINDS, DEFAULT_SETTINGS.keyboardKind),
     volume,
     muted: typeof s.muted === 'boolean' ? s.muted : DEFAULT_SETTINGS.muted,
   };

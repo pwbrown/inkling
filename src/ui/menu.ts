@@ -1308,7 +1308,10 @@ export class Menu {
     }
     // Shortcut letters (and 1–4 for difficulty).
     if ([...event.key].length === 1 && !event.repeat && performance.now() - this.shownAt >= GAME_CONFIG.menu.shortcutDelayMs) {
-      const match = this.panel.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(event.key.toLowerCase())}"]`);
+      // Number keys by position too, so 1–4 work without Shift on AZERTY.
+      const digit = /^(?:Digit|Numpad)(\d)$/.exec(event.code)?.[1];
+      const find = (key: string) => this.panel.querySelector<HTMLButtonElement>(`[data-key="${CSS.escape(key)}"]`);
+      const match = find(event.key.toLowerCase()) ?? (digit ? find(digit) : null);
       if (match) {
         event.preventDefault();
         match.click();

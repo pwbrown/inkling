@@ -420,15 +420,32 @@ Stickers arrive the moment they're earned, with a toast in the corner that doesn
 **Changed (from playtest feedback):**
 - Creatures no longer squash on each correct letter, which on long words made it look like a wrong key. They squash only when they're beaten, and a crimson or violet creature that loses a life shows a hurt face without shaking.
 
+### M32: Keys beyond A–Z (2.28.0)
+
+| French AZERTY | Spanish (Spain) |
+|---|---|
+| <img src="m32/type-case-azerty.png" width="420" alt="The Type Case on French AZERTY: digits on the Shift half of the number row above & é \" ' ( and the others, A Z E R T Y on the top row, Q S D F G H J K L M ù on the home row, and an extra < > key left of W on the bottom row"> | <img src="m32/type-case-spanish.png" width="420" alt="The Type Case on Spanish (Spain): º and ¡ ¿ on the number row, ñ and ç on the home row, the dead accent keys ` ^ and ´ ¨, and an extra < > key left of Z"> |
+| Digits on Shift, é è ç à on the number row, an extra key left of W. | ñ on the home row, ¡ ¿ right of 0, dead accent keys. |
+
+**New:**
+- **ISO keyboards:** French AZERTY and Spanish (Spain) layouts, with the extra key left of Z/W. Each has a 27-chapter Apprentice course: AZERTY teaches the comma where QWERTY teaches the semicolon, and Spanish teaches ñ there. The Mac variant of AZERTY moves a few symbols (@ # § ! - =).
+- **Dead keys and AltGr:** typed characters now come through a hidden typing field, so a dead key followed by a letter (`^` then `e` = `ê`), AltGr (Ctrl+Alt on Windows) and Mac Option characters all arrive. A dead key is never a mistake, and its accent waits beside the Nib until the letter comes.
+- **Computer setting:** Mac or Windows/Chromebook, detected the first time. It picks the layout variant and decides whether Alt types characters (Mac) or is left for shortcuts (PC).
+- The snapshot tour has `type-case-azerty` and `type-case-spanish` shots.
+
+**Changed:**
+- The 1, 2 and 3 power keys and the 1–4 difficulty keys go by the physical key, so they work without Shift on AZERTY. A number key that types one of the keys in play (like é on AZERTY's 2, if selected) types it instead.
+- Key groups are built from the layout, and every key is in exactly one: Capitals only takes real letter keys (not AZERTY's digits), Digits finds digits on Shift, a new **Accents** group (on layouts that have them) holds AZERTY's é è ç à ù and the dead accent keys (^ ¨, and Spanish ´ ¨ ` ^), and Symbols takes the rest (µ, º, ª, ²). Everything selects every key; Number-row symbols follow the layout.
+
 ## Keeping this up to date
 
 At the end of each milestone, run:
 
 ```bash
-npm run snapshots -- m30
+npm run snapshots -- m32
 ```
 
-That writes a standard set of shots to `docs/progression/m30/` (keyboard-notice, splash, menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, capitals, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m30 holidays` takes only the holiday shots. Then:
+That writes a standard set of shots to `docs/progression/m32/` (keyboard-notice, splash, menu, about, desk, players, settings, settings-layout, type-case-dvorak, chapter-intro-dvorak, type-case-azerty, type-case-spanish, how-to-play, how-to-play-bosses, daily, stickers, challenge, practice, type-case, briefing, lineup, capitals, pause, contents, chapter-intro, play, page-done, and the holiday shots menu-thanksgiving, lineup-thanksgiving, menu-christmas, lineup-christmas, desk-holidays and stickers-holidays, then the web pages site-parents and site-how-to-play). `npm run snapshots -- m32 holidays` takes only the holiday shots. Then:
 
 1. Run `npm run snapshots -- latest` too, so the "Latest" column matches.
 2. Add a section under **Milestone by milestone** with one or two shots and what's **New** or **Changed**.

@@ -188,6 +188,11 @@
   padding: 4px 22% 0;
 }
 
+/* ISO: the bottom row starts sooner, for the extra key left of Z. */
+.tc-iso .tc-row-3 {
+  padding-left: 2%;
+}
+
 /* The chrome rim; the drop shadow is the key's lever. */
 .tc-key {
   flex: 1 1 0;
