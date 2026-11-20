@@ -981,10 +981,6 @@
   --ico-accent: var(--tc-margin);
 }
 
-.how-tiles-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
-
 .how-tile {
   display: grid;
   justify-items: center;

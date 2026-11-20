@@ -683,9 +683,10 @@ export class Menu {
       ),
       section(
         'how.modesTitle',
-        h('ul', { className: 'how-tiles how-tiles-2' }, [
+        h('ul', { className: 'how-tiles' }, [
           iconTile('freeWrite', t('menu.practice'), t('how.mode.freeWrite')),
           iconTile('apprentice', t('menu.apprentice'), t('how.mode.apprentice')),
+          iconTile('fairCopy', t('menu.fairCopy'), t('how.mode.fairCopy')),
         ]),
       ),
       section(

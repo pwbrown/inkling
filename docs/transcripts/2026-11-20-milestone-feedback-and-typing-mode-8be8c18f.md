@@ -1,6 +1,6 @@
 # Milestone feedback and typing mode
 
-Claude Code session started 2026-11-20. 3 prompts.
+Claude Code session started 2026-11-20. 4 prompts.
 
 Exported with `npm run transcript`. Tool output, hidden reasoning and system prompts are left out; commands are cut short when long. Private details (email, home folder) are removed.
 
@@ -835,3 +835,69 @@ The Fair Copy prototype session is still running on its own.
   ```
 
 </details>
+
+### 🤖 Claude
+
+Scanning the changed transcripts for private details using generic patterns.
+
+<details><summary>2 tool calls</summary>
+
+- **Shell:** Scan transcripts for emails, paths, secrets
+
+  ```bash
+  F="docs/transcripts/2026-11-20-milestone-feedback-and-typing-mode-8be8c18f.md docs/transcripts/2026-11-19-game-seo-and-holiday-skins-25c4469a.md docs/transcripts/README.md"; grep -nEo "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" $F | grep -v "noreply@anthropic.com" | sort -u | head; grep -nEo "/Users/[A-Za-z0-9_.-]+|/private/tmp/[^ )\`\"]*" $F | cut -d: -f3 | sort | uniq -c | head; grep -nEi "(api[_-]?key|token|secret|password|bearer)[^a-z]{0,3}[:=][^ ]{8,}" $F | head -5; grep -nE "\b(sk|ghp|gho|xox[bp]|AKIA)[-_A-Za-z0-9]{12,}" $F | head
+  ```
+- **Shell:** Scan transcripts for emails, paths, secrets
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys/docs/transcripts && F=(2026-11-20-milestone-feedback-and-typing-mode-8be8c18f.md 2026-11-19-game-seo-and-holiday-skins-25c4469a.md README.md); echo emails:; grep -hEo "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}" "${F[@]}" | sort -u; echo paths:; grep -hEo "/Users/[A-Za-z0-9_.-]+|/private/tmp/[A-Za-z0-9_.-]+" "${F[@]}" | sort | uniq -c; echo secrets:; grep -nEi "(api[_-]?key|token|secret|password|bearer)[^a-z]{0,3}[:=] *[A-Za-z0-9_\-]{12,}" "${F[@]}" | head -5; grep -nE "\b(sk|ghp|gho|xox[bp]|AKIA)[-_A-Za-z0-9]{16,}" "${F[@]}" | head
+  ```
+
+</details>
+
+### 🤖 Claude
+
+The scan is clean: no emails besides the attribution address, no personal paths, no secrets (the one hit is a `sed` command line). Committing now.
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Commit, fast-forward main, delete branch
+
+  ```bash
+  cd /Users/[removed]/projects/inky-keys && git add -A && git status --short | grep -v "^M \|^A " ; git commit -q -F - <<'EOF'
+  Readable hits: capital marks, steadier creatures (2.22.0)
+
+  - A short bar under every capital letter on Drips, Scrawlers, bottles and Run-ons, so c/C, s/S, o/O are easy to tell apart (tuned in GAME_CONFIG.capitalTick, with tests)
+  - Creatures no longer squash on each correct letter or shake when losing a life; they squash only when beaten
+  - Release 2.22.0 notes, REQUIREMENTS milestone 30 row, DESIGN notes on hits and capitals
+  - Snapshot tour gains a capitals shot; m30 pr
+  … (275 more characters)
+  ```
+
+</details>
+
+### 🤖 Claude
+
+Milestone 30 is committed as `19adc4c` and merged into `main` with a fast-forward, and `feat/m30-readable-hits` is deleted. `main` is one commit ahead of `origin`, and nothing is pushed or tagged yet.
+
+I exported the transcript and scanned it before committing. There were no personal paths or secrets, and the only email address is the commit attribution line.
+
+The Fair Copy session ([Fair Copy typing-test prototype (M31)](#local_57a87306-a8cc-45e3-bea7-3c148b7b15ef)) has finished a turn. Its last change took out the "N in a row!" popup in the lively layout, so a long run now just makes the scribe cheer. It hasn't committed anything, and it's waiting for your design feedback.
+
+## 🧑 Prompt
+
+> Tag and push
+
+<details><summary>1 tool call</summary>
+
+- **Shell:** Tag v2.22.0 and push main and tag
+
+  ```bash
+  npm run release:tag 2>&1 | tail -3 && git push origin main 2>&1 | tail -1 && git push origin v2.22.0 2>&1 | tail -1
+  ```
+
+</details>
+
+### 🤖 Claude
+
+v2.22.0 is tagged and pushed: `main` is now at `19adc4c` on `origin`, along with the `v2.22.0` tag. The tag should start the Release workflow that publishes the GitHub Release, and the push to `main` should start the site deploy. I haven't checked either run.

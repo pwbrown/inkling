@@ -28,7 +28,7 @@ Type the character on each ink drip before it reaches the red margin. Each drip 
 | Enter | While playing: fire the **Blotter** (when charged). On a card: begin, turn the page, or retry the chapter after running out of ink |
 | R / M | After running out of ink: **Retry chapter** or go to the **Main menu** |
 
-The **main menu** has buttons for everything: **Continue** (C), **Free Write** (F, then pick a difficulty with 1–4 and change keys), **Apprentice** (A), **Word lists** (W), **Desk** (D), **Settings** (S), **Manage saves** (B), **How to play** (H), **About** (I, with links to the source code and a form for ideas and bug reports) and **Switch player** (U). Use the arrow keys or Tab and Enter, or the mouse.
+The **main menu** has buttons for everything: **Continue** (C), **Free Write** (F, then pick a difficulty with 1–4 and change keys), **Apprentice** (A), **Fair Copy** (O), **Word lists** (W), **Desk** (D), **Settings** (S), **Manage saves** (B), **How to play** (H), **About** (I, with links to the source code and a form for ideas and bug reports) and **Switch player** (U). Use the arrow keys or Tab and Enter, or the mouse.
 
 A notebook is a series of **chapters**, each made of a few **pages**. Each page is all **drips** (single characters) or all **Scrawlers** (words). In Free Write, Scrawlers are the main wave, with one letter-drip page per chapter; if your keys include at least three digits or symbols, those get a drip page of their own, so they never mix with letters. New creatures rush in from the right until their whole word is on the page, then slow to their own pace. From chapter 4, Scrawler pages now and then slip in a **Run-on** (at most one on screen and three per page). Pages speed up slightly within a chapter, each chapter is a bit harder than the last, and finishing a chapter tops up your ink. Pick Relaxed, Normal, Hard or Expert when you start a notebook. Drip and Scrawler pages never show more targets at once than you have keys to tell them apart. All of these numbers live in `src/core/config.ts`. 
 
@@ -38,7 +38,7 @@ The **Type Case** shows a keyboard where every key has two halves: its plain cha
 
 The game builds everything from your keys: drips use them directly, and word pages use real words that only need those letters. Selected capitals and punctuation show up in words too. If too few words fit, made-up strings are mixed in, and the Type Case warns you when that will happen.
 
-### Free Write and Apprentice
+### Free Write, Apprentice and Fair Copy
 
 - **Apprentice** is a typing course for beginners, 27 chapters long.
   - Chapter 1 teaches just `f` and `j`, the keys with bumps. Each later chapter adds **one** key: the rest of the home row (`d k s l a ; g h`), then space, then `e i r u t y o w n m c v b x p q z`.
@@ -48,6 +48,7 @@ The game builds everything from your keys: drips use them directly, and word pag
   - **Stars and progress:** each page earns 1–3 stars from its grade. Clearing a chapter opens the next one on the **Contents** page, where you can replay any open chapter. Finishing the last chapter completes the notebook.
 - **Free Write** (formerly Practice) is the main mode. It uses exactly the keys you choose in the Type Case, with endless chapters. New players start with all letters, capitals and space.
 - **Ready for more?** From chapter 5 of Free Write, a chapter where every page gets an A or A+ brings a card offering **Add numbers and symbols** (if you're not on Everything) and/or the next difficulty. Either change starts on the next page, and the notebook keeps going. **Not now** waits three chapters; **Don't suggest this again** stops it for that player, and **Ready for more?** in Settings turns it back on. The numbers are in `GAME_CONFIG.nudges`.
+- **Fair Copy** (O on the main menu) is a typing-speed test with no creatures. Copy out a public-domain passage from a classic book, or type for 30 or 60 seconds. The clock starts on your first key, and the result card shows WPM, raw WPM, accuracy, mistakes left in (each costs speed; Backspace fixes them), your best run and slowest keys. Bests are kept per player for each passage and each timed test, and Fair Copy has its own sticker shelf. The passages live in `src/core/fairCopy.ts` and the numbers in `GAME_CONFIG.fairCopy`.
 - **From Apprentice to Free Write:** pause a chapter and pick **Free Write with these keys** (F) to keep practicing that chapter's keys at the same difficulty. The Free Write screen and the Type Case also offer **My Apprentice keys**, which always matches the furthest chapter you've reached.
 
 ### Players
